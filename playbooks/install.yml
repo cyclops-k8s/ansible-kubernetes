@@ -3,14 +3,14 @@
   become: true
   tasks:
   roles:
-  - role: ../roles/kubernetes-proxy
+  - role: kubernetes-proxy
 
 - name: "Install containerd.io"
   hosts:
   - kubernetes
   become: true
   roles:
-  - role: ../roles/docker
+  - role: docker
     vars:
       containerd_only: true
 
@@ -20,4 +20,4 @@
   serial: 1
   become: true
   roles:
-  - role: ../roles/kubernetes
+  - role: kubernetes

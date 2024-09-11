@@ -1,16 +1,9 @@
-- name: "Wait for hosts"
-  hosts: all
-  become: false
-  gather_facts: false
-  roles:
-  - role: ../../ansible/roles/cloud-init-wait
-
 - name: Upgrade nodes
   hosts: kubernetes
   become: true
   gather_facts: true
   serial: 1
   roles:
-  - role: ../../ansible/roles/kubernetes-upgrade
+  - role: kubernetes-upgrade
   vars:
     kubernetes_version: "1.31"
