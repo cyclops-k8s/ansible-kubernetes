@@ -1,6 +1,3 @@
-# STIG
-Disabling staticPodPath on control plane nodes breaks the control planes. It is disabled on worker nodes
-
 # CIS Benchmark
 ## 1.1 - Control plane
 

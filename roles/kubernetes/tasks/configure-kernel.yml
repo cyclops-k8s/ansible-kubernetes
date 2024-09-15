@@ -14,13 +14,19 @@
     reload: true
     sysctl_file: /etc/sysctl.d/99-kubernetes-cri.conf
   with_items:
-  - name: "fs.inotify.max_user_instances"
+  - name: fs.inotify.max_user_instances
     value: 8192
-  - name: "net.bridge.bridge-nf-call-iptables"
+  - name: net.bridge.bridge-nf-call-iptables
     value: 1
-  - name: "net.bridge.bridge-nf-call-ip6tables"
+  - name: net.bridge.bridge-nf-call-ip6tables
     value: 1
-  - name: "net.ipv4.ip_forward"
+  - name: net.ipv4.ip_forward
     value: 1
-  - name: "net.ipv6.conf.all.disable_ipv6"
+  - name: net.ipv6.conf.all.disable_ipv6
     value: 1
+  - name: vm.overcommit_memory
+    value: 1
+  - name: kernel.panic_on_oops
+    value: 1
+  - name: kernel.panic
+    value: 10

@@ -102,8 +102,8 @@
       creates: /home/edward/.kube/config
     register: copy_admin_conf
 
-  # CIS 1.1.20
-  - name: CIS 1.1.20 - Secure certificates
+  # CIS 1.1.20, STIG V-242466
+  - name: CIS 1.1.20, STIG V-242466 - Secure certificates
     ansible.builtin.shell:
       cmd: chmod 0600 --recursive {{ kubernetes_pki_directory }}/*.crt
     changed_when: true
@@ -134,7 +134,8 @@
       mode: '0600'
 
   # CIS 4.1.9
-  - name: CIS 4.1.9 - Set kubelet config.yaml to 0600
+  # STIG V-242407
+  - name: CIS 4.1.9, STIG V-242407 - Set kubelet config.yaml to 0600
     ansible.builtin.file:
       path: /var/lib/kubelet/config.yaml
       mode: '0600'
@@ -171,6 +172,12 @@
   - name: Output serviceaccount_patch
     ansible.builtin.debug:
       msg: "{{ serviceaccount_patch.stdout_lines }}"
+
+  - name: Notify kubeadm init success
+    ansible.builtin.debug:
+      msg: "Notifying kubeadm_init_success"
+    notify: Kubeadm | Init Success
+    changed_when: true
 
   rescue:
   - name: Remove kubeadm output files

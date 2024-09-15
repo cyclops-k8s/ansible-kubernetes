@@ -15,5 +15,12 @@ control plane.
 
 ## CIS Benchmark
 
-Review the `hardening.md` to see the status of each benchmark test. Most of them were handeled out of the box
+Review the `CIS hardening.md` to see the status of each benchmark test. Most of them were handeled out of the box
 by kubeadm, the ones that could be resolved are.
+
+## STIG's
+
+The Kubernetes STIG Version 2 Release 1, dated 24 July 2024 has also been applied. Using the STIG viewer available for free from the DoD of the US,
+you can view the checklist `Stig checklist - Kubernetes.cklb` and review what has been fixed, or not. Of the ones not fixed, there is only one
+that is not up to the kubernetes administrator. It is the one related to anonymous auth of the API. The RBAC restricts what the anonymous
+user can access and it is required to join nodes to the cluster using Kubeadm.

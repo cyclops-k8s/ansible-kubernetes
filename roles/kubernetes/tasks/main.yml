@@ -98,6 +98,17 @@
   ansible.builtin.import_tasks: worker-node.yml
   when: inventory_hostname in groups['worker_nodes']
 
+- name: Approve all CSR's for kubelet's
+  ansible.builtin.shell:
+    cmd: |
+      # don't do a set -e here because we want to continue if there are no pending CSRs
+      set -o pipefail
+      kubectl --namespace kube-system --kubeconfig /etc/kubernetes/admin.conf get csr | grep Pending | awk '{print $1}' | xargs kubectl --namespace kube-system --kubeconfig /etc/kubernetes/admin.conf certificate approve
+      exit 0
+    executable: /bin/bash
+  delegate_to: "{{ first_kube_control_plane }}"
+  changed_when: true
+
 - name: Set local kube config
   ansible.builtin.import_tasks: local-kubeconfig.yml
   run_once: true

@@ -37,11 +37,13 @@
     mode: '0600'
 
 # CIS 4.1.9
-- name: CIS 4.1.9 - Set kubelet config.yaml to 0600
+# STIG V-242407
+- name: CIS 4.1.9, STIG V-242407 - Set kubelet config.yaml to 0600
   ansible.builtin.file:
     path: /var/lib/kubelet/config.yaml
     mode: '0600'
 
+# STIG V-242397
 - name: Secure static pod path
   ansible.builtin.replace:
     regexp: 'staticPodPath:.*'

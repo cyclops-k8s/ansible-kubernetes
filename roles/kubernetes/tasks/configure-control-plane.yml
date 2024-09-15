@@ -24,7 +24,19 @@
     backup: false
   register: kube_api_authn_file
 
-# CIS 1.1.11
+# STIG V-254800
+- name: Create Kubernetes Admission Configuration file
+  ansible.builtin.template:
+    src: admission-configuration.yaml.j2
+    dest: "{{ kubernetes_config_directory }}/admission-configuration.yaml"
+    owner: root
+    group: root
+    mode: '0600'
+    backup: false
+  register: admission_configuration_file
+
+# CIS 1.1.12
+# STIG V-242459
 - name: Copy etcd patches to kubernetes/config/patches directory
   ansible.builtin.template:
     src: etcd-patch.yaml.j2

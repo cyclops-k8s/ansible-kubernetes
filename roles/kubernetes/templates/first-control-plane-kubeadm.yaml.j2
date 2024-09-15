@@ -3,16 +3,22 @@ kind: KubeletConfiguration
 cgroupDriver: systemd
 
 # CIS 4.2.5
+# STIG V-245541
 streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout}}
 # CIS 4.2.10
+# STIG V-242425
 rotateCertificates: true
 # CIS 4.2.11
+# STIG V-242425
 serverTLSBootstrap: true
 # CIS 4.2.12
+# STIG V-242418
 tlsCipherSuites:
 {{ kubernetes_strong_cypher_suites | to_nice_yaml }}
 # CIS 4.2.15
 podPidsLimit: {{ kubernetes_podpidslimit }}
+# STIG V-242434
+protectKernelDefaults: true
 ---
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
@@ -26,6 +32,8 @@ controllerManager:
     cluster-signing-duration: "{{ kubernetes_cluster_signing_duration }}"
     # CIS 1.3.2
     profiling: "{{ kubernetes_profiling | upper}}"
+    # STIG V-242378
+    tls-min-version: VersionTLS13
 networking:
   serviceSubnet: "{{ kubernetes_service_subnet }}"
   podSubnet: "{{ kubernetes_pod_subnet }}"
@@ -33,18 +41,25 @@ networking:
 apiServer:
   extraArgs:
     # CIS 1.2.16
+    # STIG V-242465
+    # STIG V-242402
     audit-log-path: {{ kubernetes_audit_log_path }}
     # CIS 1.2.17
+    # STIG V-242464
     audit-log-maxage: "{{ kubernetes_audit_log_max_age }}"
     # CIS 1.2.18
+    # STIG V-242463
     audit-log-maxbackup: "{{ kubernetes_audit_log_max_backup }}"
     # CIS 1.2.19
+    # STIG V-242462
     audit-log-maxsize: "{{ kubernetes_audit_log_max_size }}"
     # CIS 1.2.29
     tls-cipher-suites: "{{ kubernetes_strong_cypher_suites | join(",") }}"
     # CIS 3.2.1
+    # STIG V-242461
     audit-policy-file: "{{ kubernetes_config_directory }}/audit-policy.yaml"
     # CIS 1.2.6, 1.2.7, 1.2.8
+    # STIG V-242382
     authorization-mode: Node,RBAC
     # CIS 3.1.1, 3.1.2, 3.1.3
     authentication-config: "{{ kubernetes_config_directory }}/kube-api-authn.yaml"
@@ -57,6 +72,10 @@ apiServer:
     kubelet-certificate-authority: "{{ kubernetes_pki_directory }}/ca.crt"
     # CIS 1.2.15
     profiling: "{{ kubernetes_profiling | upper}}"
+    # STIG V-254800
+    admission-control-config-file: "{{ kubernetes_config_directory }}/admission-configuration.yaml"
+    # STIG V-242378
+    tls-min-version: VersionTLS13
   certSANs:
   - "{{ kubernetes_api_endpoint }}"
   extraVolumes:
@@ -80,13 +99,27 @@ apiServer:
       mountPath: /var/log/apiserver
       readOnly: false
       pathType: DirectoryOrCreate
+    - name: admission-configuration
+      hostPath: "{{ kubernetes_config_directory }}/admission-configuration.yaml"
+      mountPath: "{{ kubernetes_config_directory }}/admission-configuration.yaml"
+      readOnly: true
+      pathType: File
   timeoutForControlPlane: 4m0s
 scheduler:
   extraArgs:
     authentication-tolerate-lookup-failure: "false"
     # CIS 1.4.1
     profiling: "{{ kubernetes_profiling | upper}}"
+    # STIG V-242377
+    tls-min-version: VersionTLS13
 clusterName: "{{ kubernetes_cluster_name }}"
+etcd:
+  local:
+    extraArgs:
+      # STIG V-242380
+      peer-auto-tls: "false"
+      # STIG V-242379
+      auto-tls: "false"
 ---
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
 kind: KubeProxyConfiguration
