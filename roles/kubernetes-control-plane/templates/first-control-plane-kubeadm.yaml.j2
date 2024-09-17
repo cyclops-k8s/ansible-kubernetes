@@ -76,6 +76,9 @@ apiServer:
     admission-control-config-file: "{{ kubernetes_config_directory }}/admission-configuration.yaml"
     # STIG V-242378
     tls-min-version: VersionTLS13
+{% if kubernetes_service_account_issuer != None %}
+    service-account-issuer: "{{ kubernetes_service_account_issuer }}"
+{% endif %}
   certSANs:
   - "{{ kubernetes_api_endpoint }}"
   extraVolumes:

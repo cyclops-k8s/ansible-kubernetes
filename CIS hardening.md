@@ -1,4 +1,7 @@
 # CIS Benchmark
+
+I used the CIS Kubernetes Benchmark 1.9
+
 ## 1.1 - Control plane
 
 ### 1.1.1 - 1.1.11

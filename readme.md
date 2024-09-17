@@ -24,3 +24,5 @@ The Kubernetes STIG Version 2 Release 1, dated 24 July 2024 has also been applie
 you can view the checklist `Stig checklist - Kubernetes.cklb` and review what has been fixed, or not. Of the ones not fixed, there is only one
 that is not up to the kubernetes administrator. It is the one related to anonymous auth of the API. The RBAC restricts what the anonymous
 user can access and it is required to join nodes to the cluster using Kubeadm.
+
+The stig viewer can be found here: https://public.cyber.mil/stigs/srg-stig-tools/

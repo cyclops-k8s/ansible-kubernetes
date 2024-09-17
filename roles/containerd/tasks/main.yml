@@ -1,0 +1,43 @@
+- name: Update apt repositories
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Make sure the gpg package is installed
+  ansible.builtin.apt:
+    name:
+    - gpg
+    state: present
+
+- name: Create keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Download GPG keyring
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/debian/gpg
+    dest: /etc/apt/keyrings/docker
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: Dearmor gpg keyring
+  ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/docker
+  args:
+    creates: /etc/apt/keyrings/docker.gpg
+
+- name: Add Docker Repository
+  ansible.builtin.apt_repository:
+    repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] {{ containerd_mirror }} {{ ansible_distribution_release | lower }} stable
+    state: present
+    update_cache: true
+    filename: docker
+
+- name: Install Container-d
+  ansible.builtin.apt:
+    name:
+    - containerd.io
+    state: present

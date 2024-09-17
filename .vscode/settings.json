@@ -3,6 +3,9 @@
     "files.associations": {
         "**/roles/**/*.yml": "ansible",
         "**/roles/**/*.yaml": "ansible",
-        "**/roles/**/*.j2": "ansible-jinja"
+        "**/roles/**/*.j2": "ansible-jinja",
+        "**/example-hooks/**/*.yml": "ansible",
+        "**/example-hooks/**/*.yaml": "ansible",
+        "**/example-hooks/**/*.j2": "ansible"
     }
 }

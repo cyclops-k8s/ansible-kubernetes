@@ -1,22 +1,15 @@
-- name: Validate parameters
-  ansible.builtin.assert:
-    that:
-    - kubernetes_kubelet_csr_approver_ips != None
-    - kubernetes_kubelet_csr_approver_regex != None
-    - kubernetes_api_endpoint != None
-    - kubernetes_api_port > 0
-    - kubernetes_oidc_issuer_url != None
-    - kubernetes_oidc_client_id != None
-    - (kubernetes_kubelogin_flavor == 'azure' and kubernetes_kubelogin_azure_tenant != None and kubernetes_kubelogin_azure_client_id != None) or kubernetes_kubelogin_flavor == 'int128'
-    - kubernetes_vsphere_server != None
-    - kubernetes_vsphere_username != None
-    - kubernetes_vsphere_password != None
-    - kubernetes_vsphere_datacenter != None
-    - kubernetes_kubelogin_flavor == 'azure' or kubernetes_kubelogin_flavor == 'int128'
-
+- name: Pre-prequisites hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.pre_prerequisites }}"
+  when: kubernetes_hookfiles.pre_prerequisites is defined
 
 - name: Install Packages
   ansible.builtin.import_tasks: install-packages.yml
+
+- name: Post install packages hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.post_install_packages }}"
+  when: kubernetes_hookfiles.post_install_packages is defined
 
 - name: Make sure kubernetes config directory exists
   ansible.builtin.file:
@@ -53,7 +46,7 @@
   ansible.builtin.debug:
     msg: "{{ kubeadm_images_pulled.stdout_lines }}"
 
-- name: Define nodes already joined to existing cluster and first_kube_control_plane
+- name: Define first_kube_control_plane
   ansible.builtin.import_tasks: define-first-kube-control.yml
 
 - name: Generate the encryption key
@@ -63,52 +56,16 @@
   ansible.builtin.import_tasks: configure-control-plane.yml
   when: inventory_hostname in groups['control_planes']
 
-- name: Initialize control plane
-  ansible.builtin.import_tasks: initialize-control-plane.yml
-  when: first_kube_control_plane == inventory_hostname
+- name: Configure control plane hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.post_configure_control_planes }}"
+  when:
+  - inventory_hostname in groups['control_planes']
+  - kubernetes_hookfiles.post_configure_control_planes is defined
 
-- name: Get Join token
-  ansible.builtin.shell:
-    cmd: |
-      kubeadm token create
-  delegate_to: "{{ first_kube_control_plane }}"
-  run_once: true
-  register: temp_token
-  changed_when: true
-
-- name: Upload certificates so they are fresh and not expired
-  ansible.builtin.command:
-    cmd: kubeadm init phase --config {{ kubernetes_config_directory }}/kubeadm.yaml upload-certs --upload-certs
-  register: kubeadm_upload_cert
-  run_once: true
-  delegate_to: "{{ first_kube_control_plane }}"
-  changed_when: true
-
-- name: Set facts
-  ansible.builtin.set_fact:
-    join_token: "{{ temp_token.stdout }}"
-    kubeadm_upload_token: "{{ kubeadm_upload_cert.stdout_lines[-1] | trim }}"
-  run_once: true
-
-- name: Configure additional control planes
-  ansible.builtin.import_tasks: secondary-control-plane.yml
-  when: first_kube_control_plane != inventory_hostname and inventory_hostname in groups['control_planes']
-
-- name: Configure worker nodes
-  ansible.builtin.import_tasks: worker-node.yml
-  when: inventory_hostname in groups['worker_nodes']
-
-- name: Approve all CSR's for kubelet's
-  ansible.builtin.shell:
-    cmd: |
-      # don't do a set -e here because we want to continue if there are no pending CSRs
-      set -o pipefail
-      kubectl --namespace kube-system --kubeconfig /etc/kubernetes/admin.conf get csr | grep Pending | awk '{print $1}' | xargs kubectl --namespace kube-system --kubeconfig /etc/kubernetes/admin.conf certificate approve
-      exit 0
-    executable: /bin/bash
-  delegate_to: "{{ first_kube_control_plane }}"
-  changed_when: true
-
-- name: Set local kube config
-  ansible.builtin.import_tasks: local-kubeconfig.yml
-  run_once: true
+- name: Configure worker hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.post_configure_workers }}"
+  when:
+  - inventory_hostname in groups['worker_nodes']
+  - kubernetes_hookfiles.post_configure_workers is defined

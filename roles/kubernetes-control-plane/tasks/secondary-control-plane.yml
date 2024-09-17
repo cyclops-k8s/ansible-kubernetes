@@ -1,12 +1,20 @@
 - name: Create kubeadm file
   ansible.builtin.template:
-    src: worker-kubeadm.yaml.j2
+    src: secondary-control-plane-kubeadm.yaml.j2
     dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
     owner: root
     group: root
-    mode: '0644'
+    mode: '0600'
     backup: true
   register: kubeadm_file
+
+- name: Pull control plane certs down
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      kubeadm join phase control-plane-prepare download-certs --config {{ kubernetes_config_directory }}/kubeadm.yaml -v5 2>&1 | tee /etc/kubernetes/output/kubeadm-certs
+    executable: /bin/bash
+    creates: "{{ kubernetes_pki_directory }}/ca.crt"
 
 - name: Stop kubelet
   ansible.builtin.systemd:
@@ -17,12 +25,17 @@
 - name: Add the control plane node
   ansible.builtin.shell:
     cmd: |
-      set -o pipefail
-      set -e
+      set -eo pipefail
       kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubeadm_init_extra_args | default('') }} 2>&1 | tee /etc/kubernetes/output/kubeadm-join
     creates: /etc/kubernetes/output/kubeadm-join
     executable: /bin/bash
   register: kubeadm_init_output
+
+- name: Start kubelet
+  ansible.builtin.service:
+    name: kubelet
+    state: started
+    enabled: true
 
 # CIS 1.1.20
 - name: CIS 1.1.20 - Secure certificates
@@ -43,15 +56,7 @@
     path: /var/lib/kubelet/config.yaml
     mode: '0600'
 
-# STIG V-242397
-- name: Secure static pod path
-  ansible.builtin.replace:
-    regexp: 'staticPodPath:.*'
-    replace: 'staticPodPath:'
-    path: /var/lib/kubelet/config.yaml
-
-- name: Retart kubelet
-  ansible.builtin.service:
-    name: kubelet
-    state: restarted
-    enabled: true
+- name: Post control plane join hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.post_control_plane_join }}"
+  when: kubernetes_hookfiles.post_control_plane_join is defined

@@ -1,0 +1,44 @@
+- name: Configure cilium values
+  ansible.builtin.copy:
+    content: |
+      k8sServiceHost: "{{ kubernetes_api_endpoint }}"
+      k8sServicePort: "{{ kubernetes_api_port }}"
+    dest: "{{ kubernetes_config_directory }}/cilium.yaml"
+
+- name: Get Cilium
+  ansible.builtin.shell:
+    cmd: |
+      set -e
+      set -o pipefail
+      mkdir -p {{ kubernetes_config_directory }}/cilium
+      cd {{ kubernetes_config_directory }}/cilium
+      curl -LO https://github.com/cilium/cilium/archive/main.tar.gz
+      tar xzf main.tar.gz
+      cd cilium-main/install/kubernetes
+      helm upgrade --install cilium ./cilium \
+        --kubeconfig /etc/kubernetes/admin.conf \
+        --namespace kube-system \
+        --values {{ kubernetes_config_directory }}/cilium.yaml \
+        2>&1 | tee /etc/kubernetes/output/cilium-installed
+    creates: /etc/kubernetes/output/cilium-installed
+    executable: /bin/bash
+  register: cilium
+  run_once: true
+  delegate_to: "{{ first_kube_control_plane }}"
+
+- name: Write cilium to stdout
+  ansible.builtin.debug:
+    msg: "{{ cilium.stdout_lines }}"
+  when: cilium.stdout_lines is defined
+
+- name: Wait for cilium to be ready
+  ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready pod -l k8s-app={{ item.app }} --timeout=5s --namespace {{ item.namespace }}
+  register: cilium_ready
+  until: cilium_ready.rc == 0
+  retries: 12
+  with_items:
+  - {namespace: kube-system, app: cilium}
+
+- name: Give it another few seconds
+  ansible.builtin.pause:
+    seconds: 10

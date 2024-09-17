@@ -9,12 +9,7 @@
       executable: /bin/bash
       creates: /etc/kubernetes/output/containerd-configured
     register: containerd_configured
-
-  - name: Restart containerd service
-    ansible.builtin.service:
-      name: containerd
-      state: restarted
-    when: containerd_configured.changed
+    notify: Restart containerd service
 
   rescue:
   - name: Output containerd_configured

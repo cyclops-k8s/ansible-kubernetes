@@ -54,11 +54,48 @@ kubernetes_audit_log_max_age: 30
 kubernetes_audit_log_max_backup: 10
 kubernetes_audit_log_max_size: 100
 kubernetes_audit_log_path: /var/log/apiserver/audit.log
-kubernetes_cni_calico: false
 kubernetes_config_directory: /etc/kubernetes/config
 kubernetes_cluster_signing_duration: 8760h
 kubernetes_cluster_name: cluster
 kubernetes_dns_domain: cluster.local
+
+# in order of execution
+kubernetes_hookfiles:
+  # At the beginning of every major section run these, this is a good spot to put in default variables
+  default_configuration: []
+
+  # At the beginning of installing pre-requisites.
+  pre_prerequisites: []
+
+  # After installing packages
+  post_install_packages: []
+
+  # After configuring the control planes with the required configuration files
+  post_configure_control_planes: []
+
+  # After configuring the workers with the required configuration files
+  post_configure_workers: []
+
+  # After the cluster has been initialized and before anything has been added or configured in the cluster.
+  # Host level security policies that are deferred to after the cluster creation are not applied yet.
+  # This is where you want to install your CNI, see the `example-hooks/post_cluster_init` directory for examples.
+  post_cluster_init: []
+
+  # Executes after the node has been joined to the cluster and after security policies have applied.
+  post_security: []
+
+  # after the additional control plane has been joined to the cluster
+  post_control_plane_join: []
+
+  # after all control planes have been joined to the cluster
+  post_control_planes: []
+
+  # after the worker node has been joined to the cluster
+  post_worker_join: []
+
+  # after all worker nodes have been joined to the cluster
+  post_workers: []
+
 kubernetes_init_skip_phases: []
 kubernetes_kubeadm_init_extra_args: ""
 
@@ -76,6 +113,8 @@ kubernetes_podpidslimit: 100
 # CIS 1.2.15, 1.3.2, 1.4.1 - Profiling should be turned off. Default in kubeadm is true.
 # STIG V-242409
 kubernetes_profiling: false
+
+kubernetes_scripts_directory: /opt/kubernetes/scripts
 kubernetes_service_subnet: 10.96.0.0/16
 kubernetes_streamingconnectionidletimeout: 5m
 kubernetes_terminated_pod_gc_threshold: 10
@@ -87,6 +126,9 @@ kubernetes_oidc_username_prefix: "oidc:"
 kubernetes_oidc_group_claim: roles
 kubernetes_oidc_group_prefix: "oidc:"
 kubernetes_oidc_uid_claim: oid
+
+# You can override the default, https://kubernetes.default.svc.cluster.local, with any url.
+kubernetes_service_account_issuer: null
 
 # CIS 4.2.12
 # STIG V-242418

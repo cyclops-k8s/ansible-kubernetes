@@ -1,0 +1,82 @@
+- name: Set join token
+  ansible.builtin.set_fact:
+    join_token: "{{ hostvars[first_kube_control_plane].join_token }}"
+
+- name: Create kubeadm file
+  ansible.builtin.template:
+    src: worker-kubeadm.yaml.j2
+    dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+  register: kubeadm_file
+
+- name: Stop kubelet
+  ansible.builtin.systemd:
+    name: kubelet
+    state: stopped
+    enabled: true
+
+- name: Add the control plane node
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      set -e
+      kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubeadm_init_extra_args | default('') }} 2>&1 | tee /etc/kubernetes/output/kubeadm-join
+    creates: /etc/kubernetes/output/kubeadm-join
+    executable: /bin/bash
+  register: kubeadm_init_output
+
+# CIS 1.1.20
+- name: CIS 1.1.20 - Secure certificates
+  ansible.builtin.shell:
+    cmd: chmod 0600 --recursive {{ kubernetes_pki_directory }}/*.crt
+  changed_when: true
+
+# CIS 4.1.1
+- name: CIS 4.1.1 - Set kubelet.service to 0600
+  ansible.builtin.file:
+    path: /usr/lib/systemd/system/kubelet.service
+    mode: '0600'
+
+# CIS 4.1.9
+# STIG V-242407
+- name: CIS 4.1.9, STIG V-242407 - Set kubelet config.yaml to 0600
+  ansible.builtin.file:
+    path: /var/lib/kubelet/config.yaml
+    mode: '0600'
+
+# STIG V-242397
+- name: Secure static pod path
+  ansible.builtin.replace:
+    regexp: 'staticPodPath:.*'
+    replace: 'staticPodPath:'
+    path: /var/lib/kubelet/config.yaml
+
+- name: Retart kubelet
+  ansible.builtin.service:
+    name: kubelet
+    state: restarted
+    enabled: true
+
+- name: Post security hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.post_security }}"
+  when: kubernetes_hookfiles.post_security is defined
+
+- name: Post worker node join hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.post_worker_join }}"
+  when: kubernetes_hookfiles.post_worker_join is defined
+
+- name: Approve all CSR's for kubelet's
+  ansible.builtin.shell:
+    cmd: |
+      # don't do a set -e here because we want to continue if there are no pending CSRs
+      set -o pipefail
+      kubectl --namespace kube-system --kubeconfig /etc/kubernetes/admin.conf get csr | grep Pending | awk '{print $1}' | xargs kubectl --namespace kube-system --kubeconfig /etc/kubernetes/admin.conf certificate approve
+      exit 0
+    executable: /bin/bash
+  delegate_to: "{{ first_kube_control_plane }}"
+  changed_when: true
