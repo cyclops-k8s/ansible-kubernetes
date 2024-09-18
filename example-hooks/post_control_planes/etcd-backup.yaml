@@ -1,0 +1,56 @@
+- name: etcd-backup cronjob
+  ansible.builtin.copy:
+    content: |
+      apiVersion: batch/v1
+      kind: CronJob
+      metadata:
+        name: etcd-backup
+        namespace: kube-system
+      spec:
+        schedule: "0 0 * * *"
+        jobTemplate:
+          spec:
+            template:
+              spec:
+                hostNetwork: true
+                nodeSelector:
+                  node-role.kubernetes.io/control-plane: ""
+                tolerations:
+                - key: node-role.kubernetes.io/control-plane
+                  effect: NoSchedule
+                restartPolicy: Never
+                containers:
+                - name: etcd-backup
+                  securityContext:
+                    runAsUser: 0
+                  image: bitnami/etcd:3.5.16
+                  command:
+                  - sh
+                  - -c
+                  - etcdctl snapshot save /var/lib/etcd/snapshots/snap-$(date +%Y%m%d-%H%M%S).db --cert /etc/kubernetes/pki/etcd/peer.crt --key /etc/kubernetes/pki/etcd/peer.key --endpoints https://127.0.0.1:2379 --cacert /etc/kubernetes/pki/etcd/ca.crt
+                  volumeMounts:
+                  - mountPath: /var/lib/etcd/snapshots
+                    name: etcd-snapshots
+                  - mountPath: /etc/kubernetes/pki/etcd
+                    name: etcd-certs
+                volumes:
+                # TODO: make this an nfs share or someplace other than the local host
+                - name: etcd-snapshots
+                  hostPath:
+                    path: /var/lib/etcd/snapshots
+                    type: DirectoryOrCreate
+                - name: etcd-certs
+                  hostPath:
+                    path: /etc/kubernetes/pki/etcd
+                    type: DirectoryOrCreate
+    dest: "{{ kubernetes_config_directory }}/etcd-backup-cronjob.yaml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Apply etcd-backup cronjob
+  ansible.builtin.command: kubectl apply -f {{ kubernetes_config_directory }}/etcd-backup-cronjob.yaml --kubeconfig /etc/kubernetes/admin.conf
+  register: etcd_backup_cronjob
+  changed_when: etcd_backup_cronjob.rc != 0
+  failed_when: etcd_backup_cronjob.rc != 0
+  ignore_errors: true
