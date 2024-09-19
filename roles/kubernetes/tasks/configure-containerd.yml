@@ -11,6 +11,9 @@
     register: containerd_configured
     notify: Restart containerd service
 
+  - name: Flush handlers
+    ansible.builtin.meta: flush_handlers
+
   rescue:
   - name: Output containerd_configured
     ansible.builtin.debug:

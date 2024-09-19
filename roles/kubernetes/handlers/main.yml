@@ -1,4 +1,10 @@
 - name: Restart containerd service
-  ansible.builtin.service:
-    name: containerd
-    state: restarted
+  block:
+  - name: Restart containerd service
+    ansible.builtin.service:
+      name: containerd
+      state: restarted
+
+  - name: Wait for 10 seconds for container d to restart
+    ansible.builtin.pause:
+      seconds: 10
