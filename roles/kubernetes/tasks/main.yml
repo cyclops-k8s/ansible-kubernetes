@@ -49,9 +49,6 @@
 - name: Define first_kube_control_plane
   ansible.builtin.import_tasks: define-first-kube-control.yml
 
-- name: Generate the encryption key
-  ansible.builtin.import_tasks: define-encryption-key.yml
-
 - name: Configure control planes
   ansible.builtin.import_tasks: configure-control-plane.yml
   when: inventory_hostname in groups['control_planes']

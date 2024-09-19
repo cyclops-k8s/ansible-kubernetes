@@ -17,3 +17,4 @@
     - kubernetes_vsphere_username != None
     - kubernetes_vsphere_password != None
     - kubernetes_vsphere_datacenter != None
+    - kubernetes_encryption_key != None

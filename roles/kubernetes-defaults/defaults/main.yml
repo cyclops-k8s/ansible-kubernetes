@@ -1,6 +1,7 @@
 kubernetes_cilium_clusterpoolipv4podcidrlist:
 - 10.2.128.0/17
 
+# CIS 1.1.12
 kubernetes_etcd_init_container_image: alpine:latest
 kubernetes_etcd_group_id: 500
 kubernetes_etcd_user_id: 500
@@ -58,6 +59,10 @@ kubernetes_config_directory: /etc/kubernetes/config
 kubernetes_cluster_signing_duration: 8760h
 kubernetes_cluster_name: cluster
 kubernetes_dns_domain: cluster.local
+
+# 32 bytes used to encrypt the etcd data, this should be base64 encoded.
+# if not specified, a random key will be generated and stored on the first control plane node.
+kubernetes_encryption_key: null
 
 # in order of execution
 kubernetes_hookfiles:
