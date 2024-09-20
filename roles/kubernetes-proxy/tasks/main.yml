@@ -1,10 +1,12 @@
 - name: Install haproxy
-  ansible.builtin.apt:
+  notify: restart-haproxy
+  ansible.builtin.package:
     name:
     - haproxy
     state: present
 
 - name: Copy haproxy.cfg
+  notify: restart-haproxy
   ansible.builtin.template:
     src: haproxy.cfg.j2
     dest: /etc/haproxy/haproxy.cfg
@@ -12,25 +14,27 @@
     group: root
     mode: '0644'
 
-- name: Restart haproxy
-  ansible.builtin.systemd:
+- name: Enable haproxy
+  ansible.builtin.systemd_service:
+    enabled: true
     name: haproxy
-    state: restarted
 
 - name: Install keepalived
-  ansible.builtin.apt:
+  notify: restart-keepalived
+  ansible.builtin.package:
     name:
     - keepalived
     state: present
 
-- name: "Copy keepalived configuration"
+- name: Copy keepalived.conf
+  notify: restart-keepalived
   ansible.builtin.template:
     src: keepalived.conf.j2
     dest: /etc/keepalived/keepalived.conf
     owner: root
     mode: 0644
 
-- name: Restart keepalived
-  ansible.builtin.systemd:
+- name: Enable keepalived
+  ansible.builtin.systemd_service:
+    enabled: true
     name: keepalived
-    state: restarted
