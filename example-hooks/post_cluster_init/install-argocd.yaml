@@ -1,0 +1,60 @@
+- name: Install argocd
+  block:
+  - name: Install kustomize
+    ansible.builtin.shell:
+      cmd: |
+        set -eo pipefail
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        mv kustomize /usr/local/bin/
+      executable: /bin/bash
+      creates: /usr/local/bin/kustomize
+
+  - name: Create argo config directory
+    ansible.builtin.file:
+      path: "{{ kubernetes_config_directory }}/argo"
+      state: directory
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Copy argo manifests
+    ansible.builtin.copy:
+      src: "{{ file.src }}"
+      dest: "{{ kubernetes_config_directory }}/argo/{{ file.name }}"
+      owner: root
+      group: root
+      mode: '0600'
+    loop_control:
+      loop_var: file
+    with_items:
+    - {name: argocd-github-repo.yaml, src: argocd-github-repo.yaml}
+    - {name: argocd-ingress.yaml, src: argocd-ingress.yaml}
+    - {name: kustomization.yaml, src: argocd-kustomization.yaml}
+    - {name: argocd-rbac-cm.yaml, src: argocd-rbac-cm.yaml}
+    - {name: argocd-service.yaml, src: argocd-service.yaml}
+    - {name: argocd-deploy-command.yaml, src: argocd-deploy-command.yaml}
+    - {name: argocd-cmd-params-cm.yaml, src: argocd-cmd-params-cm.yaml}
+  - name: Copy argo templates
+    ansible.builtin.template:
+      src: "{{ file.src }}"
+      dest: "{{ kubernetes_config_directory }}/argo/{{ file.name }}"
+      owner: root
+      group: root
+      mode: '0600'
+    loop_control:
+      loop_var: file
+    with_items:
+    - {name: argocd-cm.yaml, src: argocd-cm.yaml.j2}
+    - {name: argocd-secret.yaml, src: argocd-secret.yaml.j2}
+
+  - name: Install ArgoCD
+    ansible.builtin.shell:
+      cmd: |
+        set -eo pipefail
+        kubectl create ns argocd || true
+        kustomize build {{ kubernetes_config_directory }}/argo | kubectl apply -f - -n argocd
+        touch /etc/kubernetes/output/argocd-installed
+      executable: /bin/bash
+      # creates: /etc/kubernetes/output/argocd-installed
+  run_once: true
+  delegate_to: "{{ first_kube_control_plane }}"
