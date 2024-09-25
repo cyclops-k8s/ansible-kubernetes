@@ -106,6 +106,7 @@ kubernetes_kubeadm_init_extra_args: ""
 
 # azure or int128
 kubernetes_kubelogin_flavor: azure
+kubernetes_kubelogin_azure_login_arg: azurecli
 kubernetes_kubelogin_azure_tenant: null
 kubernetes_kubelogin_azure_client_id: "{{ kubernetes_oidc_client_id }}"
 kubernetes_kubelogin_int128_use_pkce: false
