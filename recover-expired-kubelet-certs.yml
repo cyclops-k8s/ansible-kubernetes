@@ -1,0 +1,58 @@
+- name: Recover nodes
+  hosts:
+  - worker_nodes
+  - control_planes
+  become: true
+  tasks:
+  - name: Set first control plane node
+    ansible.builtin.set_fact:
+      first_kube_control_plane: "{{ groups['control_planes'] | first }}"
+    when: first_kube_control_plane is not defined
+
+  - name: Get ca cert  # noqa: run-once[task]
+    ansible.builtin.command: kubectl get cm kube-root-ca.crt -o jsonpath='{.data.ca\.crt}' -n kube-system --kubeconfig /etc/kubernetes/admin.conf
+    register: ca_crt_file
+    run_once: true
+    changed_when: false
+    delegate_to: "{{ first_kube_control_plane }}"
+
+  - name: Generate bootstrap token  # noqa: run-once[task]
+    ansible.builtin.command: kubeadm token create --kubeconfig /etc/kubernetes/admin.conf
+    register: token_raw
+    delegate_to: "{{ first_kube_control_plane }}"
+    run_once: true
+    changed_when: true
+
+  - name: Set config facts
+    ansible.builtin.set_fact:
+      bootstrap_token: "{{ token_raw.stdout }}"
+      kubernetes_ca: "{{ ca_crt_file.stdout }}"
+
+  - name: Remove kubelet systemd unit
+    ansible.builtin.systemd:
+      name: kubelet
+      state: stopped
+      enabled: true
+
+  - name: Create bootstrap kubelet file
+    ansible.builtin.template:
+      src: bootstrap-kubelet.conf.j2
+      dest: /etc/kubernetes/bootstrap-kubelet.conf
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Start the kubelet
+    ansible.builtin.systemd:
+      name: kubelet
+      state: started
+      enabled: true
+
+  - name: Wait for 10 seconds
+    ansible.builtin.pause:
+      seconds: 10
+
+  - name: Remove the bootstrap file
+    ansible.builtin.file:
+      path: /etc/kubernetes/bootstrap-kubelet.conf
+      state: absent
