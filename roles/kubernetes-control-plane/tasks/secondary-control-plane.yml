@@ -12,7 +12,7 @@
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
-      kubeadm join phase control-plane-prepare download-certs --config {{ kubernetes_config_directory }}/kubeadm.yaml -v5 2>&1 | tee /etc/kubernetes/output/kubeadm-certs
+      kubeadm join phase control-plane-prepare download-certs --config {{ kubernetes_config_directory }}/kubeadm.yaml -v5 2>&1 | tee {{ kubernetes_output_directory }}kubeadm-certs
     executable: /bin/bash
     creates: "{{ kubernetes_pki_directory }}/ca.crt"
 
@@ -26,8 +26,8 @@
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
-      kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubeadm_init_extra_args | default('') }} 2>&1 | tee /etc/kubernetes/output/kubeadm-join
-    creates: /etc/kubernetes/output/kubeadm-join
+      kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubeadm_init_extra_args | default('') }} 2>&1 | tee {{ kubernetes_output_directory }}kubeadm-join
+    creates: "{{ kubernetes_output_directory }}kubeadm-join"
     executable: /bin/bash
   register: kubeadm_init_output
 

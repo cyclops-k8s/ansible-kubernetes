@@ -22,8 +22,8 @@
         set -eo pipefail
         kubeadm init --config {{ kubernetes_config_directory }}/kubeadm.yaml \
           {{ kubernetes_kubeadm_init_extra_args }} 2>&1 \
-          | tee /etc/kubernetes/output/kubeadm
-      creates: /etc/kubernetes/output/kubeadm
+          | tee {{ kubernetes_output_directory }}kubeadm
+      creates: "{{ kubernetes_output_directory }}kubeadm"
       executable: /bin/bash
     register: kubeadm_init_output
 
@@ -54,9 +54,9 @@
           --clusterrole=cluster-admin \
           --group "{{ kubernetes_group_prefix | default('oidc:') }}Admins" \
           --kubeconfig /etc/kubernetes/admin.conf \
-          | tee /etc/kubernetes/output/cluster-admin-binding-created
+          | tee {{ kubernetes_output_directory }}cluster-admin-binding-created
       executable: /bin/bash
-      creates: /etc/kubernetes/output/cluster-admin-binding-created
+      creates: "{{ kubernetes_output_directory }}cluster-admin-binding-created"
     register: cluster_role_binding_oidc_admins
     changed_when: true
 
@@ -72,8 +72,8 @@
       cmd: |
         set -e
         kubectl config set-context --current --namespace=kube-system --kubeconfig /etc/kubernetes/admin.conf
-        touch /etc/kubernetes/output/admin-namespace-set
-      creates: /etc/kubernetes/output/admin-namespace-set
+        touch {{ kubernetes_output_directory }}admin-namespace-set
+      creates: "{{ kubernetes_output_directory }}admin-namespace-set"
     register: admin_namespace_set
 
   - name: Create cluster role binding to make the kube-scheduler fully happy
@@ -85,9 +85,9 @@
           --role=extension-apiserver-authentication-reader \
           --user system:kube-scheduler \
           fix:kube-scheduler:extension-apiserver-authentication-reader \
-          | tee /etc/kubernetes/output/kube-scheduler-rolebinding
+          | tee {{ kubernetes_output_directory }}kube-scheduler-rolebinding
       executable: /bin/bash
-      creates: /etc/kubernetes/output/kube-scheduler-rolebinding
+      creates: "{{ kubernetes_output_directory }}kube-scheduler-rolebinding" 
     register: kube_scheduler_rolebinding
 
   - name: Copy admin.conf
@@ -114,9 +114,9 @@
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
-        kubectl apply -f {{ kubernetes_config_directory }}/crb-kubeletcerts.yml --kubeconfig /etc/kubernetes/admin.conf | tee /etc/kubernetes/output/crb-kubeletcerts
+        kubectl apply -f {{ kubernetes_config_directory }}/crb-kubeletcerts.yml --kubeconfig /etc/kubernetes/admin.conf | tee {{ kubernetes_output_directory }}crb-kubeletcerts
       executable: /bin/bash
-      creates: /etc/kubernetes/output/crb-kubeletcerts
+      creates: "{{ kubernetes_output_directory }}crb-kubeletcerts"
     register: crb_kubeletcerts
     changed_when: true
 
@@ -154,13 +154,13 @@
         export KUBECONFIG=/etc/kubernetes/admin.conf
 
         for namespace in $(kubectl get namespaces -A -o=jsonpath="{.items[*]['metadata.name']}"); do
-          echo -n "Patching namespace $namespace - " | tee -a /etc/kubernetes/output/serviceaccount-patch
-          kubectl patch serviceaccount default -n ${namespace} --patch-file /etc/kubernetes/config/default-serviceaccount-patch.yaml | tee -a /etc/kubernetes/output/serviceaccount-patch
+          echo -n "Patching namespace $namespace - " | tee -a {{ kubernetes_output_directory }}serviceaccount-patch
+          kubectl patch serviceaccount default -n ${namespace} --patch-file /etc/kubernetes/config/default-serviceaccount-patch.yaml | tee -a {{ kubernetes_output_directory }}serviceaccount-patch
         done
 
-        touch /etc/kubernetes/output/serviceaccount-patch
+        touch {{ kubernetes_output_directory }}serviceaccount-patch
       executable: /bin/bash
-      creates: /etc/kubernetes/output/serviceaccount-patch
+      creates: "{{ kubernetes_output_directory }}serviceaccount-patch"
     register: serviceaccount_patch
   - name: Output serviceaccount_patch
     ansible.builtin.debug:

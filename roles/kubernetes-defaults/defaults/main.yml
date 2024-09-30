@@ -113,6 +113,9 @@ kubernetes_kubelogin_int128_use_pkce: false
 
 kubernetes_mirror: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/
 kubernetes_node_cidr_mask_size: 24
+
+kubernetes_output_directory: /etc/kubernetes/output
+
 kubernetes_pki_directory: /etc/kubernetes/pki
 kubernetes_pod_subnet: 10.244.0.0/16
 kubernetes_podpidslimit: 100

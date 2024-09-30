@@ -23,9 +23,9 @@
           --create-namespace \
           --set namespace=${namespace} \
           --values {{ kubernetes_config_directory }}/kubelet-csr-approver.yaml \
-          | tee /etc/kubernetes/output/kubelet-csr-approver-installed
+          | tee {{ kubernetes_output_directory }}kubelet-csr-approver-installed
       executable: /bin/bash
-      creates: /etc/kubernetes/output/kubelet-csr-approver-installed
+      creates: "{{ kubernetes_output_directory }}kubelet-csr-approver-installed"
     register: csr_approver
 
   - name: Write kubelet-csr-approver to stdout
@@ -36,7 +36,7 @@
   rescue:
   - name: Delete kubelet-csr-approver-installed
     ansible.builtin.file:
-      path: /etc/kubernetes/output/kubelet-csr-approver-installed
+      path: "{{ kubernetes_output_directory }}kubelet-csr-approver-installed"
       state: absent
 
   - name: Output csr_approver lines

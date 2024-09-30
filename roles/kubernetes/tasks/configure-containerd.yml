@@ -5,9 +5,9 @@
       cmd: |
         set -eo pipefail
         containerd config default | sed "s/SystemdCgroup = false/SystemdCgroup = true/" > /etc/containerd/config.toml
-        touch /etc/kubernetes/output/containerd-configured
+        touch {{ kubernetes_output_directory }}containerd-configured
       executable: /bin/bash
-      creates: /etc/kubernetes/output/containerd-configured
+      creates: "{{ kubernetes_output_directory }}containerd-configured"
     register: containerd_configured
     notify: Restart containerd service
 
@@ -27,7 +27,7 @@
       state: absent
       path: "{{ item }}"
     with_items:
-    - /etc/kubernetes/output/containerd-configured
+    - "{{ kubernetes_output_directory }}containerd-configured"
     - /etc/containerd/config.toml
 
   - name: Fail containerd systemd cgroup

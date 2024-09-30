@@ -37,8 +37,8 @@
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
-      kubeadm config images pull 2>&1 | tee /etc/kubernetes/output/images-pulled-{{ k8s_version }}
-    creates: /etc/kubernetes/output/images-pulled-{{ k8s_version }}
+      kubeadm config images pull 2>&1 | tee {{ kubernetes_output_directory }}images-pulled-{{ k8s_version }}
+    creates: "{{ kubernetes_output_directory }}images-pulled-{{ k8s_version }}"
     executable: /bin/bash
   register: kubeadm_images_pulled
 

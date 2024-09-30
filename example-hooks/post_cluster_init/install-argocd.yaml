@@ -53,8 +53,8 @@
         set -eo pipefail
         kubectl create ns argocd || true
         kustomize build {{ kubernetes_config_directory }}/argo | kubectl apply -f - -n argocd
-        touch /etc/kubernetes/output/argocd-installed
+        touch {{ kubernetes_output_directory }}argocd-installed
       executable: /bin/bash
-      # creates: /etc/kubernetes/output/argocd-installed
+      # creates: {{ kubernetes_output_directory }}argocd-installed
   run_once: true
   delegate_to: "{{ first_kube_control_plane }}"
