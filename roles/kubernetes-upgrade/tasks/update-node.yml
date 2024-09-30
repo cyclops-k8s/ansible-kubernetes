@@ -2,7 +2,12 @@
   ansible.builtin.import_tasks: update-apt-repositories.yml
 
 - name: Get latest specified version of kubeadm, kubelet and kubectl
-  ansible.builtin.shell: apt-cache madison kubeadm | grep "{{ version }}" | head -n 1 | awk '{print $3}'
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      apt-cache madison kubeadm | grep "{{ version }}" | head -n 1 | awk '{print $3}'
+    executable: /bin/bash
+  changed_when: true
   register: k8s_version_temp
 
 - name: Set k8s_version fact
@@ -25,32 +30,32 @@
   - kubectl
 
 - name: Get kubeadm version
-  ansible.builtin.shell:
-    cmd: kubeadm version -o short
+  ansible.builtin.command: kubeadm version -o short
   register: kubeadm_version
   changed_when: false
 
 - name: Upgrade kubernetes primary control plane node
-  ansible.builtin.shell:
-    cmd: kubeadm upgrade apply {{ kubeadm_version.stdout }} --config {{ kubernetes_config_directory }}/kubeadm.yaml --yes
+  ansible.builtin.command: kubeadm upgrade apply {{ kubeadm_version.stdout }} --config {{ kubernetes_config_directory }}/kubeadm.yaml --yes
+  changed_when: true
   when: first_kube_control_plane == inventory_hostname
 
 - name: Upgrade non kubernetes primary control plane node
-  ansible.builtin.shell:
-    cmd: kubeadm upgrade node --config {{ kubernetes_config_directory }}/kubeadm.yaml
+  ansible.builtin.command: kubeadm upgrade node --config {{ kubernetes_config_directory }}/kubeadm.yaml
+  changed_when: true
   when: first_kube_control_plane != inventory_hostname
 
 - name: Drain kubernetes node
   ansible.builtin.shell:
     cmd: |
       kubectl drain {{ inventory_hostname_short }} --ignore-daemonsets --delete-emptydir-data --force --grace-period=30 --kubeconfig /etc/kubernetes/admin.conf
+  changed_when: true
   delegate_to: "{{ first_kube_control_plane }}"
 
 - name: Update kubelet and kubectl to specified k8s_version
   ansible.builtin.apt:
     name: "{{ item }}"
     state: present
-    allow_change_held_packages : true
+    allow_change_held_packages: true
   with_items:
   - kubelet={{ k8s_version }}
   - kubectl={{ k8s_version }}
@@ -71,9 +76,11 @@
 - name: Uncordon kubernetes node
   ansible.builtin.shell:
     cmd: timeout 300 bash -c 'while [[ ! `sudo kubectl uncordon kube1-cp-01 --kubeconfig /etc/kubernetes/admin.conf` ]]; do sleep 5; done'
+  changed_when: true
   delegate_to: "{{ first_kube_control_plane }}"
 
 - name: Wait for kubernetes node to be ready
   ansible.builtin.shell:
     cmd: timeout 300 bash -c 'while [[ ! `kubectl wait --for=condition=Ready node/{{ inventory_hostname_short }} --timeout=5m --kubeconfig /etc/kubernetes/admin.conf` ]]; do sleep 5; done'
+  changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"

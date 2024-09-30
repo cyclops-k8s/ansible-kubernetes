@@ -7,7 +7,8 @@
     group: root
 
 - name: Add an apt signing key for Kubernetes
-  ansible.builtin.shell: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+  ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+  changed_when: false
   args:
     creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
 

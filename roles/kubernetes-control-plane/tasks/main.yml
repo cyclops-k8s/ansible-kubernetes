@@ -21,7 +21,7 @@
 - name: Get Join token
   ansible.builtin.shell:
     cmd: |
-      kubeadm token create
+      kubeadm token create --kubeconfig /etc/kubernetes/admin.conf
   delegate_to: "{{ first_kube_control_plane }}"
   run_once: true
   register: temp_token
