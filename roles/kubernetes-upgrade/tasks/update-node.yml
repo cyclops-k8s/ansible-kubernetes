@@ -65,6 +65,7 @@
     name: containerd.io
     state: latest
     allow_change_held_packages: true
+    only_upgrade: true
 
 - name: Reload kubelet
   ansible.builtin.service:
