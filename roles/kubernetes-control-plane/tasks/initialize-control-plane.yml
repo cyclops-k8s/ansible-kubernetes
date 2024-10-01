@@ -60,9 +60,6 @@
     register: cluster_role_binding_oidc_admins
     changed_when: true
 
-  - name: Install vsphere-cpi
-    ansible.builtin.import_tasks: install-vsphere.yml
-
   # CIS 1.2.5
   - name: Install kubelet-csr-approver
     ansible.builtin.import_tasks: install-kubelet-csr-approver.yml
@@ -87,7 +84,7 @@
           fix:kube-scheduler:extension-apiserver-authentication-reader \
           | tee {{ kubernetes_output_directory }}kube-scheduler-rolebinding
       executable: /bin/bash
-      creates: "{{ kubernetes_output_directory }}kube-scheduler-rolebinding" 
+      creates: "{{ kubernetes_output_directory }}kube-scheduler-rolebinding"
     register: kube_scheduler_rolebinding
 
   - name: Copy admin.conf

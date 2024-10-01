@@ -55,6 +55,7 @@ kubernetes_audit_log_max_age: 30
 kubernetes_audit_log_max_backup: 10
 kubernetes_audit_log_max_size: 100
 kubernetes_audit_log_path: /var/log/apiserver/audit.log
+kubernetes_cloud_provider: null
 kubernetes_config_directory: /etc/kubernetes/config
 kubernetes_cluster_signing_duration: 8760h
 kubernetes_cluster_name: cluster
@@ -149,8 +150,3 @@ kubernetes_strong_cypher_suites:
 - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
 
 kubernetes_version: "1.31"
-
-kubernetes_vsphere_server: null
-kubernetes_vsphere_username: null
-kubernetes_vsphere_password: null
-kubernetes_vsphere_datacenter: null

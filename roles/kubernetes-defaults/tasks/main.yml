@@ -13,8 +13,5 @@
     - kubernetes_oidc_issuer_url != None
     - kubernetes_oidc_client_id != None
     - (kubernetes_kubelogin_flavor == 'azure' and kubernetes_kubelogin_azure_tenant != None and kubernetes_kubelogin_azure_client_id != None) or kubernetes_kubelogin_flavor == 'int128'
-    - kubernetes_vsphere_server != None
-    - kubernetes_vsphere_username != None
-    - kubernetes_vsphere_password != None
-    - kubernetes_vsphere_datacenter != None
     - kubernetes_encryption_key != None
+    - kubernetes_cloud_provider == 'external' or kubernetes_cloud_provider == None

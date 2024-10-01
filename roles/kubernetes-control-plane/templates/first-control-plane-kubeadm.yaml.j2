@@ -140,7 +140,9 @@ skipPhases:
 {% endif %}
 nodeRegistration:
   kubeletExtraArgs:
+{% if kubernetes_cloud_provider == 'vsphere' or kubernetes_cloud_provider == 'external' %}
     cloud-provider: "external"
+{% endif %}
     node-ip: "{{ ansible_default_ipv4.address}}"
 patches:
   directory: {{ kubernetes_config_directory }}/patches
