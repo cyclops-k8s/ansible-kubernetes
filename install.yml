@@ -1,46 +1,46 @@
-- name: Configure the proxies
-  hosts: proxies
-  become: true
-  tasks:
-  roles:
-  - role: kubernetes-proxy
+# - name: Configure the proxies
+#   hosts: proxies
+#   become: true
+#   tasks:
+#   roles:
+#   - role: kubernetes-proxy
 
-- name: "Install containerd.io"
-  hosts:
-  - kubernetes
-  become: true
-  roles:
-  - role: containerd
+# - name: "Install containerd.io"
+#   hosts:
+#   - kubernetes
+#   become: true
+#   roles:
+#   - role: containerd
 
-- name: Install kubernetes pre-requisites
-  hosts:
-  - kubernetes
-  become: true
-  roles:
-  - role: kubernetes-defaults
-  - role: kubernetes
+# - name: Install kubernetes pre-requisites
+#   hosts:
+#   - kubernetes
+#   become: true
+#   roles:
+#   - role: kubernetes-defaults
+#   - role: kubernetes
 
-- name: Install Control Planes
-  hosts: control_planes
-  become: true
-  serial: 1
-  roles:
-  - role: kubernetes-defaults
-  - role: kubernetes-control-plane
+# - name: Install Control Planes
+#   hosts: control_planes
+#   become: true
+#   serial: 1
+#   roles:
+#   - role: kubernetes-defaults
+#   - role: kubernetes-control-plane
 
-- name: Post control plane hooks
-  hosts: control_planes
-  become: true
-  roles:
-  - role: kubernetes-defaults
-  - role: post-kubernetes-control-plane
+# - name: Post control plane hooks
+#   hosts: control_planes
+#   become: true
+#   roles:
+#   - role: kubernetes-defaults
+#   - role: post-kubernetes-control-plane
 
-- name: Install worker nodes
-  hosts: worker_nodes
-  become: true
-  roles:
-  - role: kubernetes-defaults
-  - role: kubernetes-worker
+# - name: Install worker nodes
+#   hosts: worker_nodes
+#   become: true
+#   roles:
+#   - role: kubernetes-defaults
+#   - role: kubernetes-worker
 
 - name: Post worker node hooks
   hosts: worker_nodes

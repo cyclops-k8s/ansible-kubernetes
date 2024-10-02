@@ -27,13 +27,11 @@
     loop_control:
       loop_var: file
     with_items:
-    - {name: argocd-github-repo.yaml, src: argocd-github-repo.yaml}
-    - {name: argocd-ingress.yaml, src: argocd-ingress.yaml}
     - {name: kustomization.yaml, src: argocd-kustomization.yaml}
     - {name: argocd-rbac-cm.yaml, src: argocd-rbac-cm.yaml}
     - {name: argocd-service.yaml, src: argocd-service.yaml}
-    - {name: argocd-deploy-command.yaml, src: argocd-deploy-command.yaml}
     - {name: argocd-cmd-params-cm.yaml, src: argocd-cmd-params-cm.yaml}
+
   - name: Copy argo templates
     ansible.builtin.template:
       src: "{{ file.src }}"
@@ -46,6 +44,7 @@
     with_items:
     - {name: argocd-cm.yaml, src: argocd-cm.yaml.j2}
     - {name: argocd-secret.yaml, src: argocd-secret.yaml.j2}
+    - {name: argocd-ingress.yaml, src: argocd-ingress.yaml}
 
   - name: Install ArgoCD
     ansible.builtin.shell:
