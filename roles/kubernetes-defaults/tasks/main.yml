@@ -6,12 +6,9 @@
 - name: Validate parameters
   ansible.builtin.assert:
     that:
-    - kubernetes_kubelet_csr_approver_ips != None
-    - kubernetes_kubelet_csr_approver_regex != None
     - kubernetes_api_endpoint != None
     - kubernetes_api_port > 0
     - kubernetes_oidc_issuer_url != None
     - kubernetes_oidc_client_id != None
-    - (kubernetes_kubelogin_flavor == 'azure' and kubernetes_kubelogin_azure_tenant != None and kubernetes_kubelogin_azure_client_id != None) or kubernetes_kubelogin_flavor == 'int128'
     - kubernetes_encryption_key != None
     - kubernetes_cloud_provider == 'external' or kubernetes_cloud_provider == None

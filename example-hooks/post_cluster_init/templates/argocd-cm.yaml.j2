@@ -4,7 +4,7 @@ metadata:
   name: argocd-cm
 data:
   admin.enabled: "false"
-  url: https://argo.cookes.io
+  url: "{{ argocd_fqdn }}"
   oidc.config: |
     name: Azure
     issuer: https://login.microsoftonline.com/{{ argocd_oidc_azure_tenant_id }}/v2.0

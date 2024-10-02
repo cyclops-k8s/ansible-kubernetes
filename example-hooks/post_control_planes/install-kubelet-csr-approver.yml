@@ -1,4 +1,4 @@
-# To help with CIS benchmarks related to securing communication between the api server and kubelet we need to approve csr's for the kublet service.
+# To help with CIS benchmarks related to securing communication between the api server and kubelet we need to approve csr's for the kublet service. (1.2.5)
 # By default this doesn't happen automatically, we are including this project so it does.
 - name: Install kubelet-csr-approver
   block:

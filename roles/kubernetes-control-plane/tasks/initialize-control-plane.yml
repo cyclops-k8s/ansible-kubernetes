@@ -60,10 +60,6 @@
     register: cluster_role_binding_oidc_admins
     changed_when: true
 
-  # CIS 1.2.5
-  - name: Install kubelet-csr-approver
-    ansible.builtin.import_tasks: install-kubelet-csr-approver.yml
-
   - name: Set admin.conf namespace to kube-system
     ansible.builtin.shell:
       cmd: |

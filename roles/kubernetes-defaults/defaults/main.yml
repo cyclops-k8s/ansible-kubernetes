@@ -6,10 +6,6 @@ kubernetes_etcd_init_container_image: alpine:latest
 kubernetes_etcd_group_id: 500
 kubernetes_etcd_user_id: 500
 
-kubernetes_kubelet_csr_approver_bypass_dns_checks: false
-kubernetes_kubelet_csr_approver_ips: null
-kubernetes_kubelet_csr_approver_regex: null
-
 kubernetes_admission_control_plugins:
 # CIS 1.2.11
 - AlwaysPullImages
@@ -105,12 +101,6 @@ kubernetes_hookfiles:
 kubernetes_init_skip_phases: []
 kubernetes_kubeadm_init_extra_args: ""
 
-# azure or int128
-kubernetes_kubelogin_flavor: azure
-kubernetes_kubelogin_azure_login_arg: azurecli
-kubernetes_kubelogin_azure_tenant: null
-kubernetes_kubelogin_azure_client_id: "{{ kubernetes_oidc_client_id }}"
-kubernetes_kubelogin_int128_use_pkce: false
 
 kubernetes_mirror: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/
 kubernetes_node_cidr_mask_size: 24
