@@ -66,6 +66,12 @@
                   password = "{{ item.password | b64encode }}"
     notify: Restart containerd service
 
+  - name: Set permissions to 0600 on /etc/containerd/config.toml
+    ansible.builtin.file:
+      mode: '0600'
+      dest: /etc/containerd/config.toml
+    notify: Restart containerd service
+
   rescue:
   - name: Output containerd_configured
     ansible.builtin.debug:
