@@ -41,3 +41,50 @@
     name:
     - containerd.io
     state: present
+
+- name: Set containerd systemd cgroup
+  block:
+  - name: Set containerd systemd cgroup
+    ansible.builtin.shell:
+      cmd: |
+        set -eo pipefail
+        containerd config default | sed "s/SystemdCgroup = false/SystemdCgroup = true/" > /etc/containerd/config.toml
+        touch {{ kubernetes_output_directory }}containerd-configured
+      executable: /bin/bash
+      creates: "{{ kubernetes_output_directory }}containerd-configured"
+    register: containerd_configured
+    notify: Restart containerd service
+
+  - name: Add containerd default credentials
+    with_items: "{{ containerd_credentials }}"
+    ansible.builtin.lineinfile:
+      dest: /etc/containerd/config.toml
+      insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.configs\]'
+      line: >2
+                [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ item.registry }}".auth]
+                  username = "{{ item.username }}"
+                  password = "{{ item.password | b64encode }}"
+    notify: Restart containerd service
+
+  rescue:
+  - name: Output containerd_configured
+    ansible.builtin.debug:
+      msg: |
+        {{ containerd_configured.stdout_lines }}
+        {{ containerd_configured.stderr_lines }}
+    when: containerd_configured.stdout_lines is defined
+
+  - name: Remove containerd systemd cgroup
+    ansible.builtin.file:
+      state: absent
+      path: "{{ item }}"
+    with_items:
+    - "{{ kubernetes_output_directory }}containerd-configured"
+    - /etc/containerd/config.toml
+
+  - name: Fail containerd systemd cgroup
+    ansible.builtin.fail:
+      msg: "Failed to set containerd systemd cgroup"
+
+  - name: Flush handlers
+    ansible.builtin.meta: flush_handlers

@@ -1,6 +1,13 @@
 kubernetes_cilium_clusterpoolipv4podcidrlist:
 - 10.2.128.0/17
 
+kubernetes_containerd_credentials: []
+# kubernetes_containerd_credentials:
+# - username: "username"
+#   password: "password"
+#   registry: "docker.io"
+kubernetes_containerd_mirror: https://download.docker.com/linux/{{ ansible_distribution | lower }}
+
 # CIS 1.1.12
 kubernetes_etcd_init_container_image: alpine:latest
 kubernetes_etcd_group_id: 500

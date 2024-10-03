@@ -23,9 +23,6 @@
     state: directory
     mode: '0700'
 
-- name: Configure ContainerD
-  ansible.builtin.import_tasks: configure-containerd.yml
-
 - name: Configure Kernel
   ansible.builtin.import_tasks: configure-kernel.yml
 

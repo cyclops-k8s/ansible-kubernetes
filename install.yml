@@ -10,7 +10,11 @@
   - kubernetes
   become: true
   roles:
+  - role: kubernetes-defaults
   - role: containerd
+  vars:
+    containerd_credentials: "{{ kubernetes_containerd_credentials }}"
+    containerd_mirror: "{{ kubernetes_containerd_mirror }}"
 
 - name: Install kubernetes pre-requisites
   hosts:
