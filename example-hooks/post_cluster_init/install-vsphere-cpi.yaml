@@ -7,9 +7,9 @@
         set -e
         helm repo add vsphere-cpi https://kubernetes.github.io/cloud-provider-vsphere
         helm repo update
-        touch {{ kubernetes_output_directory }}vsphere-cpi-repo-added
+        touch {{ kubernetes_output_directory }}/vsphere-cpi-repo-added
       executable: /bin/bash
-      creates: "{{ kubernetes_output_directory }}vsphere-cpi-repo-added"
+      creates: "{{ kubernetes_output_directory }}/vsphere-cpi-repo-added"
     register: vsphere_cpi_repo_added
 
   - name: Set vsphere cpi config
@@ -29,14 +29,14 @@
           --namespace kube-system \
           --values {{ kubernetes_config_directory }}/vsphere-cpi.yaml
 
-        touch {{ kubernetes_output_directory }}vsphere-cpi-installed
+        touch {{ kubernetes_output_directory }}/vsphere-cpi-installed
       executable: /bin/bash
-      creates: "{{ kubernetes_output_directory }}vsphere-cpi-installed"
+      creates: "{{ kubernetes_output_directory }}/vsphere-cpi-installed"
     register: vsphere_cpi_installed
   rescue:
   - name: Delete vsphere-cpi-installed
     ansible.builtin.file:
-      path: "{{ kubernetes_output_directory }}vsphere-cpi-installed"
+      path: "{{ kubernetes_output_directory }}/vsphere-cpi-installed"
       state: absent
 
   - name: Output vsphere-cpi-repo-added lines

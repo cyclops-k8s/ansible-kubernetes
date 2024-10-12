@@ -1,13 +1,14 @@
 - name: Configure the proxies
   hosts: proxies
+  any_errors_fatal: true
   become: true
-  tasks:
   roles:
   - role: kubernetes-proxy
 
 - name: "Install containerd.io"
   hosts:
   - kubernetes
+  any_errors_fatal: true
   become: true
   roles:
   - role: kubernetes-defaults
@@ -19,6 +20,7 @@
 - name: Install kubernetes pre-requisites
   hosts:
   - kubernetes
+  any_errors_fatal: true
   become: true
   roles:
   - role: kubernetes-defaults
@@ -26,6 +28,7 @@
 
 - name: Install Control Planes
   hosts: control_planes
+  any_errors_fatal: true
   become: true
   serial: 1
   roles:
@@ -34,6 +37,7 @@
 
 - name: Post control plane hooks
   hosts: control_planes
+  any_errors_fatal: true
   become: true
   roles:
   - role: kubernetes-defaults
@@ -41,6 +45,7 @@
 
 - name: Install worker nodes
   hosts: worker_nodes
+  any_errors_fatal: true
   become: true
   roles:
   - role: kubernetes-defaults
@@ -48,6 +53,7 @@
 
 - name: Post worker node hooks
   hosts: worker_nodes
+  any_errors_fatal: true
   become: true
   roles:
   - role: kubernetes-defaults

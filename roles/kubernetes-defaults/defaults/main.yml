@@ -54,12 +54,34 @@ kubernetes_admission_configuration:
   warn_version: "latest"
 kubernetes_api_endpoint: null
 kubernetes_api_port: 6443
+
+# Expects an array of dictionaries with the following keys: name, source, destination, mode
+# mode defaults to File
+# destination defaults to the same value as source
+# name must be unique and not any of the following
+# - authentication
+# - authorization
+# - encryption-config
+# - audit-policy
+# - audit-log
+# - admission-configuration
+# - ca-certs
+# - etc-ca-certificates
+# - k8s-certs
+# - usr-local-share-ca-certificates
+# - usr-share-ca-certificates
+kubernetes_api_server_additional_mounts: []
 kubernetes_audit_log_max_age: 30
 kubernetes_audit_log_max_backup: 10
 kubernetes_audit_log_max_size: 100
 kubernetes_audit_log_path: /var/log/apiserver/audit.log
+kubernetes_authorization_pre_node: []
+kubernetes_authorization_pre_rbac: []
+kubernetes_authorization_post_rbac: []
 kubernetes_cloud_provider: null
 kubernetes_config_directory: /etc/kubernetes/config
+kubernetes_control_plane_additional_files: []
+kubernetes_control_plane_additional_templates: []
 kubernetes_cluster_signing_duration: 8760h
 kubernetes_cluster_name: cluster
 kubernetes_dns_domain: cluster.local

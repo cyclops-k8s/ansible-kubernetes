@@ -19,8 +19,8 @@
         --kubeconfig /etc/kubernetes/admin.conf \
         --namespace kube-system \
         --values {{ kubernetes_config_directory }}/cilium.yaml \
-        2>&1 | tee {{ kubernetes_output_directory }}cilium-installed
-    creates: "{{ kubernetes_output_directory }}cilium-installed"
+        2>&1 | tee {{ kubernetes_output_directory }}/cilium-installed
+    creates: "{{ kubernetes_output_directory }}/cilium-installed"
     executable: /bin/bash
   register: cilium
   run_once: true

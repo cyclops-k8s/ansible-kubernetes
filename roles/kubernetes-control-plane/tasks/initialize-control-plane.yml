@@ -22,8 +22,8 @@
         set -eo pipefail
         kubeadm init --config {{ kubernetes_config_directory }}/kubeadm.yaml \
           {{ kubernetes_kubeadm_init_extra_args }} 2>&1 \
-          | tee {{ kubernetes_output_directory }}kubeadm
-      creates: "{{ kubernetes_output_directory }}kubeadm"
+          | tee {{ kubernetes_output_directory }}/kubeadm
+      creates: "{{ kubernetes_output_directory }}/kubeadm"
       executable: /bin/bash
     register: kubeadm_init_output
 
@@ -54,9 +54,9 @@
           --clusterrole=cluster-admin \
           --group "{{ kubernetes_group_prefix | default('oidc:') }}Admins" \
           --kubeconfig /etc/kubernetes/admin.conf \
-          | tee {{ kubernetes_output_directory }}cluster-admin-binding-created
+          | tee {{ kubernetes_output_directory }}/cluster-admin-binding-created
       executable: /bin/bash
-      creates: "{{ kubernetes_output_directory }}cluster-admin-binding-created"
+      creates: "{{ kubernetes_output_directory }}/cluster-admin-binding-created"
     register: cluster_role_binding_oidc_admins
     changed_when: true
 

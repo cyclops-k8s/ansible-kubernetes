@@ -49,9 +49,8 @@
       cmd: |
         set -eo pipefail
         containerd config default | sed "s/SystemdCgroup = false/SystemdCgroup = true/" > /etc/containerd/config.toml
-        touch {{ kubernetes_output_directory }}containerd-configured
       executable: /bin/bash
-      creates: "{{ kubernetes_output_directory }}containerd-configured"
+      creates: /etc/containerd/config.toml
     register: containerd_configured
     notify: Restart containerd service
 
@@ -65,6 +64,7 @@
                   username = "{{ item.username }}"
                   password = "{{ item.password | b64encode }}"
     notify: Restart containerd service
+    no_log: true
 
   - name: Set permissions to 0600 on /etc/containerd/config.toml
     ansible.builtin.file:
@@ -85,7 +85,7 @@
       state: absent
       path: "{{ item }}"
     with_items:
-    - "{{ kubernetes_output_directory }}containerd-configured"
+    - "{{ kubernetes_output_directory }}/containerd-configured"
     - /etc/containerd/config.toml
 
   - name: Fail containerd systemd cgroup
