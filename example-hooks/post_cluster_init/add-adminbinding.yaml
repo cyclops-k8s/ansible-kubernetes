@@ -1,0 +1,19 @@
+- name: Set cluster role binding for admin
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      kubectl create clusterrolebinding oidc-admins \
+        --clusterrole=cluster-admin \
+        --group "{{ kubernetes_group_prefix | default('oidc:') }}Admins" \
+        --kubeconfig /etc/kubernetes/admin.conf \
+        | tee {{ kubernetes_output_directory }}/cluster-admin-binding-created
+    executable: /bin/bash
+    creates: "{{ kubernetes_output_directory }}/cluster-admin-binding-created"
+  register: cluster_role_binding_oidc_admins
+  changed_when: true
+
+- name: Write cluster_role_binding_oidc_admins init output to stdout
+  ansible.builtin.debug:
+    msg: |
+      {{ cluster_role_binding_oidc_admins }}
+  when: cluster_role_binding_oidc_admins is defined
