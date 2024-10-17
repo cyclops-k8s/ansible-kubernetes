@@ -3,7 +3,10 @@
   any_errors_fatal: true
   become: true
   roles:
+  - role: kubernetes-defaults
   - role: kubernetes-proxy
+  vars:
+    skip_checks: true
 
 - name: "Install containerd.io"
   hosts:

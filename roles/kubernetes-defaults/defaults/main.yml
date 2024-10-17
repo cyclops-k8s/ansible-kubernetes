@@ -82,6 +82,7 @@ kubernetes_cloud_provider: null
 kubernetes_config_directory: /etc/kubernetes/config
 kubernetes_control_plane_additional_files: []
 kubernetes_control_plane_additional_templates: []
+kubernetes_control_plane_check_interval: 100ms
 kubernetes_cluster_signing_duration: 8760h
 kubernetes_cluster_name: cluster
 kubernetes_dns_domain: cluster.local
@@ -169,3 +170,4 @@ kubernetes_strong_cypher_suites:
 - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
 
 kubernetes_version: "1.31"
+skip_checks: false

@@ -12,3 +12,4 @@
     - kubernetes_oidc_client_id != None
     - kubernetes_encryption_key != None
     - kubernetes_cloud_provider == 'external' or kubernetes_cloud_provider == None
+  when: not skip_checks

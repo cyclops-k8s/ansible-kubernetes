@@ -37,8 +37,16 @@ defaults
 
  backend kubernetes-controlplane
     mode tcp
+
+    option httpchk
+
+    http-check connect ssl port 6443
+    http-check send meth GET uri /healthz
+
+    timeout connect 5000
+    timeout server  50000
 {% for host in groups['control_planes'] %}
-    server {{ host }} {{ host }}:6443 check
+    server {{ host }} {{ host }}:6443 check inter {{ kubernetes_control_plane_check_interval | default('100ms') }} verify none
 {% endfor %}
     timeout connect 5000
     timeout server  50000
