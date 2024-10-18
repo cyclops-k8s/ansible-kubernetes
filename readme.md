@@ -8,10 +8,42 @@ with the Calico CNI and the VSphere CPI.
 It is a vanilla `kubeadm` cluster that can be managed by `kubeadm` going forward, or for easy upgrades
 you can use the `upgrade` playbook.
 
-It uses official helm charts or manifests to install the VSphere CPI and Calico CNI.
-
 It installs HAProxy and Keepalived on the proxy nodes, this is needed for high availability of the cluster's
 control plane.
+
+## Running
+
+Execute the `install.yml` playbook. There are a number of configurable options (see below). It is fully configurable and does not need to be copied and modified. If there additional extension points needed in this playbook/roles then please open an issue. We gladly accept pull requests.
+
+This playbook is currently tested on Ubuntu 24.04 LTS.
+
+You will probably need to add some hooks to create a fully working cluster, at a minimum the CSI. There are example hooks for 2 different CSI's, Calico and Cilium that you can use to complete your cluster.
+
+## Hooks
+To install different pieces of the cluster, things like the CNI, CPI or CSI you can use the different hook entry points. There is a number of example hooks in the [example-hooks](example-hooks) directory.
+
+Hooks are tasks that are imported in the different stages of the cluster.
+
+The different hooks are as follows
+* After the cluster is initialized
+    * This is where you would install the CPI and CNI.
+    * You can also use the example `add-adminbinding.yaml` hook to setup the oidc:Admins binding so members of the Admin role in your application client can fully access the cluster.
+* After each control plane is added to the cluster
+    * This is where you would do things that would be specific to a control plane. These tasks run on the control plane that was just added
+* After all control planes are added
+    * This is where you run tasks that would run on the control plane nodes. These tasks run on each of the control plane nodes.
+    * If you want to run the tasks only once you can set the `run_once`.
+    * If you want to use `helm` or `kustomize`, those are installed on the `first_kube_control_plane` so you can use `delegate_to` and have those run on that node.
+    * A good use for this hook is setting up your local kubeconfig.
+* After all worker nodes are added
+    * This would be a good spot to install other applications, like bootstrapping `argocd` or installing `kubevip`.
+
+## Configuration
+I'm not going to cover every option in this section as it is vast, the name of what they do is pretty self explanatory. There are a few that are required however and they are noted in the default options file along with their purpose
+
+Each option, if related to a CIS benchmark or STIG is noted in the defaults file.
+
+You can see all of the different options in [roles/kubernetes-defaults/defaults/main.yml](roles/kubernetes-defaults/defaults/main.yml)
 
 ## CIS Benchmark
 

@@ -1,5 +1,8 @@
-kubernetes_cilium_clusterpoolipv4podcidrlist:
-- 10.2.128.0/17
+kubernetes_control_plane_ip: null
+
+# Required
+# This is the password used by keepalived in the proxy nodes to move the floating ip between proxy nodes
+vrrp_password: null
 
 kubernetes_containerd_credentials: []
 # kubernetes_containerd_credentials:
@@ -52,7 +55,12 @@ kubernetes_admission_configuration:
     - kube-system
   warn: "privileged"
   warn_version: "latest"
+
+# Required to be set, this is the FQDN of the load balanced API endpoint.
+# Your clients will use this endpoint to interface with the cluster.
+# This DNS entry should already be setup before running the playbooks.
 kubernetes_api_endpoint: null
+
 kubernetes_api_port: 6443
 
 # Expects an array of dictionaries with the following keys: name, source, destination, mode
@@ -78,7 +86,10 @@ kubernetes_audit_log_path: /var/log/apiserver/audit.log
 kubernetes_authorization_pre_node: []
 kubernetes_authorization_pre_rbac: []
 kubernetes_authorization_post_rbac: []
+
+# If set, it must be external
 kubernetes_cloud_provider: null
+
 kubernetes_config_directory: /etc/kubernetes/config
 kubernetes_control_plane_additional_files: []
 kubernetes_control_plane_additional_templates: []
@@ -87,8 +98,8 @@ kubernetes_cluster_signing_duration: 8760h
 kubernetes_cluster_name: cluster
 kubernetes_dns_domain: cluster.local
 
+# Required
 # 32 bytes used to encrypt the etcd data, this should be base64 encoded.
-# if not specified, a random key will be generated and stored on the first control plane node.
 kubernetes_encryption_key: null
 
 # in order of execution
@@ -149,8 +160,13 @@ kubernetes_service_subnet: 10.96.0.0/16
 kubernetes_streamingconnectionidletimeout: 5m
 kubernetes_terminated_pod_gc_threshold: 10
 
+# Required
+# This is the issuer URL of the OIDC provider. Do not include the .well-known/openid-configuration path.
 kubernetes_oidc_issuer_url: null
+# Required
+# This is the client ID of the OIDC provider.
 kubernetes_oidc_client_id: null
+
 kubernetes_oidc_username_claim: upn
 kubernetes_oidc_username_prefix: "oidc:"
 kubernetes_oidc_group_claim: roles
