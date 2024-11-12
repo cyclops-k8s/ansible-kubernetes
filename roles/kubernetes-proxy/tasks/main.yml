@@ -8,7 +8,7 @@
 - name: Copy haproxy.cfg
   notify: restart-haproxy
   ansible.builtin.template:
-    src: haproxy.cfg.j2
+    src: "{{ kubernetes_proxy_haproxy_config_file }}"
     dest: /etc/haproxy/haproxy.cfg
     owner: root
     group: root

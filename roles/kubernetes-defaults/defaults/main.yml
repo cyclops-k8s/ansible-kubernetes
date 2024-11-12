@@ -155,6 +155,8 @@ kubernetes_podpidslimit: 100
 # STIG V-242409
 kubernetes_profiling: false
 
+kubernetes_proxy_haproxy_config_file: haproxy.cfg.j2
+
 kubernetes_scripts_directory: /opt/kubernetes/scripts
 kubernetes_service_subnet: 10.96.0.0/16
 kubernetes_streamingconnectionidletimeout: 5m

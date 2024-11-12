@@ -21,7 +21,8 @@ spec:
     - 'sleep 10 && cp -v /original-certs/* /certs && chown -R {{ kubernetes_etcd_user_id }}:{{ kubernetes_etcd_group_id }} /certs/* /var/lib/etcd'
   volumes:
   - name: etcd-certs
-    emptyDir: {}
+    emptyDir:
+      medium: Memory
     hostPath:
   - name: etcd-certs-original
     hostPath:

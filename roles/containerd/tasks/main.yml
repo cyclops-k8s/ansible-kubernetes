@@ -66,6 +66,13 @@
     notify: Restart containerd service
     no_log: true
 
+  - name: Remove disabled plugins
+    ansible.builtin.lineinfile:
+      dest: /etc/containerd/config.toml
+      regexp: 'disabled_plugins = \[.*\]'
+      state: absent
+    notify: Restart containerd service
+
   - name: Set permissions to 0600 on /etc/containerd/config.toml
     ansible.builtin.file:
       mode: '0600'

@@ -19,6 +19,15 @@ This playbook is currently tested on Ubuntu 24.04 LTS.
 
 You will probably need to add some hooks to create a fully working cluster, at a minimum the CSI. There are example hooks for 2 different CSI's, Calico and Cilium that you can use to complete your cluster.
 
+You will need to create 3 inventory groups.
+
+| Group | Purpose |
+|-|-|
+| `proxies` | These nodes will get `keepalived` and `haproxy` on them and configured to load balance the control plane nodes. This is what your clients will connect to, by default, port 6443 |
+| `kubernetes` | This will contain all of your kubernetes worker and control plane nodes |
+| `control_planes` | This will contain all of your control plane nodes |
+| `worker_nodes` | This will contain all of your worker nodes |
+
 ## Hooks
 To install different pieces of the cluster, things like the CNI, CPI or CSI you can use the different hook entry points. There is a number of example hooks in the [example-hooks](example-hooks) directory.
 
