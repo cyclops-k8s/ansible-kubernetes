@@ -150,7 +150,7 @@ kubernetes_output_directory: /etc/kubernetes/output
 
 kubernetes_pki_directory: /etc/kubernetes/pki
 kubernetes_pod_subnet: 10.244.0.0/16
-kubernetes_podpidslimit: 100
+kubernetes_podpidslimit: 1000
 # CIS 1.2.15, 1.3.2, 1.4.1 - Profiling should be turned off. Default in kubeadm is true.
 # STIG V-242409
 kubernetes_profiling: false
