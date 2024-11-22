@@ -61,5 +61,6 @@
   ansible.builtin.include_tasks: "{{ item }}"
   with_items: "{{ kubernetes_hookfiles.post_configure_workers }}"
   when:
+  - groups['worker_nodes'] is defined
   - inventory_hostname in groups['worker_nodes']
   - kubernetes_hookfiles.post_configure_workers is defined
