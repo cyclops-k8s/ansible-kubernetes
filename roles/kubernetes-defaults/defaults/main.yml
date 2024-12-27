@@ -1,9 +1,5 @@
 kubernetes_control_plane_ip: null
 
-# Required
-# This is the password used by keepalived in the proxy nodes to move the floating ip between proxy nodes
-vrrp_password: null
-
 kubernetes_containerd_credentials: []
 # kubernetes_containerd_credentials:
 # - username: "username"
@@ -189,3 +185,15 @@ kubernetes_strong_cypher_suites:
 
 kubernetes_version: "1.31"
 skip_checks: false
+
+# Required
+# This is the password used by keepalived in the proxy nodes to move the floating ip between proxy nodes
+vrrp_password: null
+
+# Required
+# The floating Kubernetes control plane IP address will live on this interface
+vrrp_interface: null
+
+# Required
+# The virtual router id for the Kubernetes control plane keepalived instance
+vrrp_virtual_router_id: null

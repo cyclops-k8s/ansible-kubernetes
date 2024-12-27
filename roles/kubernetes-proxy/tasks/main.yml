@@ -1,3 +1,10 @@
+- name: Validate Proxy Configuration
+  ansible.builtin.assert:
+    that:
+    - vrrp_interface != None
+    - vrrp_password != None
+    - vrrp_virtual_router_id != None
+
 - name: Install haproxy
   notify: restart-haproxy
   ansible.builtin.package:

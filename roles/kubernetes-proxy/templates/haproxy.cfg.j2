@@ -41,7 +41,7 @@ defaults
     option httpchk
 
     http-check connect ssl port 6443
-    http-check send meth GET uri /healthz
+    http-check send meth GET uri /readyz
 
     timeout connect 5000
     timeout server  50000

@@ -1,7 +1,7 @@
 vrrp_instance VI_1 {
     state {{ vrrp_state }}
-    interface ens192
-    virtual_router_id 51
+    interface {{ vrrp_interface }}
+    virtual_router_id {{ vrrp_virtual_router_id }}
     priority {{ vrrp_priority }}
     advert_int 1
     authentication {
