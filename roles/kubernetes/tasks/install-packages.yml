@@ -13,6 +13,14 @@
     args:
       creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
 
+  - name: Set GPG keyring permissions
+    ansible.builtin.file:
+      path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+      state: file
+      mode: '0644'
+      owner: root
+      group: root
+
   - name: Adding apt repository for Kubernetes
     ansible.builtin.apt_repository:
       repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /

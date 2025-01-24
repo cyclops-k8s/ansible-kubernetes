@@ -100,6 +100,12 @@ kubernetes_encryption_key: null
 
 # in order of execution
 kubernetes_hookfiles:
+  # run before any tasks that configure the proxies
+  pre_proxies: []
+
+  # run after the tasks that configure the proxies
+  post_proxies: []
+
   # At the beginning of every major section run these, this is a good spot to put in default variables
   default_configuration: []
 
@@ -152,6 +158,7 @@ kubernetes_podpidslimit: 1000
 kubernetes_profiling: false
 
 kubernetes_proxy_haproxy_config_file: haproxy.cfg.j2
+kubernetes_proxy_keepalived_config_file: keepalived.conf.j2
 
 kubernetes_scripts_directory: /opt/kubernetes/scripts
 kubernetes_service_subnet: 10.96.0.0/16

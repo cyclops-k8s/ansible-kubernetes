@@ -1,3 +1,8 @@
+- name: Pre proxy configuration hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.pre_proxies }}"
+  when: kubernetes_hookfiles.pre_proxies is defined
+
 - name: Validate Proxy Configuration
   ansible.builtin.assert:
     that:
@@ -36,7 +41,7 @@
 - name: Copy keepalived.conf
   notify: restart-keepalived
   ansible.builtin.template:
-    src: keepalived.conf.j2
+    src: "{{ kubernetes_proxy_keepalived_config_file }}"
     dest: /etc/keepalived/keepalived.conf
     owner: root
     mode: 0644
@@ -45,3 +50,8 @@
   ansible.builtin.systemd_service:
     enabled: true
     name: keepalived
+
+- name: Post proxy configuration hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.post_proxies }}"
+  when: kubernetes_hookfiles.post_proxies is defined

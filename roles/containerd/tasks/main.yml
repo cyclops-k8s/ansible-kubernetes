@@ -29,6 +29,14 @@
   args:
     creates: /etc/apt/keyrings/docker.gpg
 
+- name: Set GPG keyring permissions
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/docker.gpg
+    state: file
+    mode: '0644'
+    owner: root
+    group: root
+
 - name: Add Docker Repository
   ansible.builtin.apt_repository:
     repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] {{ containerd_mirror }} {{ ansible_distribution_release | lower }} stable
