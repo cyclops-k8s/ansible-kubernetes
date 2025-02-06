@@ -75,6 +75,32 @@ kubernetes_api_port: 6443
 # - usr-local-share-ca-certificates
 # - usr-share-ca-certificates
 kubernetes_api_server_additional_mounts: []
+
+# Extra arguments to pass to the Kubernetes API Server
+# Must not contain any of the following names:
+# audit-log-path
+# audit-log-maxage
+# audit-log-maxbackup
+# audit-log-maxsize
+# tls-cipher-suites
+# audit-policy-file
+# authentication-config
+# authorization-config
+# enable-admission-plugins
+# encryption-provider-config
+# encryption-provider-config-automatic-reload
+# kubelet-certificate-authority
+# profiling
+# admission-control-config-file
+# tls-min-version
+# service-account-issuer
+
+# Example:
+# kubernetes_api_server_extra_args:
+# - name: somearg
+#   value: somevalue
+kubernetes_api_server_extra_args: []
+
 kubernetes_audit_log_max_age: 30
 kubernetes_audit_log_max_backup: 10
 kubernetes_audit_log_max_size: 100
@@ -90,6 +116,22 @@ kubernetes_config_directory: /etc/kubernetes/config
 kubernetes_control_plane_additional_files: []
 kubernetes_control_plane_additional_templates: []
 kubernetes_control_plane_check_interval: 100ms
+
+# Extra arguments to pass to the Kubernetes Controller Manager
+# Must not contain any of the following names:
+# authentication-tolerate-lookup-failure
+# node-cidr-mask-size
+# terminated-pod-gc-threshold
+# cluster-signing-duration
+# profiling
+# tls-min-version
+
+# Example:
+# kubernetes_controller_manager_extra_args:
+# - name: somearg
+#   value: somevalue
+kubernetes_controller_manager_extra_args: []
+
 kubernetes_cluster_signing_duration: 8760h
 kubernetes_cluster_name: cluster
 kubernetes_dns_domain: cluster.local
@@ -98,8 +140,26 @@ kubernetes_dns_domain: cluster.local
 # 32 bytes used to encrypt the etcd data, this should be base64 encoded.
 kubernetes_encryption_key: null
 
+# Extra arguments to pass to the ETCD backend
+# Must not contain any of the following names:
+# authentication-tolerate-lookup-failure
+# peer-auto-tls
+# auto-tls
+
+# Example:
+# kubernetes_etcd_extra_args:
+# - name: somearg
+#   value: somevalue
+kubernetes_etcd_extra_args: []
+
 # in order of execution
 kubernetes_hookfiles:
+  # run before any tasks that configure the proxies
+  pre_proxies: []
+
+  # run after the tasks that configure the proxies
+  post_proxies: []
+
   # At the beginning of every major section run these, this is a good spot to put in default variables
   default_configuration: []
 
@@ -138,7 +198,6 @@ kubernetes_hookfiles:
 kubernetes_init_skip_phases: []
 kubernetes_kubeadm_init_extra_args: ""
 
-
 kubernetes_mirror: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/
 kubernetes_node_cidr_mask_size: 24
 
@@ -152,6 +211,19 @@ kubernetes_podpidslimit: 1000
 kubernetes_profiling: false
 
 kubernetes_proxy_haproxy_config_file: haproxy.cfg.j2
+kubernetes_proxy_keepalived_config_file: keepalived.conf.j2
+
+# Extra arguments to pass to the Kubernetes Scheduler
+# Must not contain any of the following names:
+# authentication-tolerate-lookup-failure
+# profiling
+# tls-min-version
+
+# Example:
+# kubernetes_scheduler_extra_args:
+# - name: somearg
+#   value: somevalue
+kubernetes_scheduler_extra_args: []
 
 kubernetes_scripts_directory: /opt/kubernetes/scripts
 kubernetes_service_subnet: 10.96.0.0/16
