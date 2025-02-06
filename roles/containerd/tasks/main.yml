@@ -70,7 +70,7 @@
       line: >2
                 [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ item.registry }}".auth]
                   username = "{{ item.username }}"
-                  password = "{{ item.password | b64encode }}"
+                  password = "{{ item.password }}"
     notify: Restart containerd service
     no_log: true
 
