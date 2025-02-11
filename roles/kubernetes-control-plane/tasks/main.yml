@@ -1,6 +1,7 @@
 - name: Initialize control plane
   ansible.builtin.import_tasks: initialize-control-plane.yml
-  when: first_kube_control_plane == inventory_hostname
+  delegate_to: "{{ first_kube_control_plane }}"
+  run_once: true
 
 - name: Get Join token
   ansible.builtin.shell:
@@ -27,7 +28,9 @@
 
 - name: Configure additional control planes
   ansible.builtin.import_tasks: secondary-control-plane.yml
-  when: first_kube_control_plane != inventory_hostname and inventory_hostname in groups['control_planes']
+  when:
+  - first_kube_control_plane != inventory_hostname
+  - inventory_hostname in groups['control_planes']
 
 - name: Approve all CSR's for kubelet's
   ansible.builtin.shell:

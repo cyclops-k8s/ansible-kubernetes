@@ -15,23 +15,28 @@
       name: kubelet
       state: stopped
       enabled: true
+    when:
+    - not kubernetes_already_installed
 
   - name: Run kubeadm init
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
         kubeadm init --config {{ kubernetes_config_directory }}/kubeadm.yaml \
-          {{ kubernetes_kubeadm_init_extra_args }} 2>&1 \
-          | tee {{ kubernetes_output_directory }}/kubeadm
-      creates: "{{ kubernetes_output_directory }}/kubeadm"
+          {{ kubernetes_kubeadm_init_extra_args }}
       executable: /bin/bash
+    changed_when: kubeadm_init_output.rc == 0
     register: kubeadm_init_output
+    when:
+    - not kubernetes_already_installed
 
   - name: Start kubelet
     ansible.builtin.service:
       name: kubelet
       state: started
       enabled: true
+    when:
+    - not kubernetes_already_installed
 
   - name: Wait for Kubernetes to fully finalize
     ansible.builtin.shell:
@@ -40,11 +45,15 @@
         timeout 120 bash -c 'until kubectl get serviceaccount -n default default; do sleep 5; done'
       executable: /bin/bash
     changed_when: false
+    when:
+    - not kubernetes_already_installed
 
   - name: Post cluster init hooks
     ansible.builtin.include_tasks: "{{ item }}"
     with_items: "{{ kubernetes_hookfiles.post_cluster_init }}"
-    when: kubernetes_hookfiles.post_cluster_init is defined
+    when:
+    - kubernetes_hookfiles.post_cluster_init is defined
+    - not kubernetes_already_installed
 
   - name: Set admin.conf namespace to kube-system
     ansible.builtin.shell:
@@ -54,6 +63,8 @@
         touch {{ kubernetes_output_directory }}admin-namespace-set
       creates: "{{ kubernetes_output_directory }}admin-namespace-set"
     register: admin_namespace_set
+    when:
+    - not kubernetes_already_installed
 
   - name: Create cluster role binding to make the kube-scheduler fully happy
     ansible.builtin.shell:
@@ -63,22 +74,27 @@
           --namespace kube-system \
           --role=extension-apiserver-authentication-reader \
           --user system:kube-scheduler \
-          fix:kube-scheduler:extension-apiserver-authentication-reader \
-          | tee {{ kubernetes_output_directory }}kube-scheduler-rolebinding
+          fix:kube-scheduler:extension-apiserver-authentication-reader
       executable: /bin/bash
-      creates: "{{ kubernetes_output_directory }}kube-scheduler-rolebinding"
+    changed_when: kube_scheduler_rolebinding.rc == 0
     register: kube_scheduler_rolebinding
+    when:
+    - not kubernetes_already_installed
 
   - name: Copy admin.conf
     ansible.builtin.command: cp /etc/kubernetes/admin.conf /root/.kube/config
     register: copy_admin_conf
     changed_when: copy_admin_conf.rc == 0
+    when:
+    - not kubernetes_already_installed
 
   # CIS 1.1.20, STIG V-242466
   - name: CIS 1.1.20, STIG V-242466 - Secure certificates
     ansible.builtin.shell:
       cmd: chmod 0600 --recursive {{ kubernetes_pki_directory }}/*.crt
     changed_when: true
+    when:
+    - not kubernetes_already_installed
 
   # CIS 1.2.5
   - name: CIS 1.2.5 - Copy crb-kubeletcerts.yml
@@ -88,22 +104,28 @@
       owner: root
       group: root
       mode: '0600'
+    when:
+    - not kubernetes_already_installed
 
   - name: CIS 1.2.5 - Create cluster role bindings for kubelet certs
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
-        kubectl apply -f {{ kubernetes_config_directory }}/crb-kubeletcerts.yml --kubeconfig /etc/kubernetes/admin.conf | tee {{ kubernetes_output_directory }}crb-kubeletcerts
+        kubectl get clusterrolebinding create-csrs-for-bootstrapping && exit 0 || true
+        kubectl apply -f {{ kubernetes_config_directory }}/crb-kubeletcerts.yml --kubeconfig /etc/kubernetes/admin.conf
       executable: /bin/bash
-      creates: "{{ kubernetes_output_directory }}crb-kubeletcerts"
     register: crb_kubeletcerts
     changed_when: true
+    when:
+    - not kubernetes_already_installed
 
   # CIS 4.1.1
   - name: CIS 4.1.1 - Set kubelet.service to 0600
     ansible.builtin.file:
       path: /usr/lib/systemd/system/kubelet.service
       mode: '0600'
+    when:
+    - not kubernetes_already_installed
 
   # CIS 4.1.9
   # STIG V-242407
@@ -111,6 +133,8 @@
     ansible.builtin.file:
       path: /var/lib/kubelet/config.yaml
       mode: '0600'
+    when:
+    - not kubernetes_already_installed
 
   # CIS 5.1.5
   - name: Create service account patch file
@@ -125,6 +149,9 @@
       owner: root
       group: root
       mode: '0600'
+    when:
+    - not kubernetes_already_installed
+
   - name: Apply service account patch
     ansible.builtin.shell:
       cmd: |
@@ -133,22 +160,21 @@
         export KUBECONFIG=/etc/kubernetes/admin.conf
 
         for namespace in $(kubectl get namespaces -A -o=jsonpath="{.items[*]['metadata.name']}"); do
-          echo -n "Patching namespace $namespace - " | tee -a {{ kubernetes_output_directory }}serviceaccount-patch
-          kubectl patch serviceaccount default -n ${namespace} --patch-file /etc/kubernetes/config/default-serviceaccount-patch.yaml | tee -a {{ kubernetes_output_directory }}serviceaccount-patch
+          echo -n "Patching namespace $namespace - "
+          kubectl patch serviceaccount default -n ${namespace} --patch-file /etc/kubernetes/config/default-serviceaccount-patch.yaml
         done
 
-        touch {{ kubernetes_output_directory }}serviceaccount-patch
       executable: /bin/bash
-      creates: "{{ kubernetes_output_directory }}serviceaccount-patch"
+    changed_when: serviceaccount_patch.rc == 0
     register: serviceaccount_patch
-  - name: Output serviceaccount_patch
-    ansible.builtin.debug:
-      msg: "{{ serviceaccount_patch.stdout_lines }}"
+    when:
+    - not kubernetes_already_installed
 
   - name: Post security hooks
     ansible.builtin.include_tasks: "{{ item }}"
     with_items: "{{ kubernetes_hookfiles.post_security }}"
-    when: kubernetes_hookfiles.post_security is defined
+    when:
+    - kubernetes_hookfiles.post_security is defined
 
   rescue:
   - name: Write kubeadm init output to stdout

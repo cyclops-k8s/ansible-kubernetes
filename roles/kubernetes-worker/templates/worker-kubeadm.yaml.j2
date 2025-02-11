@@ -37,12 +37,3 @@ nodeRegistration:
     cloud-provider: "external"
 {% endif %}
     node-ip: "{{ ansible_default_ipv4.address}}"
----
-apiVersion: kubeadm.k8s.io/v1beta3
-kind: UpgradeConfiguration
-apply:
-  patches:
-    directory: {{ kubernetes_config_directory }}/patches
-node:
-  patches:
-    directory: {{ kubernetes_config_directory }}/patches

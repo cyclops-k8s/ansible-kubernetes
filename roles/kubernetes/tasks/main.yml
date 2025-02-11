@@ -38,10 +38,8 @@
     creates: "{{ kubernetes_output_directory }}/images-pulled-{{ k8s_version }}"
     executable: /bin/bash
   register: kubeadm_images_pulled
-
-- name: Write kubeadm images pulled to stdout
-  ansible.builtin.debug:
-    msg: "{{ kubeadm_images_pulled.stdout_lines }}"
+  retries: 10
+  until: kubeadm_images_pulled.rc == 0
 
 - name: Define first_kube_control_plane
   ansible.builtin.import_tasks: define-first-kube-control.yml
