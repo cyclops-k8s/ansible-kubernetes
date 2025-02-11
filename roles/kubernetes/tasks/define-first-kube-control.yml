@@ -1,4 +1,33 @@
-- name: Set fact first_kube_control_plane
+- name: Find control planes with api-server already running
+  ansible.builtin.shell:
+    cmd: "[ -f /etc/kubernetes/manifests/kube-apiserver.yaml ] && exit 0 || exit 1"
+    executable: /bin/bash
+  failed_when: kubeapiserver_installed_cmd.rc != 0 and kubeapiserver_installed_cmd.rc != 1
+  register: kubeapiserver_installed_cmd
+  changed_when: false and kubeapiserver_installed_cmd.rc == 0
+  when: inventory_hostname in groups['control_planes']
+
+- name: Set the first_kube_control_plane fact to the first node found that has the api server installed
+  ansible.builtin.set_fact:
+    first_kube_control_plane: "{{ i }}"
+    kubernetes_already_installed: true
+  when:
+  - first_kube_control_plane is not defined
+  - hostvars[i].kubeapiserver_installed_cmd is defined
+  - hostvars[i].kubeapiserver_installed_cmd.rc is defined
+  - hostvars[i].kubeapiserver_installed_cmd.rc == 0
+  run_once: true
+  loop_control:
+    loop_var: i
+  loop: "{{ ansible_play_hosts }}"
+
+- name: Default kubernetes_already_installed to false
+  ansible.builtin.set_fact:
+    kubernetes_already_installed: false
+  when: kubernetes_already_installed is not defined
+  run_once: true
+
+- name: Set fact first_kube_control_plane to the first control plane node if the api server was not found
   ansible.builtin.set_fact:
     first_kube_control_plane: "{{ groups['control_planes'] | first }}"
   run_once: true

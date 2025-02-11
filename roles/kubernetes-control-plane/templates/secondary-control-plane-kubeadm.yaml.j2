@@ -20,7 +20,7 @@ podPidsLimit: {{ kubernetes_podpidslimit }}
 # STIG V-242434
 protectKernelDefaults: true
 ---
-apiVersion: kubeadm.k8s.io/v1beta3
+apiVersion: kubeadm.k8s.io/v1beta4
 kind: JoinConfiguration
 discovery:
   bootstrapToken:
@@ -29,20 +29,15 @@ discovery:
     unsafeSkipCAVerification: true
 caCertPath: "{{ kubernetes_pki_directory }}/ca.crt"
 controlPlane:
-  localAPIEndpoint:
+#  localAPIEndpoint:
   certificateKey: "{{ kubeadm_upload_token }}"
 nodeRegistration:
   kubeletExtraArgs:
-    cloud-provider: "external"
-    node-ip: "{{ ansible_default_ipv4.address}}"
+{% if kubernetes_cloud_provider == 'vsphere' or kubernetes_cloud_provider == 'external' %}
+  - name: cloud-provider
+    value: "external"
+{% endif %}
+  - name: node-ip
+    value: "{{ ansible_default_ipv4.address}}"
 patches:
   directory: {{ kubernetes_config_directory }}/patches
----
-apiVersion: kubeadm.k8s.io/v1beta3
-kind: UpgradeConfiguration
-apply:
-  patches:
-    directory: {{ kubernetes_config_directory }}/patches
-node:
-  patches:
-    directory: {{ kubernetes_config_directory }}/patches

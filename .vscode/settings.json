@@ -1,5 +1,4 @@
 {
-    "ansible.python.interpreterPath": "/bin/python3",
     "files.associations": {
         "**/roles/**/*.yml": "ansible",
         "**/roles/**/*.yaml": "ansible",
