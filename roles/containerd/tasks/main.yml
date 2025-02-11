@@ -58,19 +58,20 @@
         set -eo pipefail
         containerd config default | sed "s/SystemdCgroup = false/SystemdCgroup = true/" > /etc/containerd/config.toml
       executable: /bin/bash
-      creates: /etc/containerd/config.toml
     register: containerd_configured
+    changed_when: true
     notify: Restart containerd service
 
   - name: Add containerd default credentials
     with_items: "{{ containerd_credentials }}"
-    ansible.builtin.lineinfile:
+    ansible.builtin.blockinfile:
       dest: /etc/containerd/config.toml
       insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.configs\]'
-      line: >2
+      block: >2
                 [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ item.registry }}".auth]
                   username = "{{ item.username }}"
                   password = "{{ item.password }}"
+      validate: containerd --config "%s" config dump
     notify: Restart containerd service
     no_log: true
 
