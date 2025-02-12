@@ -1,5 +1,14 @@
 - name: Initialize the Kubernetes cluster
   block:
+  - name: Mark initialize ran on all control plane nodes
+    ansible.builtin.set_fact:
+      initialize_ran: true
+    delegate_facts: true
+    delegate_to: "{{ node }}"
+    loop_control:
+      loop_var: node
+    loop: "{{ ansible_play_hosts }}"
+
   - name: Create kubeadm file
     ansible.builtin.template:
       src: first-control-plane-kubeadm.yaml.j2

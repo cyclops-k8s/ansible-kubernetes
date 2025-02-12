@@ -2,6 +2,17 @@
   ansible.builtin.import_tasks: initialize-control-plane.yml
   delegate_to: "{{ first_kube_control_plane }}"
   run_once: true
+  when: kubernetes_initialize_ran is not defined or not kubernetes_initialize_ran
+
+- name: Set kubernetes_initialize_ran to true
+  ansible.builtin.set_fact:
+    kubernetes_initialize_ran: true
+  run_once: true
+  loop: "{{ ansible_play_hosts }}"
+  loop_control:
+    loop_var: node
+  delegate_facts: true
+  delegate_to: "{{ node }}"
 
 - name: Get Join token
   ansible.builtin.shell:
