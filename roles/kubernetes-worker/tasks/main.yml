@@ -40,7 +40,7 @@
       kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubeadm_init_extra_args | default('') }} 2>&1
     executable: /bin/bash
   changed_when: kubernetes_join_output.rc == 0
-  register: kubeadm_join_output
+  register: kubernetes_join_output
   when: kubernetes_needs_to_join_cluster
 
 # CIS 1.1.20

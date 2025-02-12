@@ -24,7 +24,7 @@ apiVersion: kubeproxy.config.k8s.io/v1alpha1
 kind: KubeProxyConfiguration
 mode: "ipvs"
 ---
-apiVersion: kubeadm.k8s.io/v1beta3
+apiVersion: kubeadm.k8s.io/v1beta4
 kind: JoinConfiguration
 discovery:
   bootstrapToken:
@@ -34,6 +34,8 @@ discovery:
 nodeRegistration:
   kubeletExtraArgs:
 {% if kubernetes_cloud_provider == 'vsphere' or kubernetes_cloud_provider == 'external' %}
-    cloud-provider: "external"
+  - name: cloud-provider
+    value: "external"
 {% endif %}
-    node-ip: "{{ ansible_default_ipv4.address}}"
+  - name: node-ip
+    value: "{{ ansible_default_ipv4.address}}"

@@ -1,5 +1,6 @@
 - name: Initialize the Kubernetes cluster
   block:
+
   - name: Create kubeadm file
     ansible.builtin.template:
       src: first-control-plane-kubeadm.yaml.j2
