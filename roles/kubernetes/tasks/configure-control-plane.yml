@@ -88,10 +88,15 @@
   - name: Helm - Download GPG keyring
     ansible.builtin.get_url:
       url: https://baltocdn.com/helm/signing.asc
-      dest: /etc/apt/keyrings/helm.gpg
+      dest: /etc/apt/keyrings/helm
       mode: '0644'
       owner: root
       group: root
+
+  - name: Add an apt signing key for Helm
+    ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/helm
+    args:
+      creates: /etc/apt/keyrings/helm.gpg
 
   - name: Add helm apt repository
     ansible.builtin.apt_repository:
