@@ -1,3 +1,5 @@
+# Required
+# This is the IP address of the Kubernetes control plane. This is the IP address that the proxies will bind to.
 kubernetes_control_plane_ip: null
 
 kubernetes_containerd_credentials: []
@@ -196,6 +198,13 @@ kubernetes_hookfiles:
   post_workers: []
 
 kubernetes_init_skip_phases: []
+
+# Install Helm on the control plane nodes
+kubernetes_install_helm: true
+
+# Install Kustomize on the control plane nodes
+kubernetes_install_kustomize: true
+
 kubernetes_kubeadm_init_extra_args: ""
 
 kubernetes_mirror: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/
