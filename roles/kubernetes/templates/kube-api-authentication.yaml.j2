@@ -2,9 +2,9 @@ apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthenticationConfiguration
 jwt:
 - issuer:
-    url: {{ kubernetes_oidc_issuer_url }}
+    url: "{{ kubernetes_oidc_issuer_url }}"
     audiences:
-    - {{ kubernetes_oidc_client_id }}
+    - "{{ kubernetes_oidc_client_id }}"
   claimMappings:
     # username represents an option for the username attribute.
     # This is the only required attribute.
@@ -19,4 +19,4 @@ jwt:
       # expression: 'claims.roles.split(",")'
     # uid represents an option for the uid attribute.
     uid:
-      claim: '{{ kubernetes_oidc_uid_claim }}'
+      claim: "{{ kubernetes_oidc_uid_claim }}"
