@@ -93,7 +93,7 @@
     ansible.builtin.apt_repository:
       repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
       state: absent
-      filename: kubernetes-{{ kubernetes_version }}.list
+      filename: kubernetes-{{ kubernetes_version }}
 
   - name: Remove gpg key
     ansible.builtin.file:
