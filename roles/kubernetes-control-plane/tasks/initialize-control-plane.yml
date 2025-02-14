@@ -82,10 +82,21 @@
     when:
     - not kubernetes_already_installed
 
-  - name: Copy admin.conf
-    ansible.builtin.command: cp /etc/kubernetes/admin.conf /root/.kube/config
-    register: copy_admin_conf
-    changed_when: copy_admin_conf.rc == 0
+  - name: Create the /root/.kube directory
+    ansible.builtin.file:
+      state: directory
+      path: /root/.kube
+      mode: 0600
+      owner: root
+      group: root
+    when:
+    - not kubernetes_already_installed
+
+  - name: Link admin.conf to /root/.kube/config
+    ansible.builtin.file:
+      src: /etc/kubernetes/admin.conf
+      dest: /root/.kube/config
+      state: link
     when:
     - not kubernetes_already_installed
 

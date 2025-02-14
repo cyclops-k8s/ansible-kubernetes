@@ -48,6 +48,22 @@
   register: kubeadm_join_output
   when: kubernetes_needs_to_join_cluster
 
+- name: Create the /root/.kube directory
+  ansible.builtin.file:
+    state: directory
+    path: /root/.kube
+    mode: 0600
+    owner: root
+    group: root
+  when: kubernetes_needs_to_join_cluster
+
+- name: Link admin.conf to /root/.kube/config
+  ansible.builtin.file:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    state: link
+  when: kubernetes_needs_to_join_cluster
+
 - name: Start kubelet
   ansible.builtin.service:
     name: kubelet
