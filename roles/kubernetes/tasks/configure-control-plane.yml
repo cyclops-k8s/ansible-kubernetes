@@ -127,8 +127,11 @@
       group: root
 
   - name: Install Kustomize
-    ansible.builtin.command:
-      cmd: /tmp/install_kustomize.sh
+    ansible.builtin.shell:
+      cmd: |
+        set -eo pipefail
+        /tmp/install_kustomize.sh
+        mv kustomize /usr/local/bin/kustomize
       creates: /usr/local/bin/kustomize
     register: kustomize_install
 
