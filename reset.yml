@@ -11,7 +11,7 @@
   hosts: kubernetes
   become: true
   tasks:
-  - name: Uninstall kubectl, kubeadm, kubelet
+  - name: Uninstall kubectl, kubeadm, kubelet, helm and containerd
     ansible.builtin.apt:
       name: "{{ item }}"
       state: absent
@@ -21,6 +21,7 @@
     - kubeadm
     - kubelet
     - helm
+    - containerd.io
     failed_when: false
 
   - name: Remove kubernetes config
@@ -83,6 +84,24 @@
     ansible.builtin.file:
       dest: "/var/log/apiserver"
       state: absent
+
+  - name: Remove apt sources and other extra files
+    ansible.builtin.file:
+      dest: "{{ i }}"
+      state: absent
+    loop_control:
+      loop_var: i
+    with_items:
+    - /etc/apt/sources.list.d/kubernetes-{{ kubernetes_version }}.list
+    - /etc/apt/sources.list.d/helm.list
+    - /etc/apt/sources.list.d/docker.list
+    - /usr/local/bin/kustomize
+    - /etc/apt/keyrings/docker
+    - /etc/apt/keyrings/docker.gpg
+    - /etc/apt/keyrings/helm
+    - /etc/apt/keyrings/helm.gpg
+    - /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+    - /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
 
   - name: Daemon reload
     ansible.builtin.systemd:
