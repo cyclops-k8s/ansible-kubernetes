@@ -84,6 +84,7 @@
         - /root/.kube
         - /usr/local/bin/kustomize
         - /var/lib/containerd
+        - /var/lib/etcd
         - /var/log/apiserver
         - /var/log/containers
         - /var/log/pods
