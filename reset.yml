@@ -18,8 +18,7 @@
     - name: Stop systemd units
       failed_when: false
       loop:
-        - containerd.service
-        - k8s-certs-rnew.timer
+        - k8s-certs-renew.timer
         - kubelet.service
       loop_control:
         loop_var: unit
@@ -28,9 +27,23 @@
         name: "{{ unit }}"
         state: stopped
 
-    - name: Daemon reload
+    - name: Remove all containerd containers
+      failed_when: false
+      ansible.builtin.command:
+        cmd: ctr --namespace k8s.io containers ls -q | xargs -r ctr --namespace k8s.io containers rm
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Stop containerd
+      failed_when: false
+      loop:
+        - containerd.service
+      loop_control:
+        loop_var: unit
       ansible.builtin.systemd_service:
-        daemon_reload: true
+        enabled: false
+        name: "{{ unit }}"
+        state: stopped
 
     - name: Uninstall packages
       loop:
@@ -57,6 +70,7 @@
         - /etc/apt/keyrings/helm.gpg
         - /etc/apt/sources.list.d/docker.list
         - /etc/apt/sources.list.d/helm.list
+        - /etc/apt/sources.list.d/kubernetes.list
         - /etc/cni
         - /etc/containerd
         - /etc/default/kubelet
@@ -80,12 +94,15 @@
         path: "{{ file }}"
         state: absent
 
+    - name: Daemon reload
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
     - name: Find versioned files
       register: kubernetes_files
       ansible.builtin.find:
         paths:
           - /etc/apt/keyrings
-          - /etc/apt/sources.list.d
         patterns:
           - kubernetes*
 
