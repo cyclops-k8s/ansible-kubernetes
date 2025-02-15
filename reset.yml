@@ -1,127 +1,144 @@
 - name: Kubeadm reset
-  hosts: kubernetes
   become: true
+  hosts: kubernetes
   serial: 1
   tasks:
-  - name: Reset kubeadm
-    ansible.builtin.shell: kubeadm reset -f || true
-    changed_when: true
+
+    - name: Reset kubeadm
+      changed_when: true
+      failed_when: false
+      ansible.builtin.command:
+        cmd: kubeadm reset -f
 
 - name: Cleanup
-  hosts: kubernetes
   become: true
+  hosts: kubernetes
   tasks:
-  - name: Uninstall kubectl, kubeadm, kubelet, helm and containerd
-    ansible.builtin.apt:
-      name: "{{ item }}"
-      state: absent
-      allow_change_held_packages: true
-    with_items:
-    - kubectl
-    - kubeadm
-    - kubelet
-    - helm
-    - containerd.io
-    failed_when: false
 
-  - name: Remove kubernetes config
-    ansible.builtin.file:
-      path: /etc/kubernetes
-      state: absent
+    - name: Stop systemd units
+      failed_when: false
+      loop:
+        - k8s-certs-renew.timer
+        - kubelet.service
+      loop_control:
+        loop_var: unit
+      ansible.builtin.systemd_service:
+        enabled: false
+        name: "{{ unit }}"
+        state: stopped
 
-  - name: Remove cni configs
-    ansible.builtin.file:
-      path: "{{ item }}"
-      state: absent
-    with_items:
-    - /etc/cni
-    - /opt/cni
+    - name: Remove all containerd containers
+      failed_when: false
+      ansible.builtin.command:
+        cmd: ctr --namespace k8s.io containers ls -q | xargs -r ctr --namespace k8s.io containers rm
+        executable: /bin/bash
+      changed_when: true
 
-  - name: Remove containerd config
-    ansible.builtin.file:
-      path: /etc/containerd/config.toml
-      state: absent
+    - name: Stop containerd
+      failed_when: false
+      loop:
+        - containerd.service
+      loop_control:
+        loop_var: unit
+      ansible.builtin.systemd_service:
+        enabled: false
+        name: "{{ unit }}"
+        state: stopped
 
-  - name: Remove kubeconfig
-    ansible.builtin.file:
-      path: /home/edward/.kube/config
-      state: absent
+    - name: Uninstall packages
+      loop:
+        - conntrack
+        - containerd.io
+        - cri-tools
+        - helm
+        - kubeadm
+        - kubectl
+        - kubelet
+        - kubernetes-cni
+      loop_control:
+        loop_var: package
+      ansible.builtin.apt:
+        allow_change_held_packages: true
+        name: "{{ package }}"
+        state: absent
 
-  - name: Remove all containerd containers
-    ansible.builtin.shell:
-      cmd: |
-        set -eo pipefail
-        ctr --namespace k8s.io containers ls -q | xargs -r ctr --namespace k8s.io containers rm
-      executable: /bin/bash
-    changed_when: true
+    - name: Remove files and directories
+      loop:
+        - /etc/apt/keyrings/docker
+        - /etc/apt/keyrings/docker.gpg
+        - /etc/apt/keyrings/helm
+        - /etc/apt/keyrings/helm.gpg
+        - /etc/apt/sources.list.d/docker.list
+        - /etc/apt/sources.list.d/helm.list
+        - /etc/apt/sources.list.d/kubernetes.list
+        - /etc/cni
+        - /etc/containerd
+        - /etc/default/kubelet
+        - /etc/kubernetes
+        - /etc/sysctl.d/99-kubernetes-cri.conf
+        - /etc/systemd/system/k8s-certs-renew.service
+        - /etc/systemd/system/k8s-certs-renew.timer
+        - /opt/cni
+        - /opt/containerd
+        - /opt/kubernetes
+        - /root/.kube
+        - /usr/local/bin/kustomize
+        - /var/lib/containerd
+        - /var/lib/etcd
+        - /var/log/apiserver
+        - /var/log/containers
+        - /var/log/pods
+        - /var/run/containerd
+      loop_control:
+        loop_var: file
+      ansible.builtin.file:
+        path: "{{ file }}"
+        state: absent
 
-  - name: Remove container logs
-    ansible.builtin.shell: |
-      rm -rf /var/log/containers/*
-    changed_when: true
+    - name: Daemon reload
+      ansible.builtin.systemd_service:
+        daemon_reload: true
 
-  - name: Stop systemd units
-    ansible.builtin.systemd:
-      name: k8s-certs-renew.timer
-      state: stopped
-      enabled: false
-    failed_when: false
+    - name: Find versioned files
+      register: kubernetes_files
+      ansible.builtin.find:
+        paths:
+          - /etc/apt/keyrings
+        patterns:
+          - kubernetes*
 
-  - name: Remove systemd units
-    ansible.builtin.file:
-      dest: "/etc/systemd/system/{{ item }}"
-      state: absent
-    with_items:
-    - k8s-certs-renew.service
-    - k8s-certs-renew.timer
+    - name: Remove versioned files
+      loop: "{{ kubernetes_files.files }}"
+      loop_control:
+        label: "{{ file.path }}"
+        loop_var: file
+      ansible.builtin.file:
+        path: "{{ file.path }}"
+        state: absent
 
-  - name: Remove /opt/kubernetes directory
-    ansible.builtin.file:
-      dest: "/opt/kubernetes"
-      state: absent
+    - name: Delete users
+      loop:
+        - etcd
+      loop_control:
+        loop_var: user
+      ansible.builtin.user:
+        name: "{{ user }}"
+        state: absent
 
-  - name: Remove /var/log/apiserver directory
-    ansible.builtin.file:
-      dest: "/var/log/apiserver"
-      state: absent
+    - name: Delete groups
+      loop:
+        - etcd
+      loop_control:
+        loop_var: group
+      ansible.builtin.group:
+        name: "{{ group }}"
+        state: absent
 
-  - name: Remove apt sources and other extra files
-    ansible.builtin.file:
-      dest: "{{ i }}"
-      state: absent
-    loop_control:
-      loop_var: i
-    with_items:
-    - /etc/apt/sources.list.d/kubernetes-{{ kubernetes_version }}.list
-    - /etc/apt/sources.list.d/helm.list
-    - /etc/apt/sources.list.d/docker.list
-    - /usr/local/bin/kustomize
-    - /etc/apt/keyrings/docker
-    - /etc/apt/keyrings/docker.gpg
-    - /etc/apt/keyrings/helm
-    - /etc/apt/keyrings/helm.gpg
-    - /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
-    - /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
-
-  - name: Daemon reload
-    ansible.builtin.systemd:
-      daemon_reload: true
-
-  - name: Delete etcd user
-    ansible.builtin.user:
-      name: etcd
-      state: absent
-
-  - name: Delete etcd group
-    ansible.builtin.group:
-      name: etcd
-      state: absent
-
-  - name: Reboot
-    ansible.builtin.reboot:
-      reboot_timeout: 300
-      msg: "Rebooting to complete cleanup"
-      connect_timeout: 300
-      pre_reboot_delay: 0
-      post_reboot_delay: 0
-      test_command: uptime
+    - name: Reboot
+      ansible.builtin.reboot:
+        connect_timeout: 300
+        msg: Rebooting to complete cleanup
+        post_reboot_delay: 0
+        pre_reboot_delay: 0
+        reboot_timeout: 300
+        test_command: uptime

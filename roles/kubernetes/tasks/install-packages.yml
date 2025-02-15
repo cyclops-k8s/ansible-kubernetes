@@ -25,7 +25,7 @@
     ansible.builtin.apt_repository:
       repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
       state: present
-      filename: kubernetes-{{ kubernetes_version }}
+      filename: kubernetes
 
   - name: Get latest specified version of kubeadm, kubelet and kubectl
     ansible.builtin.shell:

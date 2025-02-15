@@ -74,6 +74,7 @@
     shell: /bin/false
     uid: 500
     group: etcd
+    create_home: false
 
 - name: Renew K8S control plane certificates monthly 2/2
   ansible.builtin.systemd_service:
