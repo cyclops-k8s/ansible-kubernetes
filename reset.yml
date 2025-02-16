@@ -1,7 +1,6 @@
-- name: Kubeadm reset
+- name: Cleanup
   become: true
   hosts: kubernetes
-  serial: 1
   tasks:
 
     - name: Reset kubeadm
@@ -9,11 +8,6 @@
       failed_when: false
       ansible.builtin.command:
         cmd: kubeadm reset -f
-
-- name: Cleanup
-  become: true
-  hosts: kubernetes
-  tasks:
 
     - name: Stop systemd units
       failed_when: false
@@ -27,10 +21,12 @@
         name: "{{ unit }}"
         state: stopped
 
-    - name: Remove all containerd containers
+    - name: Remove containerd containers
       failed_when: false
-      ansible.builtin.command:
-        cmd: ctr --namespace k8s.io containers ls -q | xargs -r ctr --namespace k8s.io containers rm
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          ctr --namespace k8s.io containers ls -q | xargs -r ctr --namespace k8s.io containers rm
         executable: /bin/bash
       changed_when: true
 
@@ -46,14 +42,16 @@
         state: stopped
 
     - name: Uninstall packages
+      failed_when: false
+      # The order matters. Do not sort the list
       loop:
-        - conntrack
         - containerd.io
         - cri-tools
         - helm
         - kubeadm
         - kubectl
         - kubelet
+        - conntrack
         - kubernetes-cni
       loop_control:
         loop_var: package
@@ -138,7 +136,4 @@
       ansible.builtin.reboot:
         connect_timeout: 300
         msg: Rebooting to complete cleanup
-        post_reboot_delay: 0
-        pre_reboot_delay: 0
         reboot_timeout: 300
-        test_command: uptime
