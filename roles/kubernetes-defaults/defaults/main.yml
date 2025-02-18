@@ -2,23 +2,33 @@
 # This is the IP address of the Kubernetes control plane. This is the IP address that the proxies will bind to.
 kubernetes_control_plane_ip: null
 
-kubernetes_containerd_credentials: []
+# Credentials to add to containerd for pulling images. This way you don't need to include the credentials in every namespace.
+# Expects an array of objects containing username, password and registry
+
+# Example:
 # kubernetes_containerd_credentials:
 # - username: "username"
 #   password: "password"
 #   registry: "docker.io"
+kubernetes_containerd_credentials: []
+
+# Apt repository to pulll containerd from
 kubernetes_containerd_mirror: https://download.docker.com/linux/{{ ansible_distribution | lower }}
 
-# CIS 1.1.12
+# CIS 1.1.12 - Ensure that the etcd data directory ownership is set to etcd:etcd
 kubernetes_etcd_init_container_image: alpine:latest
+
+# CIS 1.1.12 - Ensure that the etcd data directory ownership is set to etcd:etcd
 kubernetes_etcd_group_id: 500
+
+# CIS 1.1.12 - Ensure that the etcd data directory ownership is set to etcd:etcd
 kubernetes_etcd_user_id: 500
 
 kubernetes_admission_control_plugins:
-# CIS 1.2.11
+# CIS 1.2.11 - Ensure that the admission control plugin AlwaysPullImages is set)
 - AlwaysPullImages
 
-# CIS 1.2.14
+# CIS 1.2.14 - Ensure that the admission control plugin NodeRestriction is set (included by default)
 - NodeRestriction
 
 # Defaults as of 1.31
@@ -41,6 +51,8 @@ kubernetes_admission_control_plugins:
 - TaintNodesByCondition
 - ValidatingAdmissionPolicy
 - ValidatingAdmissionWebhook
+
+# STIG V-254800
 kubernetes_admission_configuration:
   audit: "baseline"
   audit_version: "latest"
@@ -54,14 +66,16 @@ kubernetes_admission_configuration:
   warn: "privileged"
   warn_version: "latest"
 
-# Required to be set, this is the FQDN of the load balanced API endpoint.
+# Required
+# This is the FQDN of the load balanced API endpoint.
 # Your clients will use this endpoint to interface with the cluster.
 # This DNS entry should already be setup before running the playbooks.
 kubernetes_api_endpoint: null
 
+# Port for the API server to listen on, this is also the same port on the proxy that will be used for communication to the cluster.
 kubernetes_api_port: 6443
 
-# Expects an array of dictionaries with the following keys: name, source, destination, mode
+# Expects an array of dictionaries with the following keys: name, source, destination (optional), mode
 # mode defaults to File
 # destination defaults to the same value as source
 # name must be unique and not any of the following
@@ -76,6 +90,13 @@ kubernetes_api_port: 6443
 # - k8s-certs
 # - usr-local-share-ca-certificates
 # - usr-share-ca-certificates
+
+# Example:
+# kubernetes_api_server_additional_mounts:
+# - name: example-mount
+#   source: /etc/kubernetes/config
+#   destination: /opt/config
+#   mode: "0600"
 kubernetes_api_server_additional_mounts: []
 
 # Extra arguments to pass to the Kubernetes API Server
@@ -103,10 +124,28 @@ kubernetes_api_server_additional_mounts: []
 #   value: somevalue
 kubernetes_api_server_extra_args: []
 
+# CIS 1.2.17 - Ensure that the --audit-log-maxage argument is set to 30 or as appropriate
+# STIG V-242464
 kubernetes_audit_log_max_age: 30
+
+# CIS 1.2.18 - Ensure that the --audit-log-maxbackup argument is set to 10 or as appropriate (Automated)
+# STIG V-242463
 kubernetes_audit_log_max_backup: 10
+
+# CIS 1.2.19 - Ensure that the --audit-log-maxsize argument is set to 100 or as appropriate
+# STIG V-242462
 kubernetes_audit_log_max_size: 100
+
+# CIS 1.2.16 - Ensure that the --audit-log-path argument is set
+# STIG V-242465
+# STIG V-242402
 kubernetes_audit_log_path: /var/log/apiserver/audit.log
+
+# The next 3 are part of:
+# CIS 1.2.6 - Ensure that the --authorization-mode argument is not set to AlwaysAllow
+# CIS 1.2.7 - Ensure that the --authorization-mode argument includes Node
+# CIS 1.2.8 - Ensure that the --authorization-mode argument includes RBAC
+# STIG V-242382
 kubernetes_authorization_pre_node: []
 kubernetes_authorization_pre_rbac: []
 kubernetes_authorization_post_rbac: []
@@ -114,9 +153,30 @@ kubernetes_authorization_post_rbac: []
 # If set, it must be external
 kubernetes_cloud_provider: null
 
+# Directory to store configuration for the playbook and Kubernetes components in
 kubernetes_config_directory: /etc/kubernetes/config
+
+# Additional files to copy to control plane nodes. This only copies files, it does not use them as a template
+# Expects an array of object containing source, destination and mode (defaults to 0600)
+
+# Example:
+# kubernetes_control_plane_additional_files:
+# - source: "{{ inventory_dir }}/somefile.yaml.j2"
+#   destination: "/etc/kubernetes/config/somefile.yaml"
+#   mode: "0644"
 kubernetes_control_plane_additional_files: []
+
+# Additional files to copy to control plane nodes. This will run these files through the template, passing in variables.
+# Expects an array of object containing source, destination and mode (defaults to 0600)
+
+# Example:
+# kubernetes_control_plane_additional_templates:
+# - source: "{{ inventory_dir }}/somefile.yaml.j2"
+#   destination: "/etc/kubernetes/config/somefile.yaml"
+#   mode: "0644"
 kubernetes_control_plane_additional_templates: []
+
+# How frequently the proxies will check if the control plane is functioning
 kubernetes_control_plane_check_interval: 100ms
 
 # Extra arguments to pass to the Kubernetes Controller Manager
@@ -134,8 +194,13 @@ kubernetes_control_plane_check_interval: 100ms
 #   value: somevalue
 kubernetes_controller_manager_extra_args: []
 
+# How long the cluster certificate will remain valid
 kubernetes_cluster_signing_duration: 8760h
+
+# The name of the cluster, usually can be whatever you want
 kubernetes_cluster_name: cluster
+
+# The domain name for the cluster, this is used in-cluster to resolve things like services and pods
 kubernetes_dns_domain: cluster.local
 
 # Required
@@ -162,7 +227,7 @@ kubernetes_hookfiles:
   # run after the tasks that configure the proxies
   post_proxies: []
 
-  # At the beginning of every major section run these, this is a good spot to put in default variables
+  # At the beginning of every major section run these, this is a good spot to put in default variables and validations
   default_configuration: []
 
   # At the beginning of installing pre-requisites.
@@ -197,6 +262,7 @@ kubernetes_hookfiles:
   # after all worker nodes have been joined to the cluster
   post_workers: []
 
+# Phases to skip in the kubeadm init process, you can view the list of phases by checking out `kubeadm init --help`
 kubernetes_init_skip_phases: []
 
 # Install Helm on the control plane nodes
@@ -205,21 +271,35 @@ kubernetes_install_helm: true
 # Install Kustomize on the control plane nodes
 kubernetes_install_kustomize: true
 
+# Extra arguments to add to kubeadm init. This is added verbatim to the end of the `kubeadm init` command
 kubernetes_kubeadm_init_extra_args: ""
 
+# Apt mirror to pull the Kubernetes packages from
 kubernetes_mirror: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/
+
+# The internal Kubernetes node cidr for pods
 kubernetes_node_cidr_mask_size: 24
 
+# Where to store output files for this playbook
 kubernetes_output_directory: /etc/kubernetes/output
 
+# Where to put the certificates for Kubernetes that are generated by kubeadm.
 kubernetes_pki_directory: /etc/kubernetes/pki
+
+# The internal CIDR for all of the pod's. Must be large enough to accomodate the CIDR subnet size above for all nodes.
 kubernetes_pod_subnet: 10.244.0.0/16
+
+# CIS 4.2.13 - Ensure that a limit is set on pod PIDs
 kubernetes_podpidslimit: 1000
+
 # CIS 1.2.15, 1.3.2, 1.4.1 - Profiling should be turned off. Default in kubeadm is true.
 # STIG V-242409
 kubernetes_profiling: false
 
+# Template file to use for configuring HAProxy on the proxy nodes
 kubernetes_proxy_haproxy_config_file: haproxy.cfg.j2
+
+# Template file to use for configuring Keepalived on the proxy nodes
 kubernetes_proxy_keepalived_config_file: keepalived.conf.j2
 
 # Extra arguments to pass to the Kubernetes Scheduler
@@ -234,28 +314,46 @@ kubernetes_proxy_keepalived_config_file: keepalived.conf.j2
 #   value: somevalue
 kubernetes_scheduler_extra_args: []
 
+# Directory to store scripts for Kubernetes on the nodes
 kubernetes_scripts_directory: /opt/kubernetes/scripts
+
+# Subnet for the cluster services running in the Kubernetes cluster
 kubernetes_service_subnet: 10.96.0.0/16
+
+# CIS 4.2.5 - Ensure that the --streaming-connection-idle-timeout argument is not set to 0
+# STIG V-245541 - States this should be 5 minutes
 kubernetes_streamingconnectionidletimeout: 5m
+
+# CIS 1.3.1 Ensure that the --terminated-pod-gc-threshold argument is set as appropriate
 kubernetes_terminated_pod_gc_threshold: 10
 
 # Required
 # This is the issuer URL of the OIDC provider. Do not include the .well-known/openid-configuration path.
 kubernetes_oidc_issuer_url: null
+
 # Required
 # This is the client ID of the OIDC provider.
 kubernetes_oidc_client_id: null
 
+# Claim inside the OIDC token that states the username
 kubernetes_oidc_username_claim: upn
+
+# Prefix to add to the username for logs and authorization
 kubernetes_oidc_username_prefix: "oidc:"
+
+# Claim inside the OIDC token that has the list of roles assigned to the user
 kubernetes_oidc_group_claim: roles
+
+# Prefix to add to the roles for logs and authorization
 kubernetes_oidc_group_prefix: "oidc:"
+
+# Claim inside the OIDC token that has the unique object id, useful for logging
 kubernetes_oidc_uid_claim: oid
 
-# You can override the default, https://kubernetes.default.svc.cluster.local, with any url.
+# You can override the default, which is https://kubernetes.default.svc.cluster.local, with any url.
 kubernetes_service_account_issuer: null
 
-# CIS 4.2.12
+# CIS 4.2.12 - Ensure that the Kubelet only makes use of Strong Cryptographic Ciphers
 # STIG V-242418
 kubernetes_strong_cypher_suites:
 - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
@@ -264,7 +362,10 @@ kubernetes_strong_cypher_suites:
 - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
 - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
 
+# The minor version of Kubernetes to install. Do not include the patch version, like 1.31.2. Just do the minor, like 1.31.
 kubernetes_version: "1.31"
+
+# Done run the kubernetes-default validation checks. It is not recommended to skip these unless you know what you are doing.
 skip_checks: false
 
 # Required

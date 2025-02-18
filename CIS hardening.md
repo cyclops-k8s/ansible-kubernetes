@@ -46,7 +46,9 @@ Set by default
 
 Fixed using automatic certificate renewal and issuing to kubelets
 
-### 1.2.6, 1.2.7, 1.2.8
+### 1.2.6 - Ensure that the --authorization-mode argument is not set to AlwaysAllow
+### 1.2.7 - Ensure that the --authorization-mode argument includes Node
+### 1.2.8 - Ensure that the --authorization-mode argument includes RBAC
 
 We set the auth mode to RBAC,Node by default with the ability to add webhooks
 

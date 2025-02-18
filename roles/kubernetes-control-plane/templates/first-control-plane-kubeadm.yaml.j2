@@ -126,6 +126,11 @@ apiServer:
       mountPath: "{{ kubernetes_config_directory }}/kube-api-authentication.yaml"
       readOnly: true
       pathType: File
+
+    # CIS 1.2.6
+    # CIS 1.2.7
+    # CIS 1.2.8
+    # STIG V-242382
     - name: authorization
       hostPath: "{{ kubernetes_config_directory }}/kube-api-authorization.yaml"
       mountPath: "{{ kubernetes_config_directory }}/kube-api-authorization.yaml"
