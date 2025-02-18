@@ -2,14 +2,14 @@
 
 ## Purpose
 
-The purpose of this playbook and roles is to install a vanilla Kubernetes cluster with OIDC enabled
-with the Calico CNI and the VSphere CPI.
+The purpose of this playbook and roles is to install a vanilla Kubernetes cluster with OIDC enabled hardened against the CIS Benchmark and DOD Stig.
 
-It is a vanilla `kubeadm` cluster that can be managed by `kubeadm` going forward, or for easy upgrades
-you can use the `upgrade` playbook.
+It is a vanilla `kubeadm` cluster that can be managed by `kubeadm` going forward, or for easy upgrades you can use the `upgrade` playbook.
 
 It installs HAProxy and Keepalived on the proxy nodes, this is needed for high availability of the cluster's
 control plane.
+
+It also, by default, installs `Helm` and `Kustomize` on the control plane nodes for use by the hooks. They are not required to run the playbook. This can be opted out of by setting `kubernetes_install_helm` and/or `kubernetes_install_kustomize` to `false` in your variables for the `control_plane` nodes.
 
 ## Running
 
@@ -48,22 +48,25 @@ The different hooks are as follows
     * This would be a good spot to install other applications, like bootstrapping `argocd` or installing `kubevip`.
 
 ## Configuration
-I'm not going to cover every option in this section as it is vast, the name of what they do is pretty self explanatory. There are a few that are required however and they are noted in the default options file along with their purpose
+I'm not going to cover every option in this section as it is vast, the name of what they do is pretty self explanatory and many comments have been added. There are a few that are required and they are noted in the default options file along with their purpose.
 
-Each option, if related to a CIS benchmark or STIG is noted in the defaults file.
+Each option, if related to a CIS benchmark or STIG, is noted in the defaults main.yml file and respective tasks in the roles.
 
-You can see all of the different options in [roles/kubernetes-defaults/defaults/main.yml](roles/kubernetes-defaults/defaults/main.yml)
+You can see all of the different options in [roles/kubernetes-defaults/defaults/main.yml](roles/kubernetes-defaults/defaults/main.yml).
 
 ## CIS Benchmark
 
-Review the `CIS hardening.md` to see the status of each benchmark test. Most of them were handeled out of the box
-by kubeadm, the ones that could be resolved are.
+Review the [CIS%20Hardening.md](`CIS hardening.md`) to see the status of each benchmark test. Most of them were handeled out of the box by kubeadm, the ones that could be resolved by the playbook are.
+
+There are some that must be handled by the administrator while using the cluster, like making sure that the default service account is not mounted by default.
+
+When 1.33 comes out this playbook will be updated to use CEL mutatations to automatically mark the default service account as not automatically mounted.
 
 ## STIG's
 
-The Kubernetes STIG Version 2 Release 1, dated 24 July 2024 has also been applied. Using the STIG viewer available for free from the DoD of the US,
+The Kubernetes STIG Version 2 Release 1, dated 24 July 2024 has also been applied. Using the STIG viewer available for free from the DoD of the United States,
 you can view the checklist `Stig checklist - Kubernetes.cklb` and review what has been fixed, or not. Of the ones not fixed, there is only one
 that is not up to the kubernetes administrator. It is the one related to anonymous auth of the API. The RBAC restricts what the anonymous
 user can access and it is required to join nodes to the cluster using Kubeadm.
 
-The stig viewer can be found here: https://public.cyber.mil/stigs/srg-stig-tools/
+The stig viewer can be found here: [https://public.cyber.mil/stigs/srg-stig-tools/](Stig Viewer)
