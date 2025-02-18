@@ -141,6 +141,7 @@
         /tmp/install_kustomize.sh
         mv kustomize /usr/local/bin/kustomize
       creates: /usr/local/bin/kustomize
+      executable: /bin/bash
     register: kustomize_install
 
   - name: Remove Kustomize install script
