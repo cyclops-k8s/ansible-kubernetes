@@ -70,41 +70,6 @@
 
   rescue:
 
-  - name: Unhold kubeadm, kubelet and kubectl
-    ansible.builtin.dpkg_selections:
-      name: "{{ item }}"
-      selection: install
-    with_items:
-    - kubeadm
-    - kubelet
-    - kubectl
-
-  - name: Remove Kubernetes packages
-    ansible.builtin.apt:
-      name: "{{ packages }}"
-      state: absent
-    vars:
-      packages:
-      - kubeadm
-      - kubelet
-      - kubectl
-
-  - name: Remove Kubernetes apt repository
-    ansible.builtin.apt_repository:
-      repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
-      state: absent
-      filename: kubernetes
-
-  - name: Remove gpg key
-    ansible.builtin.file:
-      path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
-      state: absent
-
-  - name: Remove armored gpg key
-    ansible.builtin.file:
-      path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
-      state: absent
-
   - name: Fail install packages
     ansible.builtin.fail:
       msg: "Failed to install packages"
