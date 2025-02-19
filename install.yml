@@ -16,6 +16,7 @@
   roles:
   - role: kubernetes-defaults
   - role: containerd
+  serial: 100
   vars:
     containerd_credentials: "{{ kubernetes_containerd_credentials }}"
     containerd_mirror: "{{ kubernetes_containerd_mirror }}"
@@ -28,6 +29,7 @@
   roles:
   - role: kubernetes-defaults
   - role: kubernetes
+  serial: 100
 
 - name: Install Control Planes
   hosts: control_planes

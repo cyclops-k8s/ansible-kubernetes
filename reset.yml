@@ -1,6 +1,7 @@
 - name: Cleanup
   become: true
   hosts: kubernetes
+  serial: 100
   tasks:
 
   - name: Reset kubeadm
