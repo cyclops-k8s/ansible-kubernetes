@@ -85,8 +85,15 @@
 
   - name: Set permissions to 0600 on /etc/containerd/config.toml
     ansible.builtin.file:
-      mode: '0600'
       dest: /etc/containerd/config.toml
+      mode: '0600'
+    notify: Restart containerd service
+
+  - name: Ensure containerd is enabled and started
+    ansible.builtin.systemd:
+      enabled: true
+      name: containerd
+      state: started
     notify: Restart containerd service
 
   rescue:

@@ -99,6 +99,13 @@
     args:
       creates: /etc/apt/keyrings/helm.gpg
 
+  - name: Set helm gpg signing key permissions
+    ansible.builtin.file:
+      dest: /etc/apt/keyrings/helm.gpg
+      mode: '0644'
+      owner: root
+      group: root
+
   - name: Add helm apt repository
     ansible.builtin.apt_repository:
       repo: deb [signed-by=/etc/apt/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main
@@ -134,6 +141,7 @@
         /tmp/install_kustomize.sh
         mv kustomize /usr/local/bin/kustomize
       creates: /usr/local/bin/kustomize
+      executable: /bin/bash
     register: kustomize_install
 
   - name: Remove Kustomize install script
