@@ -5,3 +5,17 @@ containerd_credentials: []
 # - username: "username"
 #   password: "password"
 #   registry: "https://index.docker.io/v1/"
+
+# Instructs containerd to use registry mirrors. Multiple enpoints can be defined in a list.
+# Reference:
+# https://github.com/containerd/containerd/blob/main/docs/cri/registry.md
+# containerd_registry_mirrors:
+# - registry: docker.io
+#   endpoints:
+#   - https://dockermirror.example.com:5001
+# - registry: quay.io
+#   endpoints:
+#   - https://quaymirror.example.com:5002
+# - registry: registry.k8s.io
+#   endpoints:
+#   - https://k8smirror.example.com:5003

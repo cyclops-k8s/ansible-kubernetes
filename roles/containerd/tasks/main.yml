@@ -76,6 +76,25 @@
     notify: Restart containerd service
     no_log: true
 
+  # TODO The TOML path/section will need to be updated for containerd 2.x. This is for 1.x.
+  # https://github.com/containerd/containerd/blob/main/docs/cri/registry.md
+  - name: Add registry mirrors
+    loop: "{{ containerd_registry_mirrors }}"
+    loop_control:
+      label: "{{ registry_mirror.registry }}"
+      loop_var: registry_mirror
+    notify: Restart containerd service
+    when:
+    - containerd_registry_mirrors is defined
+    ansible.builtin.blockinfile:
+      block: >2
+                [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ registry_mirror.registry }}"]
+                  endpoint  = {{ registry_mirror.endpoints | to_json }}
+      dest: /etc/containerd/config.toml
+      insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.mirrors\]'
+      marker: "# {mark} ANSIBLE MANAGED MIRROR {{ registry_mirror.registry }}"
+      validate: containerd --config "%s" config dump
+
   - name: Remove disabled plugins
     ansible.builtin.lineinfile:
       dest: /etc/containerd/config.toml
