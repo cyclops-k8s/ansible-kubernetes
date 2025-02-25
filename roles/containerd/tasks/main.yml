@@ -50,6 +50,10 @@
     - containerd.io
     state: present
 
+- name: Get package facts
+  become: true
+  ansible.builtin.package_facts:
+
 - name: Set containerd systemd cgroup
   block:
   - name: Set containerd systemd cgroup
@@ -64,6 +68,8 @@
 
   - name: Add containerd default credentials
     with_items: "{{ containerd_credentials }}"
+    when:
+    - 'ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "lt")'
     ansible.builtin.blockinfile:
       dest: /etc/containerd/config.toml
       insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.configs\]'
@@ -75,6 +81,60 @@
       marker: "# {mark} ANSIBLE MANAGED CREDENTIAL {{ item.registry }}"
     notify: Restart containerd service
     no_log: true
+
+  - name: Add containerd default credentials
+    with_items: "{{ containerd_credentials }}"
+    when:
+    - 'ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "ge")'
+    ansible.builtin.blockinfile:
+      dest: /etc/containerd/config.toml
+      insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.configs\]'
+      block: >2
+                [plugins."io.containerd.cri.v1.images".registry.configs."{{ item.registry }}".auth]
+                  username = "{{ item.username }}"
+                  password = "{{ item.password }}"
+      validate: containerd --config "%s" config dump
+      marker: "# {mark} ANSIBLE MANAGED CREDENTIAL {{ item.registry }}"
+    notify: Restart containerd service
+    no_log: true
+
+  # https://github.com/containerd/containerd/blob/main/docs/cri/registry.md
+  - name: Add registry mirrors
+    loop: "{{ containerd_registry_mirrors }}"
+    loop_control:
+      label: "{{ registry_mirror.registry }}"
+      loop_var: registry_mirror
+    notify: Restart containerd service
+    when:
+    - containerd_registry_mirrors is defined
+    - 'ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "lt")'
+    ansible.builtin.blockinfile:
+      block: >2
+                [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ registry_mirror.registry }}"]
+                  endpoint  = {{ registry_mirror.endpoints | to_json }}
+      dest: /etc/containerd/config.toml
+      insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.mirrors\]'
+      marker: "# {mark} ANSIBLE MANAGED MIRROR {{ registry_mirror.registry }}"
+      validate: containerd --config "%s" config dump
+
+  # https://github.com/containerd/containerd/blob/main/docs/cri/registry.md
+  - name: Add registry mirrors
+    loop: "{{ containerd_registry_mirrors }}"
+    loop_control:
+      label: "{{ registry_mirror.registry }}"
+      loop_var: registry_mirror
+    notify: Restart containerd service
+    when:
+    - containerd_registry_mirrors is defined
+    - 'ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "ge")'
+    ansible.builtin.blockinfile:
+      block: >2
+                [plugins."io.containerd.cri.v1.images".registry.mirrors."{{ registry_mirror.registry }}"]
+                  endpoint  = {{ registry_mirror.endpoints | to_json }}
+      dest: /etc/containerd/config.toml
+      insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.mirrors\]'
+      marker: "# {mark} ANSIBLE MANAGED MIRROR {{ registry_mirror.registry }}"
+      validate: containerd --config "%s" config dump
 
   - name: Remove disabled plugins
     ansible.builtin.lineinfile:
