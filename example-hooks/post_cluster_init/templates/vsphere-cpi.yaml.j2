@@ -1,6 +1,8 @@
 config:
   enabled: true
-  vcenter: "{{ kubernetes_vsphere_server }}"
-  username: "{{ kubernetes_vsphere_username }}"
-  password: "{{ kubernetes_vsphere_password }}"
-  datacenter: "{{ kubernetes_vsphere_datacenter }}"
+  vcenter: "{{ vsphere_cpi_server }}"
+  username: "{{ vsphere_cpi_username }}"
+  password: "{{ vsphere_cpi_password }}"
+  datacenter: "{{ vsphere_cpi_datacenter }}"
+  region: "{{ vsphere_cpi_region_category }}"
+  zone: "{{ vsphere_cpi_zone_category }}"
