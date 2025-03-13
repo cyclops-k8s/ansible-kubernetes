@@ -1,44 +1,77 @@
-- name: Configure cilium values
-  ansible.builtin.copy:
-    content: |
-      k8sServiceHost: "{{ kubernetes_api_endpoint }}"
-      k8sServicePort: "{{ kubernetes_api_port }}"
-    dest: "{{ kubernetes_config_directory }}/cilium.yaml"
-
-- name: Get Cilium
-  ansible.builtin.shell:
-    cmd: |
-      set -e
-      set -o pipefail
-      mkdir -p {{ kubernetes_config_directory }}/cilium
-      cd {{ kubernetes_config_directory }}/cilium
-      curl -LO https://github.com/cilium/cilium/archive/main.tar.gz
-      tar xzf main.tar.gz
-      cd cilium-main/install/kubernetes
-      helm upgrade --install cilium ./cilium \
-        --kubeconfig /etc/kubernetes/admin.conf \
-        --namespace kube-system \
-        --values {{ kubernetes_config_directory }}/cilium.yaml \
-        2>&1 | tee {{ kubernetes_output_directory }}/cilium-installed
-    creates: "{{ kubernetes_output_directory }}/cilium-installed"
-    executable: /bin/bash
-  register: cilium
+- name: Install Cilium
   run_once: true
   delegate_to: "{{ first_kube_control_plane }}"
+  block:
+  - name: Check for Cilium
+    ansible.builtin.shell:
+      cmd: |
+        kubectl get pods -n kube-system --kubeconfig /etc/kubernetes/admin.conf 2> /dev/null | grep cilium > /dev/null 2> /dev/null || echo "Not installed"
+        echo "Installed"
+    register: cilium_installed_cmd
+    run_once: true
 
-- name: Write cilium to stdout
-  ansible.builtin.debug:
-    msg: "{{ cilium.stdout_lines }}"
-  when: cilium.stdout_lines is defined
+  - name: Set install_cilium fact
+    ansible.builtin.set_fact:
+      install_cilium: "{{ cilium_installed_cmd.stdout_lines[0] == 'Not installed' }}"
+    run_once: true
 
-- name: Wait for cilium to be ready
-  ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready pod -l k8s-app={{ item.app }} --timeout=5s --namespace {{ item.namespace }}
-  register: cilium_ready
-  until: cilium_ready.rc == 0
-  retries: 12
-  with_items:
-  - {namespace: kube-system, app: cilium}
+  - name: Configure Cilium values
+    ansible.builtin.template:
+      src: "{{ i }}.j2"
+      dest: "{{ kubernetes_config_directory }}/{{ i }}"
+    loop_control:
+      loop_var: i
+    when: install_cilium
+    with_items:
+    - cilium.yaml
 
-- name: Give it another few seconds
-  ansible.builtin.pause:
-    seconds: 10
+  - name: Install Cilium Helm chart
+    register: cilium
+    ansible.builtin.shell:
+      cmd: |
+        set -e
+        set -o pipefail
+        helm repo add cilium https://helm.cilium.io/
+        helm upgrade --install cilium cilium/cilium \
+          --version 1.16.4 \
+          --kubeconfig /etc/kubernetes/admin.conf \
+          --namespace kube-system \
+          --values {{ kubernetes_config_directory }}/cilium.yaml \
+          2>&1 | tee /etc/kubernetes/output/cilium-installed
+      creates: "{{ kubernetes_output_directory }}/cilium-installed"
+      executable: /bin/bash
+    when: install_cilium
+
+  - name: Wait for Cilium to be ready
+    delay: 1
+    register: cilium_pods
+    # ~120 seconds
+    retries: 12
+    when: install_cilium
+    until: cilium_pods.rc == 0
+    ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf --namespace kube-system wait --for=condition=Ready pod -l k8s-app=cilium --timeout=10s
+
+  - name: Give it another few seconds
+    when: install_cilium
+    ansible.builtin.pause:
+      seconds: 10
+
+  rescue:
+  - name: Write Cilium to stdout
+    when: cilium is defined
+    ansible.builtin.debug:
+      msg: "{{ cilium }}"
+
+  - name: Write cilium_loadbalancerippool to stdout
+    when: cilium_loadbalancerippool is defined
+    ansible.builtin.debug:
+      msg: "{{ cilium_loadbalancerippool }}"
+
+  - name: Write cilium_bgp to stdout
+    when: cilium_bgp is defined
+    ansible.builtin.debug:
+      msg: "{{ cilium_bgp }}"
+
+  - name: Cilium Failed
+    ansible.builtin.fail:
+      msg: Cilium failed to install

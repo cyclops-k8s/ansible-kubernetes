@@ -1,13 +1,17 @@
 - name: Install argocd
+  delegate_to: "{{ first_kube_control_plane }}"
+  run_once: true
   block:
-  - name: Install kustomize
+  - name: Check for ArgoCD
     ansible.builtin.shell:
       cmd: |
-        set -eo pipefail
-        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-        mv kustomize /usr/local/bin/
-      executable: /bin/bash
-      creates: /usr/local/bin/kustomize
+        kubectl get ns argocd --kubeconfig /etc/kubernetes/admin.conf > /dev/null 2> /dev/null || echo "Not installed"
+        echo "Installed"
+    register: argo_installed_cmd
+
+  - name: Set install_argo_cd fact
+    ansible.builtin.set_fact:
+      install_argo_cd: "{{ argo_installed_cmd.stdout_lines[0] == 'Not installed' }}"
 
   - name: Create argo config directory
     ansible.builtin.file:
@@ -16,6 +20,7 @@
       owner: root
       group: root
       mode: '0700'
+    when: install_argo_cd
 
   - name: Copy argo manifests
     ansible.builtin.copy:
@@ -31,6 +36,7 @@
     - {name: argocd-rbac-cm.yaml, src: argocd-rbac-cm.yaml}
     - {name: argocd-service.yaml, src: argocd-service.yaml}
     - {name: argocd-cmd-params-cm.yaml, src: argocd-cmd-params-cm.yaml}
+    when: install_argo_cd
 
   - name: Copy argo templates
     ansible.builtin.template:
@@ -44,7 +50,8 @@
     with_items:
     - {name: argocd-cm.yaml, src: argocd-cm.yaml.j2}
     - {name: argocd-secret.yaml, src: argocd-secret.yaml.j2}
-    - {name: argocd-ingress.yaml, src: argocd-ingress.yaml}
+    - {name: argocd-ingress.yaml, src: argocd-ingress.yaml.j2}
+    when: install_argo_cd
 
   - name: Install ArgoCD
     ansible.builtin.shell:
@@ -54,6 +61,20 @@
         kustomize build {{ kubernetes_config_directory }}/argo | kubectl apply -f - -n argocd
         touch {{ kubernetes_output_directory }}/argocd-installed
       executable: /bin/bash
-      # creates: {{ kubernetes_output_directory }}/argocd-installed
-  run_once: true
-  delegate_to: "{{ first_kube_control_plane }}"
+    register: argocd_install
+    when: install_argo_cd
+
+  rescue:
+  - name: Write argocd_install to stdout
+    ansible.builtin.debug:
+      msg: "{{ argocd_install }}"
+    when: argocd_install is defined
+
+  - name: Write argo_installed_cmd to stdout
+    ansible.builtin.debug:
+      msg: "{{ argo_installed_cmd }}"
+    when: argo_installed_cmd is defined
+
+  - name: ArgoCD failed to install
+    ansible.builtin.fail:
+      msg: ArgoCD failed to install

@@ -1,6 +1,18 @@
 # Add cloud-provider-vsphere helm repository
 - name: Install VSphere CPI
   block:
+  - name: Check for VSphere CPI
+    ansible.builtin.shell: |
+        kubectl get pods -n kube-system --kubeconfig /etc/kubernetes/admin.conf | grep vsphere-cpi > /dev/null || echo "Not installed"
+        echo "Installed"
+    register: vsphere_cpi_installed_cmd
+    run_once: true
+
+  - name: Set vsphere_cpi_installed fact
+    ansible.builtin.set_fact:
+      vsphere_cpi_installed: "{{ vsphere_cpi_installed_cmd.stdout_lines[0] == 'Not installed' }}"
+    run_once: true
+
   - name: Add cloud-provider-vsphere helm repository
     ansible.builtin.shell:
       cmd: |
@@ -11,6 +23,7 @@
       executable: /bin/bash
       creates: "{{ kubernetes_output_directory }}/vsphere-cpi-repo-added"
     register: vsphere_cpi_repo_added
+    when: vsphere_cpi_installed
 
   - name: Set vsphere cpi config
     ansible.builtin.template:
@@ -19,6 +32,7 @@
       owner: root
       group: root
       mode: '0600'
+    when: vsphere_cpi_installed
 
   - name: Install cloud-provider-vsphere helm chart
     ansible.builtin.shell:
@@ -33,6 +47,7 @@
       executable: /bin/bash
       creates: "{{ kubernetes_output_directory }}/vsphere-cpi-installed"
     register: vsphere_cpi_installed
+    when: vsphere_cpi_installed
   rescue:
   - name: Delete vsphere-cpi-installed
     ansible.builtin.file:
@@ -42,16 +57,14 @@
   - name: Output vsphere-cpi-repo-added lines
     ansible.builtin.debug:
       msg: |
-        {{ vsphere_cpi_repo_added.stdout_lines }}
-        {{ vsphere_cpi_repo_added.stderr_lines }}
-    when: vsphere_cpi_repo_added.stdout_lines is defined
+        {{ vsphere_cpi_repo_added }}
+    when: vsphere_cpi_repo_added is defined
 
   - name: Output vsphere-cpi-installed
     ansible.builtin.debug:
       msg: |
-        {{ vsphere_cpi_installed.stdout_lines }}
-        {{ vsphere_cpi_installed.stderr_lines }}
-    when: vsphere_cpi_installed.stdout_lines is defined
+        {{ vsphere_cpi_installed }}
+    when: vsphere_cpi_installed is defined
 
   - name: Fail vsphere-cpi
     ansible.builtin.fail:
