@@ -31,7 +31,17 @@
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
-        apt-cache madison kubeadm | grep "{{ kubernetes_version }}" | head -n 1 | awk '{print $3}'
+
+        # get the version of the currently installed kubeadm
+        REQUESTED_VERSION="{{ kubernetes_version }}"
+        CURRENT_VERSION=$(kubeadm version -o short 2>/dev/null || echo -n "")
+
+        if [[ "$CURRENT_VERSION" != "" ]]
+        then
+          REQUESTED_VERSION="$(sed 's/v//' <<< $CURRENT_VERSION)-"
+        fi
+
+        apt-cache madison kubeadm | grep "$REQUESTED_VERSION" | head -n 1 | awk '{print $3}'
       executable: /bin/bash
     register: k8s_version_temp
     changed_when: k8s_version_temp.rc != 0
