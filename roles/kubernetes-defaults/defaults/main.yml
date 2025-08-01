@@ -338,6 +338,9 @@ kubernetes_oidc_client_id: null
 # Claim inside the OIDC token that states the username
 kubernetes_oidc_username_claim: upn
 
+# Use expression instead of claim for the OIDC username
+kubernetes_oidc_username_expression: null
+
 # Prefix to add to the username for logs and authorization
 kubernetes_oidc_username_prefix: "oidc:"
 

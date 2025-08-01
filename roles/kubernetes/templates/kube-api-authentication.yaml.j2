@@ -9,8 +9,12 @@ jwt:
     # username represents an option for the username attribute.
     # This is the only required attribute.
     username:
+{% if kubernetes_oidc_username_expression %}
+      expression: "{{ kubernetes_oidc_username_expression }}"
+{% else %}
       claim: "{{ kubernetes_oidc_username_claim }}"
       prefix: "{{ kubernetes_oidc_username_prefix }}"
+{% endif %}
     groups:
       claim: "{{ kubernetes_oidc_group_claim }}"
       prefix: "{{ kubernetes_oidc_group_prefix }}"
