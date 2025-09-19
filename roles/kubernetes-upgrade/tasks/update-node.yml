@@ -45,7 +45,6 @@
   with_items:
   - {file: "kubeadm-upgrade.yaml.j2", destination: "{{ kubernetes_config_directory }}/kubeadm-upgrade.yaml"}
   when:
-  - first_kube_control_plane == inventory_hostname
   - inventory_hostname in groups['control_planes']
 
 - name: Upgrade kubernetes primary control plane node
