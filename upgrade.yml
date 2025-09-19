@@ -4,6 +4,7 @@
   gather_facts: true
   serial: 1
   roles:
+  - role: kubernetes-defaults
   - role: kubernetes-upgrade
   vars:
-    kubernetes_version: "1.31"
+    version: "{{ kubernetes_version }}"

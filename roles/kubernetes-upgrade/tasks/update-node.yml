@@ -34,15 +34,37 @@
   register: kubeadm_version
   changed_when: false
 
+- name: Create kubeadm upgrade config file
+  ansible.builtin.template:
+    src: "{{ item.file }}"
+    dest: "{{ item.destination }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode | default('0600') }}"
+    backup: false
+  with_items:
+  - {file: "kubeadm-upgrade.yaml.j2", destination: "{{ kubernetes_config_directory }}/kubeadm-upgrade.yaml"}
+  when:
+  - first_kube_control_plane == inventory_hostname
+  - inventory_hostname in groups['control_planes']
+
 - name: Upgrade kubernetes primary control plane node
-  ansible.builtin.command: kubeadm upgrade apply {{ kubeadm_version.stdout }} --config {{ kubernetes_config_directory }}/kubeadm.yaml --yes
+  ansible.builtin.command: kubeadm upgrade apply {{ kubeadm_version.stdout }} --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml --yes
   changed_when: true
   when: first_kube_control_plane == inventory_hostname
 
 - name: Upgrade non kubernetes primary control plane node
-  ansible.builtin.command: kubeadm upgrade node --config {{ kubernetes_config_directory }}/kubeadm.yaml
+  ansible.builtin.command: kubeadm upgrade node --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml
   changed_when: true
-  when: first_kube_control_plane != inventory_hostname
+  when:
+  - first_kube_control_plane != inventory_hostname
+  - inventory_hostname in groups['control_planes']
+
+- name: Upgrade worker nodes
+  ansible.builtin.command: kubeadm upgrade node
+  changed_when: true
+  when:
+  - inventory_hostname not in groups['control_planes']
 
 - name: Drain kubernetes node
   ansible.builtin.shell:
@@ -76,7 +98,7 @@
 
 - name: Uncordon kubernetes node
   ansible.builtin.shell:
-    cmd: timeout 300 bash -c 'while [[ ! `sudo kubectl uncordon kube1-cp-01 --kubeconfig /etc/kubernetes/admin.conf` ]]; do sleep 5; done'
+    cmd: timeout 300 bash -c 'while [[ ! `sudo kubectl uncordon {{ inventory_hostname_short }} --kubeconfig /etc/kubernetes/admin.conf` ]]; do sleep 5; done'
   changed_when: true
   delegate_to: "{{ first_kube_control_plane }}"
 
