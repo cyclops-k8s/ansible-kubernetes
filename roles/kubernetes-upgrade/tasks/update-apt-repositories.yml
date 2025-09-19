@@ -12,6 +12,17 @@
   args:
     creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
 
+- name: Set file permissions for keyring
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: update kubernetes list file
+  ansible.builtin.shell: |
+    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
 - name: Adding apt repository for Kubernetes
   ansible.builtin.apt_repository:
     repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/ /
@@ -21,4 +32,4 @@
 - name: Find latest kubernetes version in apt
   ansible.builtin.apt:
     update_cache: true
-    cache_valid_time: 3600
+    allow_change_held_packages: true
