@@ -1,5 +1,13 @@
 # Ansible-Kubernetes - CIS hardened
 
+## Pre-requisites
+
+### Collections
+* community.dns `ansible-galaxy collection install community.dns`
+
+### Python packages
+* dnspython
+
 ## Purpose
 
 The purpose of this playbook and roles is to install a vanilla Kubernetes cluster with OIDC enabled hardened against the CIS Benchmark and DOD Stig.
