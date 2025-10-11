@@ -243,11 +243,17 @@ kubernetes_hookfiles:
   # After installing packages
   post_install_packages: []
 
+  # Before installing control planes
+  pre_configure_control_planes: []
+
   # After configuring the control planes with the required configuration files
   post_configure_control_planes: []
 
   # After configuring the workers with the required configuration files
   post_configure_workers: []
+
+  # Before the control plane has been initialized or control planes have been joined
+  pre_control_planes: []
 
   # After the cluster has been initialized and before anything has been added or configured in the cluster.
   # Host level security policies that are deferred to after the cluster creation are not applied yet.
