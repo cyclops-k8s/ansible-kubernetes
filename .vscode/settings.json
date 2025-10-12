@@ -7,5 +7,5 @@
         "**/example-hooks/**/*.yaml": "ansible",
         "**/example-hooks/**/*.j2": "ansible"
     },
-    "ansible.python.interpreterPath": "/usr/bin/python3"
+    "ansible.python.interpreterPath": "~/.local/pipx/venvs/ansible/bin/python"
 }
