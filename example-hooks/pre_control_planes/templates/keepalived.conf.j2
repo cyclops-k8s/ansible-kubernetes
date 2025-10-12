@@ -1,0 +1,28 @@
+global_defs {
+    enable_script_security
+    script_user root
+}
+
+vrrp_script check_haproxy {
+    init_fail
+    interval 1
+    script "/usr/bin/curl http://127.0.0.1:1936/healthz --head"
+    weight 2
+}
+
+vrrp_instance haproxy {
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass {{ vrrp_password }}
+    }
+    interface {{ vrrp_interface }}
+    state {{ vrrp_state }}
+    track_script {
+        check_haproxy
+    }
+    virtual_ipaddress {
+        {{ control_plane_ip }}/24
+    }
+    virtual_router_id {{ vrrp_virtual_router_id }}
+}
