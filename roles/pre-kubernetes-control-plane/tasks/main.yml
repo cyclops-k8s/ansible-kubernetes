@@ -4,4 +4,3 @@
   when:
   - inventory_hostname in groups['control_planes']
   - kubernetes_hookfiles.pre_control_planes is defined
-  run_once: true
