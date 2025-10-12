@@ -203,9 +203,12 @@ skipPhases:
 - {{ phase }}
 {% endfor %}
 {% endif %}
+localAPIEndpoint:
+  advertiseAddress: "{{ kubernetes_api_server_bind_address if kubernetes_api_server_bind_address != None else query('community.dns.lookup', ansible_host)[0] }}"
+  bindPort: {{ kubernetes_api_server_port }}
 nodeRegistration:
   kubeletExtraArgs:
-{% if kubernetes_cloud_provider == 'vsphere' or kubernetes_cloud_provider == 'external' %}
+{% if kubernetes_cloud_provider == 'external' %}
   - name: cloud-provider
     value: "external"
 {% endif %}

@@ -88,7 +88,7 @@
   block:
   - name: Helm - Download GPG keyring
     ansible.builtin.get_url:
-      url: https://baltocdn.com/helm/signing.asc
+      url: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
       dest: /etc/apt/keyrings/helm
       mode: '0644'
       owner: root
@@ -108,7 +108,7 @@
 
   - name: Add helm apt repository
     ansible.builtin.apt_repository:
-      repo: deb [signed-by=/etc/apt/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main
+      repo: deb [signed-by=/etc/apt/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main
       state: present
       filename: helm
       update_cache: true

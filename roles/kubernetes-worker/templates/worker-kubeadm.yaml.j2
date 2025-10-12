@@ -33,7 +33,7 @@ discovery:
     unsafeSkipCAVerification: true
 nodeRegistration:
   kubeletExtraArgs:
-{% if kubernetes_cloud_provider == 'vsphere' or kubernetes_cloud_provider == 'external' %}
+{% if kubernetes_cloud_provider == 'external' %}
   - name: cloud-provider
     value: "external"
 {% endif %}

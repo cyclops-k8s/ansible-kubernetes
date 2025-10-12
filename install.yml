@@ -31,6 +31,14 @@
   - role: kubernetes
   serial: 100
 
+- name: Pre control plane hooks
+  hosts: control_planes
+  any_errors_fatal: true
+  become: true
+  roles:
+  - role: kubernetes-defaults
+  - role: pre-kubernetes-control-plane
+
 - name: Install Control Planes
   hosts: control_planes
   any_errors_fatal: true
