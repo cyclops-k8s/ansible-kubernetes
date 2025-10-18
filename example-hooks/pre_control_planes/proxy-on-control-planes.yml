@@ -37,7 +37,7 @@
     src: "{{ kubernetes_proxy_keepalived_config_file }}"
     dest: /etc/keepalived/keepalived.conf
     owner: root
-    mode: 0644
+    mode: '0644'
 
 - name: Enable keepalived
   ansible.builtin.systemd_service:
