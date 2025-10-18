@@ -86,7 +86,7 @@
     ansible.builtin.file:
       state: directory
       path: /root/.kube
-      mode: 0600
+      mode: '0600'
       owner: root
       group: root
     when:
@@ -227,7 +227,7 @@
   - name: Output serviceaccount_patch error
     ansible.builtin.debug:
       msg: |
-        {{ serviceaccount_pach.stdout_lines }}
+        {{ serviceaccount_patch.stdout_lines }}
         {{ serviceaccount_patch.stderr_lines }}
     when: serviceaccount_patch.stdout_lines is defined
 

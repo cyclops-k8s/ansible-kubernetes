@@ -42,7 +42,7 @@
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
-      kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubeadm_init_extra_args | default('') }} 2>&1
+      kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_join_extra_args | default('') }} 2>&1
     executable: /bin/bash
   changed_when: kubeadm_join_output.rc == 0
   register: kubeadm_join_output
@@ -52,7 +52,7 @@
   ansible.builtin.file:
     state: directory
     path: /root/.kube
-    mode: 0600
+    mode: '0600'
     owner: root
     group: root
   when: kubernetes_needs_to_join_cluster
