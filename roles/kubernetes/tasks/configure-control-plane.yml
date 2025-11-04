@@ -7,7 +7,7 @@
   - "{{ kubernetes_config_directory }}/patches"
   - "{{ kubernetes_scripts_directory }}"
 
-- name: Create kubernetes encryption configuration
+- name: Create kubernetes configuration files
   ansible.builtin.template:
     src: "{{ item.file }}"
     dest: "{{ item.destination }}"
@@ -28,7 +28,17 @@
   # CIS 1.1.12
   # STIG V-242459
   - {file: "etcd-patch.yaml.j2", destination: "{{ kubernetes_config_directory }}/patches/etcd.yaml"}
-  # Cert rotation
+
+- name: Create kubernetes automatic certificate renewal scripts and service files
+  ansible.builtin.template:
+    src: "{{ item.file }}"
+    dest: "{{ item.destination }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode | default('0600') }}"
+    backup: false
+  when: kubernetes_manage_cert_renewal
+  with_items:
   - {file: "k8s-certs-renew.sh.j2", destination: "{{ kubernetes_scripts_directory }}/k8s-certs-renew.sh", mode: "0755"}
   - {file: "k8s-certs-renew.service.j2", destination: "/etc/systemd/system/k8s-certs-renew.service", mode: "0644"}
   - {file: "k8s-certs-renew.timer.j2", destination: "/etc/systemd/system/k8s-certs-renew.timer", mode: "0644"}
@@ -76,12 +86,13 @@
     group: etcd
     create_home: false
 
-- name: Renew K8S control plane certificates monthly 2/2
+- name: Renew K8S control plane certificates monthly systemd timer
   ansible.builtin.systemd_service:
     name: k8s-certs-renew.timer
     enabled: true
     state: started
     daemon_reload: true
+  when: kubernetes_manage_cert_renewal
 
 - name: Install Helm
   when: kubernetes_install_helm
