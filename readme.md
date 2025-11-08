@@ -3,19 +3,24 @@
 ## Pre-requisites
 
 ### Collections
+
 * community.dns `ansible-galaxy collection install community.dns`
 
 ### Python packages
+
 * dnspython
+
+### Operating systems
+
+* Currently the only supported Linux distribution is Ubuntu. This has been tested on 22.04, 24.04, 24.10 and 25.04.
 
 ## Purpose
 
 The purpose of this playbook and roles is to install a vanilla Kubernetes cluster with OIDC enabled hardened against the CIS Benchmark and DOD Stig.
 
-It is a vanilla `kubeadm` cluster that can be managed by `kubeadm` going forward, or for easy upgrades you can use the `upgrade` playbook.
+It is a vanilla `kubeadm` cluster that can be managed by `kubeadm` going forward, or for easy upgrades you can use the included `upgrade` playbook.
 
-It installs HAProxy and Keepalived on the proxy nodes, this is needed for high availability of the cluster's
-control plane.
+It installs HAProxy and Keepalived on the proxy nodes, this is needed for high availability of the cluster's control plane. If you decide to run the frontend of the control plane on the control planes themselves, there is an example hook that will do that for you.
 
 It also, by default, installs `Helm` and `Kustomize` on the control plane nodes for use by the hooks. They are not required to run the playbook. This can be opted out of by setting `kubernetes_install_helm` and/or `kubernetes_install_kustomize` to `false` in your variables for the `control_plane` nodes.
 
@@ -42,6 +47,8 @@ To install different pieces of the cluster, things like the CNI, CPI or CSI you 
 Hooks are tasks that are imported in the different stages of the cluster.
 
 The different hooks are as follows
+* Before the control planes are configured, but after software is installed
+    * One example would be to configure the proxies to run on the control planes so you don't need to have additional infrastructure.
 * After the cluster is initialized
     * This is where you would install the CPI and CNI.
     * You can also use the example `add-adminbinding.yaml` hook to setup the oidc:Admins binding so members of the Admin role in your application client can fully access the cluster.
@@ -58,23 +65,26 @@ The different hooks are as follows
 ## Configuration
 I'm not going to cover every option in this section as it is vast, the name of what they do is pretty self explanatory and many comments have been added. There are a few that are required and they are noted in the default options file along with their purpose.
 
-Each option, if related to a CIS benchmark or STIG, is noted in the defaults main.yml file and respective tasks in the roles.
+Each option, if it is related to a CIS benchmark or STIG, is noted in the defaults main.yml file and respective tasks in the roles.
 
 You can see all of the different options in [roles/kubernetes-defaults/defaults/main.yml](roles/kubernetes-defaults/defaults/main.yml).
 
 ## CIS Benchmark
 
-Review the [CIS%20Hardening.md](`CIS hardening.md`) to see the status of each benchmark test. Most of them were handeled out of the box by kubeadm, the ones that could be resolved by the playbook are.
+Review the [CIS Hardening.md](CIS%20hardening.md) to see the status of each benchmark test. Most of them were handled out of the box by kubeadm, the ones that could be resolved by the playbook are.
 
 There are some that must be handled by the administrator while using the cluster, like making sure that the default service account is not mounted by default.
 
-When 1.33 comes out this playbook will be updated to use CEL mutatations to automatically mark the default service account as not automatically mounted.
+TODO: Use CEL mutations to automatically mark the default service account as not automatically mounted.
 
 ## STIG's
 
-The Kubernetes STIG Version 2 Release 1, dated 24 July 2024 has also been applied. Using the STIG viewer available for free from the DoD of the United States,
-you can view the checklist `Stig checklist - Kubernetes.cklb` and review what has been fixed, or not. Of the ones not fixed, there is only one
-that is not up to the kubernetes administrator. It is the one related to anonymous auth of the API. The RBAC restricts what the anonymous
+The Kubernetes STIG Version 2 Release 1, dated 24 July 2024 has also been applied. Using the STIG viewer available for free from the DoD of the United States, you can view the checklist `Stig checklist - Kubernetes.cklb` and review what has been fixed, or not. Of the ones not fixed, there is only one
+that is not up to the kubernetes administrator. It is the one related to anonymous auth of the API. RBAC restricts what the anonymous
 user can access and it is required to join nodes to the cluster using Kubeadm.
 
-The stig viewer can be found here: [https://public.cyber.mil/stigs/srg-stig-tools/](Stig Viewer)
+The Stig viewer can be found here: [Stig Viewer](https://public.cyber.mil/stigs/srg-stig-tools/)
+
+## Adding nodes
+
+Just add the new nodes to your inventory and re-run the install playbook. It will automatically add the node without disrupting anything. Your hooks should check to see if they are already installed and if so, don't do anything.

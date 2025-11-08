@@ -290,7 +290,7 @@ kubernetes_kubeadm_init_extra_args: ""
 # Extra arguments to add to kubeadm join. This is added verbatim to the end of the `kubeadm join` command
 kubernetes_kubeadm_join_extra_args: ""
 
-# Manage automatic renewal of Kubernetes node certificates by a systemd timer unit
+# Manage automatic renewal of Kubernetes node (KubeScheduler/APIServer/Etcd/etc) certificates by a systemd timer unit
 kubernetes_manage_cert_renewal: true
 
 # Apt mirror to pull the Kubernetes packages from
