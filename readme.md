@@ -65,17 +65,17 @@ The different hooks are as follows
 ## Configuration
 I'm not going to cover every option in this section as it is vast, the name of what they do is pretty self explanatory and many comments have been added. There are a few that are required and they are noted in the default options file along with their purpose.
 
-Each option, if it related to a CIS benchmark or STIG, is noted in the defaults main.yml file and respective tasks in the roles.
+Each option, if it is related to a CIS benchmark or STIG, is noted in the defaults main.yml file and respective tasks in the roles.
 
 You can see all of the different options in [roles/kubernetes-defaults/defaults/main.yml](roles/kubernetes-defaults/defaults/main.yml).
 
 ## CIS Benchmark
 
-Review the [CIS Hardening.md](CIS%20hardening.md) to see the status of each benchmark test. Most of them were handeled out of the box by kubeadm, the ones that could be resolved by the playbook are.
+Review the [CIS Hardening.md](CIS%20hardening.md) to see the status of each benchmark test. Most of them were handled out of the box by kubeadm, the ones that could be resolved by the playbook are.
 
 There are some that must be handled by the administrator while using the cluster, like making sure that the default service account is not mounted by default.
 
-TODO: Use CEL mutatations to automatically mark the default service account as not automatically mounted.
+TODO: Use CEL mutations to automatically mark the default service account as not automatically mounted.
 
 ## STIG's
 
