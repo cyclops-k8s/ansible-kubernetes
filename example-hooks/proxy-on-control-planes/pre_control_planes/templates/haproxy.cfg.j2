@@ -1,0 +1,31 @@
+global
+    log stdout format raw local0 notice
+
+defaults
+    log global
+    mode tcp
+    timeout connect 5000
+    timeout client  60000
+    timeout server  60000
+
+listen stats
+    bind :1936
+    mode http
+    stats enable
+    stats refresh 30s
+    stats show-node
+    stats uri /haproxy?stats
+    http-request use-service prometheus-exporter if { path /metrics }
+    monitor-uri /healthz
+
+listen kubernetes-controlplane
+    mode tcp
+    bind {{ kubernetes_proxy_bind_address }}:{{ kubernetes_proxy_port }}
+
+    option httpchk GET /readyz
+    http-check connect ssl alpn h2,http/1.1
+    http-check send meth GET uri /readyz
+
+{% for host in groups['control_planes'] %}
+    server {{ hostvars[host]['ansible_host'] }} {{ hostvars[host]['kubernetes_api_server_bind_address'] | default(query('community.dns.lookup', hostvars[host]['ansible_host'])[0]) }}:{{ hostvars[host]['kubernetes_api_server_port'] }} check inter {{ kubernetes_control_plane_check_interval | default('250ms') }} verify none
+{% endfor %}
