@@ -1,14 +1,15 @@
-- name: Check if we need to join the cluster
-  ansible.builtin.shell:
-    cmd: kubectl get nodes {{ inventory_hostname_short }} && exit 1 || exit 0
-  register: kubernetes_needs_to_join_cluster_cmd
-  failed_when: kubernetes_needs_to_join_cluster_cmd.rc != 0 and kubernetes_needs_to_join_cluster_cmd.rc != 1
+- name: Get nodes in the cluster
   changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"
+  register: kubernetes_nodes
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      kubectl get nodes -o json | jq -r '.items[].metadata.name'
 
-- name: Set kubernetes_needs_to_join_cluster
+- name: Check if the node needs to join the cluster
   ansible.builtin.set_fact:
-    kubernetes_needs_to_join_cluster: "{{ kubernetes_needs_to_join_cluster_cmd.rc == 0 }}"
+    kubernetes_needs_to_join_cluster: "{% if inventory_hostname in kubernetes_nodes.stdout_lines or inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ 'false' | bool }}{% else %}{{ 'true' | bool }}{% endif %}"
 
 - name: Set join token
   ansible.builtin.set_fact:
