@@ -32,8 +32,8 @@
         set -e
         set -o pipefail
         helm repo add cilium https://helm.cilium.io/
-        helm upgrade --install cilium cilium/cilium \
-          --version {{ kubernetes_cilium_version | default(1.16.4) }} \
+        helm upgrade --install cilium cilium/cilium
+          {{ "--version " + kubernetes_cilium_version if kubernetes_cilium_version is defined }} \
           --kubeconfig /etc/kubernetes/admin.conf \
           --namespace kube-system \
           --values {{ kubernetes_config_directory }}/cilium.yaml \
