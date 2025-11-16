@@ -56,6 +56,17 @@
 
 - name: Set containerd systemd cgroup
   block:
+
+  # Ensure the containerd configuration directory exists.
+  # Ensure secure directory permissions.
+  - name: Create containerd configuration directory
+    ansible.builtin.file:
+      group: root
+      mode: '0700'
+      owner: root
+      path: /etc/containerd
+      state: directory
+
   - name: Set containerd systemd cgroup
     ansible.builtin.shell:
       cmd: |
