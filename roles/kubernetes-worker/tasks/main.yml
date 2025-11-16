@@ -50,14 +50,12 @@
     path: "{{ kubernetes_pki_directory }}"
     mode: '0600'
     recurse: true
-  when: kubernetes_needs_to_join_cluster
 
 # CIS 4.1.1
 - name: CIS 4.1.1 - Set kubelet.service to 0600
   ansible.builtin.file:
     path: /usr/lib/systemd/system/kubelet.service
     mode: '0600'
-  when: kubernetes_needs_to_join_cluster
 
 # CIS 4.1.9
 # STIG V-242407
@@ -65,7 +63,6 @@
   ansible.builtin.file:
     path: /var/lib/kubelet/config.yaml
     mode: '0600'
-  when: kubernetes_needs_to_join_cluster
 
 # STIG V-242397
 - name: Secure static pod path
@@ -73,7 +70,6 @@
     regexp: 'staticPodPath:.*'
     replace: 'staticPodPath:'
     path: /var/lib/kubelet/config.yaml
-  when: kubernetes_needs_to_join_cluster
 
 - name: Retart kubelet
   ansible.builtin.service:
