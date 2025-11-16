@@ -80,7 +80,8 @@
   - name: Add containerd default credentials
     with_items: "{{ containerd_credentials }}"
     when:
-    - 'ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "lt")'
+    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "lt")) or
+      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "lt"))
     ansible.builtin.blockinfile:
       dest: /etc/containerd/config.toml
       insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.configs\]'
@@ -96,7 +97,8 @@
   - name: Add containerd default credentials
     with_items: "{{ containerd_credentials }}"
     when:
-    - 'ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "ge")'
+    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "gt")) or
+      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "gt"))
     ansible.builtin.blockinfile:
       dest: /etc/containerd/config.toml
       insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.configs\]'
@@ -118,7 +120,8 @@
     notify: Restart containerd service
     when:
     - containerd_registry_mirrors is defined
-    - 'ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "lt")'
+    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "lt")) or
+      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "lt"))
     ansible.builtin.blockinfile:
       block: >2
                 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ registry_mirror.registry }}"]
@@ -137,7 +140,8 @@
     notify: Restart containerd service
     when:
     - containerd_registry_mirrors is defined
-    - 'ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "ge")'
+    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "gt")) or
+      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "gt"))
     ansible.builtin.blockinfile:
       block: >2
                 [plugins."io.containerd.cri.v1.images".registry.mirrors."{{ registry_mirror.registry }}"]
