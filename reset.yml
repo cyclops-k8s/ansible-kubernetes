@@ -15,6 +15,7 @@
     loop:
     - k8s-certs-renew.timer
     - kubelet.service
+    - keepalived.service
     loop_control:
       loop_var: unit
     ansible.builtin.systemd_service:
@@ -23,13 +24,13 @@
       state: stopped
 
   - name: Remove containerd containers
+    changed_when: true
     failed_when: false
     ansible.builtin.shell:
       cmd: |
         set -o pipefail
         ctr --namespace k8s.io containers ls -q | xargs -r ctr --namespace k8s.io containers rm
-      executable: /bin/bash
-    changed_when: true
+      executable: /usr/bin/bash
 
   - name: Stop containerd
     failed_when: false
@@ -43,23 +44,36 @@
       state: stopped
 
   - name: Uninstall packages
-    failed_when: false
-    # The order matters. Do not sort the list
-    loop:
-    - containerd.io
-    - cri-tools
-    - helm
-    - kubeadm
-    - kubectl
-    - kubelet
-    - conntrack
-    - kubernetes-cni
-    loop_control:
-      loop_var: package
     ansible.builtin.apt:
       allow_change_held_packages: true
-      name: "{{ package }}"
+      name:
+      - conntrack
+      - containerd
+      - containerd.io
+      - cri-tools
+      - helm
+      - keepalived
+      - kubeadm
+      - kubectl
+      - kubelet
+      - kubernetes-cni
       state: absent
+
+  - name: Clean up unused packages
+    ansible.builtin.apt:
+      autoremove: true
+      purge: true
+
+  # This removes config files left behind by package removal and also removes
+  # them from the dpkg database. This prevents issues on future installs where
+  # the config files would not be installed because the dpkg database says
+  # they are already present.
+  - name: Clean up unused package configuration files
+    failed_when: false
+    ansible.builtin.shell:
+      cmd: |
+        apt-get autopurge --yes $(dpkg-query --show --showformat='${binary:Package} ${db:Status-Abbrev}\n' | grep ' rc' | cut -f 1 -d ' ' | tr '\n' ' ')
+      executable: /usr/bin/bash
 
   - name: Reboot
     ansible.builtin.reboot:
@@ -80,8 +94,10 @@
     - /etc/cni
     - /etc/containerd
     - /etc/default/kubelet
+    - /etc/keepalived
     - /etc/kubernetes
     - /etc/sysctl.d/99-kubernetes-cri.conf
+    - /etc/sysctl.d/99-non-local-bind.conf
     - /etc/systemd/system/k8s-certs-renew.service
     - /etc/systemd/system/k8s-certs-renew.timer
     - /opt/cni

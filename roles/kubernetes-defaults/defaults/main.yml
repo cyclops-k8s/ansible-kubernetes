@@ -407,3 +407,23 @@ vrrp_interface: null
 # Required
 # The virtual router id for the Kubernetes control plane keepalived instance
 vrrp_virtual_router_id: null
+
+# Required
+# The initial state of the keepalived instance on this node, either MASTER or BACKUP
+# This shouldn't reeally be needed. BACKUP should be fine. We should get rid of this.
+vrrp_state: BACKUP
+
+# Registry mirrors to add to containerd configuration
+# containerd_registry_mirrors
+# - registry: docker.io
+#   endpoints:
+#     - https://my.localserver.me:5001
+# - registry: quay.io
+#   endpoints:
+#     - https://my.localserver.me:5002
+# - registry: registry.k8s.io
+#   endpoints:
+#     - https://my.localserver.me:5004
+# - registry: docker.elastic.co
+#   endpoints:
+#     - https://my.localserver.me:5003

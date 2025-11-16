@@ -185,8 +185,8 @@ etcd:
         value: "false"
 {% if kubernetes_etcd_extra_args is defined and kubernetes_etcd_extra_args | length > 0 %}
 {% for arg in kubernetes_etcd_extra_args %}
-      - name: {{ arg.name }}
-        value: {{ arg.value }}
+      - name: "{{ arg.name }}"
+        value: "{{ arg.value }}"
 {% endfor %}
 {% endif %}
 ---
@@ -200,7 +200,7 @@ kind: InitConfiguration
 {% if kubernetes_init_skip_phases is defined and kubernetes_init_skip_phases | length > 0 %}
 skipPhases:
 {% for phase in kubernetes_init_skip_phases %}
-- {{ phase }}
+- "{{ phase }}"
 {% endfor %}
 {% endif %}
 localAPIEndpoint:
@@ -215,4 +215,4 @@ nodeRegistration:
   - name: node-ip
     value: "{{ ansible_default_ipv4.address}}"
 patches:
-  directory: {{ kubernetes_config_directory }}/patches
+  directory: "{{ kubernetes_config_directory }}/patches"
