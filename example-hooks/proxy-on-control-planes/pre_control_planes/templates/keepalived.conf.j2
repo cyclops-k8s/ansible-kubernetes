@@ -22,7 +22,7 @@ vrrp_instance haproxy {
         check_haproxy
     }
     virtual_ipaddress {
-        {{ control_plane_ip }}/24
+        {{ kubernetes_control_plane_ip }}/24
     }
     virtual_router_id {{ vrrp_virtual_router_id }}
 }
