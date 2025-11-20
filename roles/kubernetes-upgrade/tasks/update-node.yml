@@ -26,8 +26,6 @@
     selection: hold
   with_items:
   - kubeadm
-  - kubelet
-  - kubectl
 
 - name: Get kubeadm version
   ansible.builtin.command: kubeadm version -o short
@@ -87,6 +85,15 @@
     state: latest
     allow_change_held_packages: true
     only_upgrade: true
+
+- name: Hold kubelet, kubectl and containerd.io
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  with_items:
+  - kubelet
+  - kubectl
+  - containerd.io
 
 - name: Reload kubelet
   ansible.builtin.service:
