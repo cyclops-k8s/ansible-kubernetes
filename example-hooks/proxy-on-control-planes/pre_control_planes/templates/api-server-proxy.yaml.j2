@@ -1,6 +1,8 @@
 apiVersion: v1
 kind: Pod
 metadata:
+  annotations:
+    haproxy-playbook-run-date: "{{ template_run_date }}"
   labels:
     component: kube-apiserver-proxy
     tier: control-plane

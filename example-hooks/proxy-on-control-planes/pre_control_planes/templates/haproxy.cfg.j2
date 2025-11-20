@@ -27,5 +27,5 @@ listen kubernetes-controlplane
     http-check send meth GET uri /readyz
 
 {% for host in groups['control_planes'] %}
-    server {{ hostvars[host]['ansible_host'] }} {{ hostvars[host]['kubernetes_api_server_bind_address'] | default(query('community.dns.lookup', hostvars[host]['ansible_host'])[0]) }}:{{ hostvars[host]['kubernetes_api_server_port'] }} check inter {{ kubernetes_control_plane_check_interval | default('250ms') }} verify none
+    server {{ host }} {{ hostvars[host]['kubernetes_api_server_bind_address'] | default(query('community.dns.lookup', hostvars[host]['ansible_host'])[0]) | default(query('community.dns.lookup', host)[0]) }}:{{ hostvars[host]['kubernetes_api_server_port'] }} check inter {{ kubernetes_control_plane_check_interval | default('250ms') }} verify none
 {% endfor %}
