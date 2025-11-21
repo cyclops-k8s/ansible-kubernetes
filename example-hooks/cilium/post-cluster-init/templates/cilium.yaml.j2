@@ -1,0 +1,68 @@
+kubeProxyReplacement: true
+k8sServiceHost: {{ kubernetes_api_endpoint }}
+k8sServicePort: {{ kubernetes_api_port }}
+
+{% if kubernetes_cilium_devices -%}
+devices: {{ kubernetes_cilium_devices }}
+{%- endif %}
+
+ipam:
+  mode: cluster-pool
+  operator:
+    {% if kubernetes_cilium_clusterPoolIPv4PodCIDR and kubernetes_cilium_clusterPoolIPv4MaskSize -%}
+    clusterPoolIPv4PodCIDRList:
+    - {{ kubernetes_cilium_clusterPoolIPv4PodCIDR }}
+    clusterPoolIPv4MaskSize: {{ kubernetes_cilium_clusterPoolIPv4MaskSize }}
+    {%- endif %}
+    {% if kubernetes_cilium_clusterPoolIPv6PodCIDR and kubernetes_cilium_clusterPoolIPv6MaskSize -%}
+    clusterPoolIPv6PodCIDRList:
+    - {{ kubernetes_cilium_clusterPoolIPv6PodCIDR }}
+    clusterPoolIPv6MaskSize: {{ kubernetes_cilium_clusterPoolIPv6MaskSize }}
+    {%- endif %}
+
+hubble:
+  metrics:
+    enabled:
+    - dns
+    - drop
+    - flow
+    # - flows-to-world
+    # - httpV2
+    - icmp
+    # - kafka
+    - port-distribution
+    - tcp
+  relay:
+    enabled: true
+    rollOutPods: true
+  ui:
+    enabled: true
+    {% if kubernetes_cilium_hubble_fqdn -%}
+    ingress:
+      enabled: true
+      className: {{ kubernetes_cilium_hubble_ingressClassName | default("cilium") }}
+      hosts:
+      - {{ kubernetes_cilium_hubble_fqdn }}
+    {% endif -%}
+    rollOutPods: true
+
+{% if kubernetes_cilium_bgpControlPlane_enabled -%}
+bgpControlPlane:
+  enabled: true
+{%- endif %}
+
+cni:
+  exclusive: false
+
+encryption:
+  enabled: true
+  nodeEncryption: true
+  type: wireguard
+
+pmtuDiscovery:
+  enabled: true
+
+prometheus:
+  enabled: true
+
+rollOutCiliumPods: true
