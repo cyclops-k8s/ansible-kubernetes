@@ -39,7 +39,7 @@
 
 - name: Add Docker Repository
   ansible.builtin.apt_repository:
-    repo: deb [signed-by=/etc/apt/keyrings/docker.gpg] {{ containerd_mirror }} {{ ansible_distribution_release | lower }} stable
+    repo: deb [signed-by=/etc/apt/keyrings/docker.gpg] {{ containerd_mirror }} {{ ansible_facts["distribution_release"] | lower }} stable
     state: present
     update_cache: true
     filename: docker
