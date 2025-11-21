@@ -1,6 +1,6 @@
 - name: Check if we need to join the cluster
   ansible.builtin.shell:
-    cmd: kubectl get nodes {{ inventory_hostname_short }} && exit 1 || exit 0
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes {{ inventory_hostname_short }} && exit 1 || exit 0
   register: kubernetes_needs_to_join_cluster_cmd
   failed_when: kubernetes_needs_to_join_cluster_cmd.rc != 0 and kubernetes_needs_to_join_cluster_cmd.rc != 1
   changed_when: false
