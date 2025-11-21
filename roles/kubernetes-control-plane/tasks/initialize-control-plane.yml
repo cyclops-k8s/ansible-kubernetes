@@ -167,14 +167,10 @@
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
-
-        export KUBECONFIG=/etc/kubernetes/admin.conf
-
         for namespace in $(kubectl --kubeconfig /etc/kubernetes/admin.conf get namespaces -A -o=jsonpath="{.items[*]['metadata.name']}"); do
           echo -n "Patching namespace $namespace - "
           kubectl --kubeconfig /etc/kubernetes/admin.conf patch serviceaccount default -n ${namespace} --patch-file /etc/kubernetes/config/default-serviceaccount-patch.yaml
         done
-
       executable: /bin/bash
     changed_when: serviceaccount_patch.rc == 0
     register: serviceaccount_patch
