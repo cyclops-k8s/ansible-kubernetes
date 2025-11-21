@@ -50,6 +50,11 @@
     - containerd.io
     state: present
 
+- name: Hold containerd.io
+  ansible.builtin.dpkg_selections:
+    name: containerd.io
+    selection: hold
+
 - name: Get package facts
   become: true
   ansible.builtin.package_facts:
