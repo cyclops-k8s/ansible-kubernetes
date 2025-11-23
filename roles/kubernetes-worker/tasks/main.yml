@@ -5,7 +5,7 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      kubectl get nodes -o json | jq -r '.items[].metadata.name'
+      kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o custom-columns=NAME:.metadata.name --no-headers
 
 - name: Check if the node needs to join the cluster
   ansible.builtin.set_fact:

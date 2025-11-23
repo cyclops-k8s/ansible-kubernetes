@@ -42,8 +42,7 @@
   - name: Wait for Kubernetes to fully finalize
     ansible.builtin.shell:
       cmd: |
-        export KUBECONFIG="/etc/kubernetes/admin.conf"
-        timeout 120 bash -c 'until kubectl get serviceaccount -n default default; do sleep 5; done'
+        timeout 120 bash -c 'until kubectl --kubeconfig /etc/kubernetes/admin.conf get serviceaccount -n default default; do sleep 5; done'
       executable: /bin/bash
     changed_when: false
     when:
@@ -123,8 +122,8 @@
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
-        kubectl get clusterrolebinding create-csrs-for-bootstrapping && exit 0 || true
-        kubectl apply -f {{ kubernetes_config_directory }}/crb-kubeletcerts.yml --kubeconfig /etc/kubernetes/admin.conf
+        kubectl --kubeconfig /etc/kubernetes/admin.conf get clusterrolebinding create-csrs-for-bootstrapping && exit 0 || true
+        kubectl --kubeconfig /etc/kubernetes/admin.conf apply -f {{ kubernetes_config_directory }}/crb-kubeletcerts.yml
       executable: /bin/bash
     register: crb_kubeletcerts
     changed_when: true
@@ -168,14 +167,10 @@
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
-
-        export KUBECONFIG=/etc/kubernetes/admin.conf
-
-        for namespace in $(kubectl get namespaces -A -o=jsonpath="{.items[*]['metadata.name']}"); do
+        for namespace in $(kubectl --kubeconfig /etc/kubernetes/admin.conf get namespaces -A -o=jsonpath="{.items[*]['metadata.name']}"); do
           echo -n "Patching namespace $namespace - "
-          kubectl patch serviceaccount default -n ${namespace} --patch-file /etc/kubernetes/config/default-serviceaccount-patch.yaml
+          kubectl --kubeconfig /etc/kubernetes/admin.conf patch serviceaccount default -n ${namespace} --patch-file /etc/kubernetes/config/default-serviceaccount-patch.yaml
         done
-
       executable: /bin/bash
     changed_when: serviceaccount_patch.rc == 0
     register: serviceaccount_patch

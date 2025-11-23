@@ -13,7 +13,7 @@ kubernetes_control_plane_ip: null
 kubernetes_containerd_credentials: []
 
 # Apt repository to pulll containerd from
-kubernetes_containerd_mirror: https://download.docker.com/linux/{{ ansible_distribution | lower }}
+kubernetes_containerd_mirror: https://download.docker.com/linux/{{ ansible_facts["distribution"] | lower }}
 
 # CIS 1.1.12 - Ensure that the etcd data directory ownership is set to etcd:etcd
 kubernetes_etcd_init_container_image: alpine:latest
