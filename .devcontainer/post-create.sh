@@ -2,7 +2,7 @@
 #!/bin/bash
 set -e
 
-pip install --user ansible ansible-lint yamllint
+pip install --user ansible ansible-lint yamllint dnspython
 ansible-galaxy collection install -r requirements.yml
 
 sudo apt update

@@ -21,8 +21,8 @@ resource "ansible_host" "control-plane" {
   name   = "cp${count.index + 1}.k8s.local"
   groups = ["control_planes", "kubernetes"]
   variables = {
-    ansible_host           = "cp${count.index + 1}.k8s.local"
-    ip_address             = "172.21.0.${count.index + 12}"
+    ansible_host = "cp${count.index + 1}.k8s.local"
+    ip_address   = "172.21.0.${count.index + 12}"
   }
 }
 
@@ -31,8 +31,8 @@ resource "ansible_host" "worker-nodes" {
   name   = "w${count.index + 1}.k8s.local"
   groups = ["worker_nodes", "kubernetes"]
   variables = {
-    ansible_host           = "w${count.index + 1}.k8s.local"
-    ip_address             = "172.21.0.${count.index + 15}"
+    ansible_host = "w${count.index + 1}.k8s.local"
+    ip_address   = "172.21.0.${count.index + 15}"
   }
 }
 
@@ -69,6 +69,7 @@ resource "ansible_group" "kubernetes" {
 
 locals {
   kubernetes_config = {
+    kubernetes_api_server_port                        = 6443
     kubernetes_version                                = "1.34"
     kubernetes_cluster_name                           = "testcluster"
     kubernetes_control_plane_check_interval           = "250ms"
@@ -82,6 +83,7 @@ locals {
     kubernetes_kubelet_csr_approver_bypass_dns_checks = "true"
     kubernetes_manage_cert_renewal                    = true
     kubernetes_proxy_bind_address                     = "172.21.0.11"
+    kubernetes_proxy_enable_keepalived                = false
   }
   special_config = {
     kubernetes = {

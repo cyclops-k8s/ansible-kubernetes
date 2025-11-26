@@ -27,3 +27,5 @@ if [ $? -ne 0 ]; then
   echo "Terraform apply failed"
   exit 1
 fi
+
+ansible-playbook -i inventory.yaml -i vars.yaml ../install.yml
