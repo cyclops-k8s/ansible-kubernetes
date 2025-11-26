@@ -1,0 +1,17 @@
+$TTL    604800
+@       IN      SOA     dns.k8s.local. admin.k8s.local. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      dns.k8s.local.
+dns     IN      A       172.20.0.10
+cp      IN      CNAME   px.k8s.local.
+px      IN      A       172.21.0.11
+cp1     IN      A       172.21.0.12
+cp2     IN      A       172.21.0.13
+cp3     IN      A       172.21.0.14
+w1      IN      A       172.21.0.15
+w2      IN      A       172.21.0.16

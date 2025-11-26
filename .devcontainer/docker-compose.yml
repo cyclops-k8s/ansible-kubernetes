@@ -1,0 +1,34 @@
+services:
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/python:3.11
+    volumes:
+    - ..:/workspace:cached
+    - ~/.ssh:/home/vscode/.ssh-original:ro
+    command: sleep infinity
+    networks:
+    - k8s-network
+    privileged: true
+    dns:
+    - 172.20.0.10
+
+  dns:
+    image: ubuntu/bind9:latest
+    container_name: k8s-dns
+    hostname: dns
+    networks:
+      k8s-network:
+        ipv4_address: 172.20.0.10
+    volumes:
+    - ./bind/named.conf:/etc/bind/named.conf:ro
+    - ./bind/db.k8s.local:/etc/bind/db.k8s.local:ro
+    - ./bind/db.20.reverse:/etc/bind/db.20.reverse:ro
+    - ./bind/db.21.reverse:/etc/bind/db.21.reverse:ro
+    environment:
+    - TZ=UTC
+
+networks:
+  k8s-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

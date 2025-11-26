@@ -1,0 +1,130 @@
+services:
+
+  px:
+    image: baseimage
+    container_name: k8s-px
+    environment:
+    - DEBIAN_FRONTEND=noninteractive
+    healthcheck:
+      test: ["CMD", "systemctl", "is-system-running"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 1s
+    hostname: px
+    networks:
+      k8s-network:
+        ipv4_address: 172.21.0.11
+    privileged: true
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    dns:
+    - 172.20.0.10
+
+  cp1:
+    image: baseimage
+    container_name: k8s-cp1
+    healthcheck:
+      test: ["CMD", "systemctl", "is-system-running"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 1s
+    hostname: cp1
+    networks:
+      k8s-network:
+        ipv4_address: 172.21.0.12
+    privileged: true
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    dns:
+    - 172.20.0.10
+
+  cp2:
+    image: baseimage
+    container_name: k8s-cp2
+    healthcheck:
+      test: ["CMD", "systemctl", "is-system-running"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 1s
+    hostname: cp2
+    networks:
+      k8s-network:
+        ipv4_address: 172.21.0.13
+    privileged: true
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    dns:
+    - 172.20.0.10
+
+  cp3:
+    image: baseimage
+    container_name: k8s-cp3
+    healthcheck:
+      test: ["CMD", "systemctl", "is-system-running"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 1s
+    hostname: cp3
+    networks:
+      k8s-network:
+        ipv4_address: 172.21.0.14
+    privileged: true
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    dns:
+    - 172.20.0.10
+
+  w1:
+    image: baseimage
+    container_name: k8s-w1
+    healthcheck:
+      test: ["CMD", "systemctl", "is-system-running"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 1s
+    hostname: w1
+    networks:
+      k8s-network:
+        ipv4_address: 172.21.0.15
+    privileged: true
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    dns:
+    - 172.20.0.10
+
+  w2:
+    image: baseimage
+    container_name: k8s-w2
+    healthcheck:
+      test: ["CMD", "systemctl", "is-system-running"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 1s
+    hostname: w2
+    networks:
+      k8s-network:
+        ipv4_address: 172.21.0.16
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    dns:
+      - 172.20.0.10
+
+networks:
+  k8s-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
