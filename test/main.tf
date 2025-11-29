@@ -22,7 +22,7 @@ resource "ansible_host" "control-plane" {
   groups = ["control_planes", "kubernetes"]
   variables = {
     ansible_host = "cp${count.index + 1}.k8s.local"
-    ip_address   = "172.21.0.${count.index + 12}"
+    ip_address   = "10.255.254.${count.index + 12}"
   }
 }
 
@@ -32,7 +32,7 @@ resource "ansible_host" "worker-nodes" {
   groups = ["worker_nodes", "kubernetes"]
   variables = {
     ansible_host = "w${count.index + 1}.k8s.local"
-    ip_address   = "172.21.0.${count.index + 15}"
+    ip_address   = "10.255.254.${count.index + 15}"
   }
 }
 
@@ -44,9 +44,9 @@ resource "ansible_host" "proxy" {
     vrrp_priority          = 1
     vrrp_state             = "BACKUP" #count.index == 0 ? "MASTER" : "BACKUP"
     vrrp_password          = random_password.proxy_vrrp_password.result
-    vrrp_interface         = "xyz"
+    vrrp_interface         = "ens4"
     vrrp_virtual_router_id = 1
-    control_plane_ip       = "172.21.0.11"
+    control_plane_ip       = "10.255.254.11"
   }
 }
 
@@ -79,10 +79,10 @@ locals {
     kubernetes_oidc_client_id                         = "test-client-id"
     kubernetes_oidc_issuer_url                        = "no-issuer-url"
     kubernetes_kubelet_csr_approver_regex             = "^(cp|w)[0-9]+$"
-    kubernetes_kubelet_csr_approver_ips               = "172.21.0.0/24"
+    kubernetes_kubelet_csr_approver_ips               = "10.255.254.0/24"
     kubernetes_kubelet_csr_approver_bypass_dns_checks = "true"
     kubernetes_manage_cert_renewal                    = true
-    kubernetes_proxy_bind_address                     = "172.21.0.11"
+    kubernetes_proxy_bind_address                     = "0.0.0.0"
     kubernetes_proxy_enable_keepalived                = false
   }
   special_config = {
@@ -90,7 +90,8 @@ locals {
       vars = {
         kubernetes_hookfiles = {
           post_cluster_init = [
-            "{{ inventory_dir }}/../example-hooks/install-calico/post-cluster-init/install-calico.yaml"
+            "{{ inventory_dir }}/../example-hooks/install-calico/post-cluster-init/install-calico.yaml",
+            "{{ inventory_dir }}/../example-hooks/copy-admin-config/post-cluster-init/copy-admin-config.yaml"
           ]
         }
       }
