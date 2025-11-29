@@ -7,7 +7,7 @@ function create_vm() {
     local name=$1
     local port=$2
     local ip=$3
-    local addional_forwarding=$4
+    local additional_forwarding=$4
 
     echo "#cloud-config" > .temp/user-data
     echo "" >> .temp/user-data
@@ -33,7 +33,7 @@ function create_vm() {
         -cdrom .temp/cloud-init-${name}.iso \
         -device virtio-net-pci,netdev=net0,mac=52:54:00:00:00:${ip} \
         -device virtio-net-pci,netdev=net1,mac=52:54:00:00:01:${ip} \
-        -netdev user,id=net0,hostfwd=tcp::${port}-:22${addional_forwarding} \
+        -netdev user,id=net0,hostfwd=tcp::${port}-:22${additional_forwarding} \
         -netdev socket,id=net1,mcast=230.0.0.1:1234 \
         -m 4G \
         -smp 2 \
