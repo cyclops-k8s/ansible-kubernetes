@@ -23,11 +23,11 @@ One that script exits, you will have the required vm's. Then run install.sh
 ## How it works
 ### `spin-up-test-environment.sh`
 
-The script will download the latest Ubuntu image and build VM's from that.
+The script will download the latest Ubuntu image and build VMs from that.
 
-We use cloud-init to configure the VM's base operating system.
+We use cloud-init to configure the VMs base operating system.
 
-This `/dev/kvm` device is passed into the dev container where the `spin-up-test-environment.sh` script uses it. It spins up the above 6 VM's as the dev containers user, `vscode`. It doesn't require root access to the kernel.
+This `/dev/kvm` device is passed into the dev container where the `spin-up-test-environment.sh` script uses it. It spins up the above 6 VM's as the dev containers user, `vscode`.
 
 The networking is handled using the user device type and socket device type.
 
