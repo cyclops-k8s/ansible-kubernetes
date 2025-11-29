@@ -1,0 +1,10 @@
+network:
+  version: 2
+  ethernets:
+    ens3:
+      dhcp4: true
+      dhcp6: false
+    ens4:
+      dhcp4: false
+      dhcp6: false
+      addresses: []

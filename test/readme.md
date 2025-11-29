@@ -1,0 +1,40 @@
+# Test Environment
+## Requirements
+Host requires QEMU.
+
+Host must by x86/64. Arm (Apple's) is not working, we'll need someone with an Apple device to make that work.
+
+Must be ran through the dev container. It may work outside of the dev container, but no guarantees and issues arising from such a scenario will likely not be resolved. Too many variables.
+
+The dev container needs at least 24 gigs available memory to run the VM's. This can be provided via swap, it'll be slower, but it'll work.
+
+## Purpose
+This will spin up 6 VM's for testing the playbook.
+
+* 1 proxy, px.k8s.local
+* 3 control planes, cp(1-3).k8s.local
+* 2 worker nodes, w(1|2).k8s.local
+
+## Usage
+To use the test harness, execute the `spin-up-test-environment.sh` file.
+
+One that script exits, you will have the required vm's. Then run install.sh
+
+## How it works
+### `spin-up-test-environment.sh`
+
+The script will download the latest Ubuntu image and build VM's from that.
+
+We use cloud-init to configure the VM's base operating system.
+
+This `/dev/kvm` device is passed into the dev container where the `spin-up-test-environment.sh` script uses it. It spins up the above 6 VM's as the dev containers user, `vscode`. It doesn't require root access to the kernel.
+
+The networking is handled using the user device type and socket device type.
+
+Inter-vm networking is handled with the socket device driver using a multicast address.
+
+Each VM is given 4 gigs of memory and 2 cpu's.
+
+### `install.sh`
+
+The install script will execute Terraform to configure the playbook. It will then run the `install.yml` playbook and install Kubernetes.
