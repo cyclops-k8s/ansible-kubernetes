@@ -2,7 +2,7 @@
 ## Requirements
 Host requires QEMU.
 
-Host must by x86/64. Arm (Apple's) is not working, we'll need someone with an Apple device to make that work.
+Host must be x86/64. Arm (Apple's) is not working, we'll need someone with an Apple device to make that work.
 
 Must be ran through the dev container. It may work outside of the dev container, but no guarantees and issues arising from such a scenario will likely not be resolved. Too many variables.
 
