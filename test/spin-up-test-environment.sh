@@ -60,7 +60,7 @@ fi
 cp /usr/share/OVMF/* .temp
 
 [ -f ~/.ssh/known_hosts ] && rm ~/.ssh/known_hosts
-pkill ssh || true
+pkill ssh -x || true
 sudo pkill qemu || true
 
 create_vm "px" 2021 11 ",hostfwd=tcp::6443-:6443"
