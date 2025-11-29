@@ -6,7 +6,7 @@ then
   exit 1
 fi
 
-echo "VM's are running."
+echo "VMs are running."
 
 echo "Running Terraform to generate inventory and configuration"
 terraform init

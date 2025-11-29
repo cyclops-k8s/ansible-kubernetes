@@ -6,6 +6,6 @@ then
   exit 1
 fi
 
-echo "VM's are running."
+echo "VMs are running."
 
 ansible-playbook -i inventory.yaml -i vars.yaml ../reset.yml
