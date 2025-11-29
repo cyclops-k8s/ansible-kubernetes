@@ -24,47 +24,44 @@ cp -r /host/.ssh/* ~/.ssh/
 ssh-keygen -t rsa -b 4096 -f ~/.rsa_key -N ""
 
 echo "
+Host *
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
 
 Host px.k8s.local
     HostName localhost
     Port 2021
     User ansible
-    StrictHostKeyChecking no
     IdentityFile ~/.rsa_key
 
 Host cp1.k8s.local
     HostName localhost
     Port 2022
     User ansible
-    StrictHostKeyChecking no
     IdentityFile ~/.rsa_key
 
 Host cp2.k8s.local
     HostName localhost
     Port 2023
     User ansible
-    StrictHostKeyChecking no
     IdentityFile ~/.rsa_key
 
 Host cp3.k8s.local
     HostName localhost
     Port 2024
     User ansible
-    StrictHostKeyChecking no
     IdentityFile ~/.rsa_key
 
 Host w1.k8s.local
     HostName localhost
     Port 2025
     User ansible
-    StrictHostKeyChecking no
     IdentityFile ~/.rsa_key
 
 Host w2.k8s.local
     HostName localhost
     Port 2026
     User ansible
-    StrictHostKeyChecking no
     IdentityFile ~/.rsa_key
 
 " >> ~/.ssh/config
