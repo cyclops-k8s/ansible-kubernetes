@@ -15,7 +15,7 @@ function create_vm() {
     echo "" >> .temp/network
 
     cat cloud-init/user-data | yq ".hostname = \"${name}\" | .fqdn = \"${name}.k8s.local\" | .users[0].ssh_authorized_keys = [\"${PUB_KEY}\"]" --yaml-output >> .temp/user-data
-    cat cloud-init/network | yq --yaml-output ".network.ethernets.ens4.addresses += [\"10.255.254.${ip}/24\"]" >> .temp/network
+    cat cloud-init/network | yq --yaml-output ".network.ethernets.enp0s3.addresses += [\"10.255.254.${ip}/24\"]" >> .temp/network
 
     cloud-localds .temp/cloud-init-${name}.iso .temp/user-data -N .temp/network > /dev/null
 
@@ -23,7 +23,7 @@ function create_vm() {
     [ -f .temp/${name}.img ] && rm .temp/${name}.img
     qemu-img create -b ubuntu.img -F qcow2 -f qcow2 .temp/${name}.img 20G
 
-    sudo qemu-system-x86_64 \
+    sudo -b qemu-system-x86_64 \
         -enable-kvm \
         -cpu host \
         -boot menu=off \
@@ -36,9 +36,12 @@ function create_vm() {
         -netdev user,id=net0,hostfwd=tcp::${port}-:22${additional_forwarding} \
         -netdev socket,id=net1,mcast=230.0.0.1:1234 \
         -m 4G \
+        -machine accel=kvm,type=q35 \
         -smp 2 \
         -nographic \
-        -smbios type=0,uefi=on 1>.temp/${name}.stdout.log 2>.temp/${name}.stderr.log &
+        -smbios type=0,uefi=on 1>.temp/${name}.stdout.log 2>.temp/${name}.stderr.log
+
+  sleep 3
 }
 
 function wait_for_ssh() {
@@ -59,9 +62,8 @@ fi
 
 cp /usr/share/OVMF/* .temp
 
-[ -f ~/.ssh/known_hosts ] && rm ~/.ssh/known_hosts
 pkill ssh -x || true
-sudo pkill qemu || true
+sudo pkill -f qemu-system-x86_64 || true
 
 create_vm "px" 2021 11 ",hostfwd=tcp::6443-:6443"
 create_vm "cp1" 2022 12
