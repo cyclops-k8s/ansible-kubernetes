@@ -66,12 +66,11 @@ Host w2.k8s.local
 
 " >> ~/.ssh/config
 
-sudo usermod -aG kvm vscode
-sudo usermod -aG libvirt vscode
+sudo usermod -aG kvm codespace
+sudo usermod -aG libvirt codespace
 
 # reload group memberships
-newgrp kvm
-newgrp libvirt
+newgrp
 
 echo '
 filetype indent on
