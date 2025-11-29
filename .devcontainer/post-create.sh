@@ -99,3 +99,5 @@ if &t_Co > 2 || has("gui_running")
   set hlsearch
 endif
 ' > ~/.vimrc
+
+echo "127.0.0.1 cp.k8s.local" | sudo tee -a /etc/hosts

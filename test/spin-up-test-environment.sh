@@ -17,13 +17,13 @@ function create_vm() {
     cat cloud-init/user-data | yq ".hostname = \"${name}\" | .fqdn = \"${name}.k8s.local\" | .users[0].ssh_authorized_keys = [\"${PUB_KEY}\"]" --yaml-output >> .temp/user-data
     cat cloud-init/network | yq --yaml-output ".network.ethernets.ens4.addresses += [\"10.255.254.${ip}/24\"]" >> .temp/network
 
-    cloud-localds .temp/cloud-init-${name}.iso .temp/user-data -N .temp/network
+    cloud-localds .temp/cloud-init-${name}.iso .temp/user-data -N .temp/network > /dev/null
 
     echo "Creating VM $name on port $port..."
     [ -f .temp/${name}.img ] && rm .temp/${name}.img
     qemu-img create -b ubuntu.img -F qcow2 -f qcow2 .temp/${name}.img 20G
 
-    qemu-system-x86_64 \
+    sudo qemu-system-x86_64 \
         -enable-kvm \
         -cpu host \
         -boot menu=off \
@@ -31,8 +31,8 @@ function create_vm() {
         -drive if=pflash,format=raw,file=.temp/OVMF_VARS_4M.fd \
         -drive file=.temp/${name}.img \
         -cdrom .temp/cloud-init-${name}.iso \
-        -device virtio-net-pci,netdev=net0 \
-        -device virtio-net-pci,netdev=net1 \
+        -device virtio-net-pci,netdev=net0,mac=52:54:00:00:00:${ip} \
+        -device virtio-net-pci,netdev=net1,mac=52:54:00:00:01:${ip} \
         -netdev user,id=net0,hostfwd=tcp::${port}-:22${addional_forwarding} \
         -netdev socket,id=net1,mcast=230.0.0.1:1234 \
         -m 4G \

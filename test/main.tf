@@ -40,13 +40,13 @@ resource "ansible_host" "proxy" {
   name   = "px.k8s.local"
   groups = ["proxies"]
   variables = {
-    ansible_host           = "px.k8s.local"
-    vrrp_priority          = 1
-    vrrp_state             = "BACKUP" #count.index == 0 ? "MASTER" : "BACKUP"
-    vrrp_password          = random_password.proxy_vrrp_password.result
-    vrrp_interface         = "ens4"
-    vrrp_virtual_router_id = 1
-    control_plane_ip       = "10.255.254.11"
+    ansible_host                       = "px.k8s.local"
+    vrrp_priority                      = 1
+    vrrp_state                         = "BACKUP" #count.index == 0 ? "MASTER" : "BACKUP"
+    vrrp_password                      = random_password.proxy_vrrp_password.result
+    vrrp_interface                     = "ens4"
+    vrrp_virtual_router_id             = 1
+    control_plane_ip                   = "10.255.254.11"
   }
 }
 
@@ -69,19 +69,20 @@ resource "ansible_group" "kubernetes" {
 
 locals {
   kubernetes_config = {
-    kubernetes_api_server_port                        = 6443
-    kubernetes_version                                = "1.34"
-    kubernetes_cluster_name                           = "testcluster"
-    kubernetes_control_plane_check_interval           = "250ms"
-    kubernetes_api_endpoint                           = "cp.k8s.local"
-    kubernetes_encryption_key                         = random_bytes.encryption_key.base64
-    kubernetes_cluster_signing_duration               = "720h0m0s"
-    kubernetes_oidc_client_id                         = "test-client-id"
-    kubernetes_oidc_issuer_url                        = "no-issuer-url"
+    kubernetes_api_server_port              = 6443
+    kubernetes_version                      = "1.34"
+    kubernetes_cluster_name                 = "testcluster"
+    kubernetes_control_plane_check_interval = "250ms"
+    kubernetes_api_endpoint                 = "cp.k8s.local"
+    kubernetes_encryption_key               = random_bytes.encryption_key.base64
+    kubernetes_cluster_signing_duration     = "720h0m0s"
+    # TODO: Replace with your own OIDC client ID for testing
+    kubernetes_oidc_client_id = "test-client-id"
+    # TODO: Replace with your own OIDC issuer URL for testing
+    kubernetes_oidc_issuer_url                        = "https://github.com/login/oauth/"
     kubernetes_kubelet_csr_approver_regex             = "^(cp|w)[0-9]+$"
     kubernetes_kubelet_csr_approver_ips               = "10.255.254.0/24"
     kubernetes_kubelet_csr_approver_bypass_dns_checks = "true"
-    kubernetes_manage_cert_renewal                    = true
     kubernetes_proxy_bind_address                     = "0.0.0.0"
     kubernetes_proxy_enable_keepalived                = false
   }
@@ -94,6 +95,11 @@ locals {
             "{{ inventory_dir }}/../example-hooks/copy-admin-config/post-cluster-init/copy-admin-config.yaml"
           ]
         }
+      }
+    }
+    proxies = {
+      vars = {
+        kubernetes_proxy_enable_keepalived = false
       }
     }
   }

@@ -4,6 +4,13 @@ network:
     ens3:
       dhcp4: true
       dhcp6: false
+      dhcp4-overrides:
+        use-dns: false
+      nameservers:
+        search:
+        - k8s.local
+        addresses:
+        - 172.20.0.10
     ens4:
       dhcp4: false
       dhcp6: false

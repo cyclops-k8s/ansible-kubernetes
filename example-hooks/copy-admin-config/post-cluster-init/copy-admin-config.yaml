@@ -1,15 +1,16 @@
-# copy /etc/kubernetes/admin.conf to /home/vscode/.kube/config
+# Create .kube directory for vscode user
+- name: Create .kube directory for vscode user
+  delegate_to: localhost
+  run_once: true
+  ansible.builtin.file:
+    path: /home/vscode/.kube
+    state: directory
+    mode: '0700'
+
 - name: Copy admin kubeconfig to vscode user
   delegate_to: "{{ first_kube_control_plane }}"
   run_once: true
   ansible.builtin.fetch:
     src: /etc/kubernetes/admin.conf
     flat: true
-    dest: /home/vscode/.kube
-
-# Rename /home/vscode/.kube/admin.conf to /home/vscode/.kube/config
-- name: Rename admin.conf to config
-  delegate_to: localhost
-  run_once: true
-  ansible.builtin.command:
-    cmd: mv /home/vscode/.kube/admin.conf /home/vscode/.kube/config
+    dest: /home/vscode/.kube/config
