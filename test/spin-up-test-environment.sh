@@ -1,5 +1,18 @@
 #!/bin/bash -e
 
+# check if running in a devcontainer
+if [ -z "$DEVCONTAINER" ]
+then
+    echo "This script is intended to only be run inside a devcontainer."
+    exit 1
+fi
+
+if [ ! -f ~/.rsa_key.pub ]
+then
+    echo "SSH key not found. Please wait for the devcontainer to fully start."
+    exit 1
+fi
+
 PUB_KEY=$(cat ~/.rsa_key.pub)
 gateway=$(ip r | grep default | awk '{print $3}')
 

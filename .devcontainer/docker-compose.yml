@@ -7,6 +7,8 @@ services:
     command: sleep infinity
     devices:
     - /dev/kvm:/dev/kvm
+    environment:
+    - DEVCONTAINER=true
     networks:
     - k8s-network
     dns:
