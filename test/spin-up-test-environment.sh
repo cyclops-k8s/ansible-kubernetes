@@ -68,13 +68,14 @@ function wait_for_ssh() {
   echo "SSH is available on ${host}:${port}"
 }
 
+mkdir -p .temp
+
 # download ubuntu cloud image questing if not already present
 if [ ! -f .temp/ubuntu.img ]
 then
     wget https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img -O .temp/ubuntu.img
 fi
 
-mkdir -p .temp
 cp /usr/share/OVMF/* .temp
 
 pkill ssh -x || true
