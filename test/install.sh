@@ -6,7 +6,7 @@ then
     exit 1
 fi
 
-if ! pgrep -f "^qemu"
+if ! pgrep -f "^qemu-system-x86_64" > /dev/null
 then
   echo "VMs are not running, please run spin-up-test-environment.sh first."
   exit 1
