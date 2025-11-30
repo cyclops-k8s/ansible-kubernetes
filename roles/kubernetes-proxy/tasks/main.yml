@@ -37,6 +37,7 @@
     name:
     - keepalived
     state: present
+  when: kubernetes_proxy_enable_keepalived | default(true)
 
 - name: Copy keepalived.conf
   notify: restart-keepalived
@@ -45,11 +46,13 @@
     dest: /etc/keepalived/keepalived.conf
     owner: root
     mode: '0644'
+  when: kubernetes_proxy_enable_keepalived | default(true)
 
 - name: Enable keepalived
   ansible.builtin.systemd_service:
     enabled: true
     name: keepalived
+  when: kubernetes_proxy_enable_keepalived | default(true)
 
 - name: Post proxy configuration hooks
   ansible.builtin.include_tasks: "{{ item }}"

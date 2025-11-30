@@ -1,0 +1,23 @@
+#cloud-config
+
+hostname: ${hostname}
+manage_etc_hosts: true
+fqdn: ${hostname}.k8s.local
+
+users:
+- name: ansible
+  gecos: ansible
+  sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+  groups: sudo
+  shell: /bin/bash
+  passwd: $y$j9T$mmKZ1QBhRdwqcTbQF90PT/$tU7QEWhKzBev6cS0jiXtkFD03fqMjwZ6qMIlJbFc4y4 # password
+  lock_passwd: false
+  ssh_authorized_keys:
+  - ${ authorized_key }
+timezone: Etc/UTC
+write_files:
+- path: /etc/ssh/sshd_config.d/00-nopassword.conf
+  content: |
+    PasswordAuthentication no
+package_update: true
+package_upgrade: true
