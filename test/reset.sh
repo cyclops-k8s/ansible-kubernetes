@@ -8,7 +8,7 @@ fi
 
 if ! pgrep -f "^qemu-system-x86_64" > /dev/null
 then
-  echo "VMs are not running, please run spin-up-vms.sh first."
+  echo "VMs are not running, please run pin-up-test-environment.sh first."
   exit 1
 fi
 
