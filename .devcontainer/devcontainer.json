@@ -1,0 +1,52 @@
+{
+  "name": "Ansible Kubernetes",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "upgradePackages": true,
+      "username": "codespace"
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "helm": "latest",
+      "minikube": "none"
+    },
+    "ghcr.io/devcontainers/features/terraform:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Compilenix.vscode-zonefile",
+        "EditorConfig.EditorConfig",
+        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-containers",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "redhat.ansible",
+        "redhat.vscode-yaml",
+        "HashiCorp.terraform"
+      ],
+      "settings": {
+        "ansible.python.interpreterPath": "/usr/local/py-utils/venvs/ansible-core/bin/python",
+        "ansible.validation.lint.path": "/usr/local/py-utils/venvs/ansible-core/bin/ansible-lint",
+        "files.associations": {
+          "*.yml": "ansible",
+          "*.yaml": "ansible"
+        }
+      }
+    }
+  },
+
+  "postCreateCommand": ".devcontainer/post-create.sh",
+
+  "remoteUser": "codespace",
+
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/host/.ssh,readonly,type=bind,consistency=cached"
+  ]
+}

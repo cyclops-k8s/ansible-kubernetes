@@ -5,7 +5,8 @@
         "**/roles/**/*.j2": "ansible-jinja",
         "**/example-hooks/**/*.yml": "ansible",
         "**/example-hooks/**/*.yaml": "ansible",
-        "**/example-hooks/**/*.j2": "ansible"
-    },
-    "ansible.python.interpreterPath": "~/.local/pipx/venvs/ansible/bin/python"
+        "**/example-hooks/**/*.j2": "ansible",
+        "docker-compose.*": "dockercompose",
+        "db.k8s.local": "zone"
+    }
 }
