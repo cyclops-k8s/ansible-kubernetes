@@ -7,9 +7,9 @@
 * Host requires QEMU. This is already included in WSL2. Be sure to turn on nested virtualization for WSL2 for better performance.
 * Host must be x86/64. Arm (Apple's) is not working, we'll need someone with an Apple device to make that work.
 * Must be ran through the dev container. It may work outside of the dev container, but no guarantees and issues arising from such a scenario will likely not be resolved. Too many variables.
-* The dev container needs at least 24 gigs available memory to run the VMs.
+* The dev container needs at least 24 GB available memory to run the VMs.
     * This can be provided via swap, it'll be slower, but it'll work.
-* Each disk (6 of them) can get up to 20 gig which means up to 120 gig disk space. However, a basic install with no additional options is only about 6 gigs.
+* Each disk (6 of them) can get up to 20 GB which means up to 120 GB disk space. However, a basic install with no additional options is only about 6 GB.
 
 ## Purpose
 This will spin up 6 VMs for testing the playbook.
@@ -36,7 +36,7 @@ The networking is handled using the user device type and socket device type.
 
 Inter-vm networking is handled with the socket device driver using a multicast address.
 
-Each VM is given 4 gigs of memory and 2 cpu's.
+Each VM is given 4 GB of memory and 2 cpu's.
 
 ### `install.sh`
 
