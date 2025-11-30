@@ -1,5 +1,5 @@
 collections:
 - name: cloud.terraform
-  version: 3.0.0
 - name: community.general
-  version: 12.0.1
+- name: ansible.posix
+- name: community.dns

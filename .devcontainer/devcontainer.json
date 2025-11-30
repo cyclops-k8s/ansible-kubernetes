@@ -9,17 +9,10 @@
       "upgradePackages": true,
       "username": "codespace"
     },
-    "ghcr.io/devcontainers/features/git:1": {
-      "version": "latest"
-    },
     "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
       "version": "latest",
       "helm": "latest",
       "minikube": "none"
-    },
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "version": "latest",
-      "moby": false
     },
     "ghcr.io/devcontainers/features/terraform:1": {}
   },
@@ -27,17 +20,20 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "redhat.ansible",
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "redhat.vscode-yaml",
-        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "Compilenix.vscode-zonefile",
+        "EditorConfig.EditorConfig",
         "ms-azuretools.vscode-docker",
         "ms-azuretools.vscode-containers",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "redhat.ansible",
+        "redhat.vscode-yaml",
         "HashiCorp.terraform"
       ],
       "settings": {
-        "ansible.python.interpreterPath": "/usr/local/bin/python",
+        "ansible.python.interpreterPath": "/usr/local/py-utils/venvs/ansible-core/bin/python",
+        "ansible.validation.lint.path": "/usr/local/py-utils/venvs/ansible-core/bin/ansible-lint",
         "files.associations": {
           "*.yml": "ansible",
           "*.yaml": "ansible"

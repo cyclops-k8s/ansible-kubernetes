@@ -1,8 +1,8 @@
 #!/bin/bash
 
-if ! ps -ef | grep qemu-system-x86_64 | grep -v grep
+if ! pgrep -f "^qemu"
 then
-  echo "VMs are not running, please run spin-up-vms.sh first."
+  echo "VMs are not running, please run spin-up-test-environment.sh first."
   exit 1
 fi
 

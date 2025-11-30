@@ -1,7 +1,6 @@
 services:
   devcontainer:
-    image: mcr.microsoft.com/devcontainers/universal:4.1.1-linux
-    #image: mcr.microsoft.com/devcontainers/python:3.11
+    image: mcr.microsoft.com/devcontainers/universal:linux
     volumes:
     - ..:/workspace:cached
     - ~/.ssh:/host/.ssh:ro

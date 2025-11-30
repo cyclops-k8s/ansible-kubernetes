@@ -19,7 +19,7 @@ function create_vm() {
 
     cloud-localds .temp/cloud-init-${name}.iso .temp/user-data -N .temp/network > /dev/null
 
-    echo "Creating VM $name on port $port..."
+    echo "Creating VM ${name} on port ${port}..."
     [ -f .temp/${name}.img ] && rm .temp/${name}.img
     qemu-img create -b ubuntu.img -F qcow2 -f qcow2 .temp/${name}.img 20G
 
@@ -47,19 +47,21 @@ function create_vm() {
 function wait_for_ssh() {
   local host=$1
   local port=$2
-  echo "Waiting for SSH on $host:$port..."
+  echo "Waiting for SSH on ${host}:${port}..."
   while ! ssh ansible@localhost -p $port -i ~/.rsa_key -o ConnectTimeout=1s -o StrictHostKeyChecking=no -- exit 0 2>/dev/null; do
     sleep 2
     echo -n "."
   done
-  echo "SSH is available on $host:$port"
+  echo "SSH is available on ${host}:${port}"
 }
 
 # download ubuntu cloud image questing if not already present
-if [ ! -f .temp/ubuntu.img ]; then
+if [ ! -f .temp/ubuntu.img ]
+then
     wget https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img -O .temp/ubuntu.img
 fi
 
+mkdir -p .temp
 cp /usr/share/OVMF/* .temp
 
 pkill ssh -x || true

@@ -6,7 +6,7 @@
         "**/example-hooks/**/*.yml": "ansible",
         "**/example-hooks/**/*.yaml": "ansible",
         "**/example-hooks/**/*.j2": "ansible",
-        "docker-compose.*": "dockercompose"
-    },
-    "ansible.python.interpreterPath": "~/.local/pipx/venvs/ansible/bin/python"
+        "docker-compose.*": "dockercompose",
+        "db.k8s.local": "zone"
+    }
 }
