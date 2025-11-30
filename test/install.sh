@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ -z "$DEVCONTAINER" ]
+then
+    echo "This script is intended to only be run inside a devcontainer."
+    exit 1
+fi
+
 if ! pgrep -f "^qemu"
 then
   echo "VMs are not running, please run spin-up-test-environment.sh first."
