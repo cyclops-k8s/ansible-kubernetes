@@ -17,7 +17,9 @@ echo "VMs are running."
 echo "Running Terraform to generate inventory and configuration"
 terraform init
 terraform apply -auto-approve
-if [ $? -ne 0 ]; then
+
+if [ $? -ne 0 ]
+then
   echo "Terraform apply failed"
   exit 1
 fi
