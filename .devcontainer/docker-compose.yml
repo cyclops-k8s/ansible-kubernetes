@@ -1,0 +1,35 @@
+services:
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/universal:linux
+    volumes:
+    - ..:/workspace:cached
+    - ~/.ssh:/host/.ssh:ro
+    command: sleep infinity
+    devices:
+    - /dev/kvm:/dev/kvm
+    environment:
+    - DEVCONTAINER=true
+    networks:
+    - k8s-network
+    dns:
+    - 172.20.0.10
+
+  dns:
+    image: ubuntu/bind9:latest
+    container_name: k8s-dns
+    hostname: dns
+    networks:
+      k8s-network:
+        ipv4_address: 172.20.0.10
+    volumes:
+    - ./bind/named.conf:/etc/bind/named.conf:ro
+    - ./bind/db.k8s.local:/etc/bind/db.k8s.local:ro
+    environment:
+    - TZ=UTC
+
+networks:
+  k8s-network:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.20.0.0/24

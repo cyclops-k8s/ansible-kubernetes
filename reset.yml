@@ -77,7 +77,7 @@
 
   - name: Reboot
     ansible.builtin.reboot:
-      connect_timeout: 300
+      connect_timeout: 10
       msg: Rebooting to complete package cleanup
       reboot_timeout: 300
 
@@ -158,6 +158,6 @@
 
   - name: Reboot
     ansible.builtin.reboot:
-      connect_timeout: 300
+      connect_timeout: 10
       msg: Rebooting to complete cleanup
       reboot_timeout: 300
