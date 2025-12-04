@@ -1,50 +1,48 @@
 {
   "name": "Ansible Kubernetes",
-  "dockerComposeFile": "docker-compose.yml",
+  "dockerComposeFile": "docker-compose.yaml",
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
-
-  "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "upgradePackages": true,
-      "username": "codespace"
-    },
-    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
-      "version": "latest",
-      "helm": "latest",
-      "minikube": "none"
-    },
-    "ghcr.io/devcontainers/features/terraform:1": {}
-  },
 
   "customizations": {
     "vscode": {
       "extensions": [
         "Compilenix.vscode-zonefile",
         "EditorConfig.EditorConfig",
-        "ms-azuretools.vscode-docker",
+        "github.copilot",
+        "github.copilot-chat",
+        "github.vscode-github-actions",
+        "GitHub.vscode-pull-request-github",
         "ms-azuretools.vscode-containers",
+        "ms-azuretools.vscode-docker",
         "ms-kubernetes-tools.vscode-kubernetes-tools",
         "ms-python.python",
         "ms-python.vscode-pylance",
+        "opentofu.vscode-opentofu",
         "redhat.ansible",
         "redhat.vscode-yaml",
-        "HashiCorp.terraform"
+        "timonwong.shellcheck"
       ],
       "settings": {
-        "ansible.python.interpreterPath": "/usr/local/py-utils/venvs/ansible-core/bin/python",
-        "ansible.validation.lint.path": "/usr/local/py-utils/venvs/ansible-core/bin/ansible-lint",
+        "ansible.python.interpreterPath": "python3",
+        "ansible.validation.lint.path": "ansible-lint",
         "files.associations": {
-          "*.yml": "ansible",
-          "*.yaml": "ansible"
-        }
+          "**/roles/**/*.yml": "ansible",
+          "**/roles/**/*.yaml": "ansible",
+          "**/roles/**/*.j2": "ansible-jinja",
+          "**/example-hooks/**/*.yml": "ansible",
+          "**/example-hooks/**/*.yaml": "ansible",
+          "**/example-hooks/**/*.j2": "ansible-jinja",
+          "docker-compose.*": "dockercompose",
+          "db.k8s.local": "zone"
+        },
+        "telemetry.editStats.enabled": false,
+        "telemetry.telemetryLevel": "off"
       }
     }
   },
 
-  "postCreateCommand": ".devcontainer/post-create.sh",
-
-  "remoteUser": "codespace",
+  "remoteUser": "vscode",
 
   "mounts": [
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/host/.ssh,readonly,type=bind,consistency=cached"
