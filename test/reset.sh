@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/bash -e
 
-if [ -z "$DEVCONTAINER" ]
+if [ -z "${DEVCONTAINER}" ]
 then
     echo "This script is intended to only be run inside a devcontainer."
     exit 1
@@ -12,6 +12,16 @@ then
   exit 1
 fi
 
+which terraform && CMD=terraform
+which tofu && CMD=tofu
+
+if [ "${CMD}" == "" ]
+then
+  echo "terraform or tofu needs to be installed"
+  echo 1
+fi
+
 echo "VMs are running."
 
-ansible-playbook -i inventory.yaml -i vars.yaml ../reset.yml
+echo "Running the ansible playbook to reset kubernetes"
+ansible-playbook -i "inventory_${CMD}.yaml" -i vars.yaml ../reset.yml
