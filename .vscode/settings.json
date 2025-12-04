@@ -1,12 +1,15 @@
 {
+    "ansible.python.interpreterPath": "python3",
+    "ansible.validation.lint.path": "ansible-lint",
     "files.associations": {
         "**/roles/**/*.yml": "ansible",
         "**/roles/**/*.yaml": "ansible",
         "**/roles/**/*.j2": "ansible-jinja",
         "**/example-hooks/**/*.yml": "ansible",
         "**/example-hooks/**/*.yaml": "ansible",
-        "**/example-hooks/**/*.j2": "ansible",
+        "**/example-hooks/**/*.j2": "ansible-jinja",
         "docker-compose.*": "dockercompose",
         "db.k8s.local": "zone"
-    }
+    },
+    "telemetry.editStats.enabled": false
 }
