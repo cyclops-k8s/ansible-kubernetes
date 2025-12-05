@@ -28,4 +28,4 @@ ${CMD} init
 ${CMD} apply -auto-approve
 
 echo "Running the ansible playbook to install kubernetes"
-ansible-playbook -i "inventory_${CMD}.yaml" -i vars.yaml ../install.yml
+ansible-playbook -i "inventory_${CMD}.yaml" -i vars.yaml ../install.yaml
