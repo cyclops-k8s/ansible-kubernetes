@@ -1,0 +1,21 @@
+# https://github.com/koalaman/shellcheck/wiki/Directive#shellcheckrc-file
+
+# Look for 'source'd files relative to the checked script,
+# and also look for absolute paths in /mnt/chroot
+# source-path=SCRIPTDIR
+# source-path=/mnt/chroot
+
+# Since 0.9.0, values can be quoted with '' or "" to allow spaces
+# source-path="My Documents/scripts"
+
+# Allow opening any 'source'd file, even if not specified as input
+external-sources=true
+
+# Turn on warnings for unquoted variables with safe values
+enable=quote-safe-variables
+
+# Turn on warnings for unassigned uppercase variables
+enable=check-unassigned-uppercase
+
+# Allow [ ! -z foo ] instead of suggesting -n
+# disable=SC2236

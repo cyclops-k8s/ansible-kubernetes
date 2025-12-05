@@ -24,4 +24,4 @@ fi
 echo "VMs are running."
 
 echo "Running the ansible playbook to reset kubernetes"
-ansible-playbook -i "inventory_${CMD}.yaml" -i vars.yaml ../reset.yml
+ansible-playbook -i "inventory_${CMD}.yaml" -i vars.yaml ../reset.yaml

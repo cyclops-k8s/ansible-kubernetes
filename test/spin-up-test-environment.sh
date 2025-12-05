@@ -22,7 +22,7 @@ fi
 # Make sure the necessary commands exist
 for cmd in cloud-localds pkill qemu-img qemu-system-x86_64 sudo wget yq
 do
-  if ! which ${cmd} > /dev/null 2>&1
+  if ! which "${cmd}" > /dev/null 2>&1
   then
     echo "Please install: ${cmd}"
     exit 1
@@ -33,7 +33,7 @@ done
 # shellcheck disable=SC2043
 for f in OVMF=/usr/share/OVMF/OVMF_CODE_4M.fd
 do
-  if [ ! -f ${f/*=/} ]
+  if [ ! -f "${f/*=/}" ]
   then
     echo "Please install: ${f/=*/}"
     exit 1

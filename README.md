@@ -26,7 +26,7 @@ It also, by default, installs `Helm` and `Kustomize` on the control plane nodes 
 
 ## Running
 
-Execute the `install.yml` playbook. There are a number of configurable options (see below). It is fully configurable and does not need to be copied and modified. If there additional extension points needed in this playbook/roles then please open an issue. We gladly accept pull requests.
+Execute the `install.yaml` playbook. There are a number of configurable options (see below). It is fully configurable and does not need to be copied and modified. If there additional extension points needed in this playbook/roles then please open an issue. We gladly accept pull requests.
 
 This playbook is currently tested on Ubuntu 24.04 LTS.
 
