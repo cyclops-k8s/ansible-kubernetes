@@ -1,0 +1,32 @@
+- name: Create containerd hosts configuration directory
+  notify: Restart containerd service
+  ansible.builtin.file:
+    group: root
+    mode: '0700'
+    owner: root
+    path: "/etc/containerd/certs.d/{{ registry_mirror.registry }}"
+    state: directory
+
+- name: Create containerd hosts file
+  notify: Restart containerd service
+  ansible.builtin.template:
+    dest: "/etc/containerd/certs.d/{{ registry_mirror.registry }}/hosts.toml"
+    group: root
+    mode: '0600'
+    owner: root
+    src: hosts.toml.j2
+
+- name: Create containerd extra hosts files
+  loop: "{{ registry_mirror.extra_files }}"
+  loop_control:
+    label: "{{ extra_file.name }}"
+    loop_var: extra_file
+  notify: Restart containerd service
+  when:
+  - registry_mirror.extra_files is defined
+  ansible.builtin.copy:
+    content: "{{ extra_file.content }}"
+    dest: "/etc/containerd/certs.d/{{ registry_mirror.registry }}/{{ extra_file.name }}"
+    group: root
+    mode: '0600'
+    owner: root
