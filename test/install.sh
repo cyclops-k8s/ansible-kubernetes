@@ -74,8 +74,6 @@ else
   export TF_VAR_kubernetes_version=${KUBERNETES_VERSION}
 fi
 
-echo "What a piece of shit: ${TF_VAR_kubernetes_version}"
-
 ${CMD} init
 ${CMD} apply -auto-approve
 

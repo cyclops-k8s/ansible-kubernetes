@@ -105,10 +105,6 @@ locals {
   }
 }
 
-output "vars"{
-    value = var.kubernetes_version
-}
-
 resource "local_file" "second_inventory" {
   content  = yamlencode(local.special_config)
   filename = "vars.yaml"

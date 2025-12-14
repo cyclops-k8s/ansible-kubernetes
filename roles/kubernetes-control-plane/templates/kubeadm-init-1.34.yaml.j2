@@ -4,7 +4,7 @@ cgroupDriver: systemd
 
 # CIS 4.2.5
 # STIG V-245541
-streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout}}
+streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout }}
 # CIS 4.2.10
 # STIG V-242425
 rotateCertificates: true
@@ -34,7 +34,7 @@ controllerManager:
       value: "{{ kubernetes_cluster_signing_duration }}"
     # CIS 1.3.2
     - name: profiling
-      value: "{{ kubernetes_profiling | upper}}"
+      value: "{{ kubernetes_profiling | upper }}"
     # STIG V-242378
     - name: tls-min-version
       value: VersionTLS13
@@ -162,7 +162,7 @@ scheduler:
       value: "false"
     # CIS 1.4.1
     - name: profiling
-      value: "{{ kubernetes_profiling | upper}}"
+      value: "{{ kubernetes_profiling | upper }}"
     # STIG V-242377
     - name: tls-min-version
       value: VersionTLS13
@@ -212,7 +212,7 @@ nodeRegistration:
     value: "external"
 {% endif %}
   - name: node-ip
-    value: "{{ ansible_default_ipv4.address}}"
+    value: "{{ ansible_default_ipv4.address }}"
 patches:
   directory: "{{ kubernetes_config_directory }}/patches"
 timeouts:

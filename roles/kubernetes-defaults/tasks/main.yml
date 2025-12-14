@@ -8,7 +8,7 @@
     msg: "kubernetes version {{ kubernetes_version }} is not supported. Supported versions are {{ kubernetes_supported_versions }}."
   when: kubernetes_version not in kubernetes_supported_versions
 
-- name: Validate some parameters
+- name: Validate required parameters
   ansible.builtin.assert:
     that:
     - kubernetes_api_endpoint != None
