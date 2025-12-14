@@ -19,7 +19,7 @@
     when: install_cilium
     ansible.builtin.template:
       src: cilium.yaml.j2
-      dest: "{{ kubernetes_config_directory }}/{{ template_file }}"
+      dest: "{{ kubernetes_config_directory }}/cilium.yaml"
 
   - name: Install Cilium Helm repo
     when: install_cilium

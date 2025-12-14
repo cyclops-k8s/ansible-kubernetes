@@ -2,23 +2,23 @@ kubeProxyReplacement: true
 k8sServiceHost: {{ kubernetes_api_endpoint }}
 k8sServicePort: {{ kubernetes_api_port }}
 
-{% if kubernetes_cilium_devices -%}
+{% if kubernetes_cilium_devices is defined %}
 devices: {{ kubernetes_cilium_devices }}
-{%- endif %}
+{% endif %}
 
 ipam:
   mode: cluster-pool
   operator:
-    {% if kubernetes_cilium_clusterPoolIPv4PodCIDR and kubernetes_cilium_clusterPoolIPv4MaskSize -%}
+{% if kubernetes_cilium_clusterPoolIPv4PodCIDR is defined and kubernetes_cilium_clusterPoolIPv4MaskSize is defined %}
     clusterPoolIPv4PodCIDRList:
     - {{ kubernetes_cilium_clusterPoolIPv4PodCIDR }}
     clusterPoolIPv4MaskSize: {{ kubernetes_cilium_clusterPoolIPv4MaskSize }}
-    {%- endif %}
-    {% if kubernetes_cilium_clusterPoolIPv6PodCIDR and kubernetes_cilium_clusterPoolIPv6MaskSize -%}
+{% endif %}
+{% if kubernetes_cilium_clusterPoolIPv6PodCIDR is defined and kubernetes_cilium_clusterPoolIPv6MaskSize is defined %}
     clusterPoolIPv6PodCIDRList:
     - {{ kubernetes_cilium_clusterPoolIPv6PodCIDR }}
     clusterPoolIPv6MaskSize: {{ kubernetes_cilium_clusterPoolIPv6MaskSize }}
-    {%- endif %}
+{% endif %}
 
 hubble:
   metrics:
@@ -37,19 +37,19 @@ hubble:
     rollOutPods: true
   ui:
     enabled: true
-    {% if kubernetes_cilium_hubble_fqdn -%}
+{% if kubernetes_cilium_hubble_fqdn is defined %}
     ingress:
       enabled: true
       className: {{ kubernetes_cilium_hubble_ingressClassName | default("cilium") }}
       hosts:
       - {{ kubernetes_cilium_hubble_fqdn }}
-    {% endif -%}
+{% endif %}
     rollOutPods: true
 
-{% if kubernetes_cilium_bgpControlPlane_enabled -%}
+{% if kubernetes_cilium_bgpControlPlane_enabled | default(false) %}
 bgpControlPlane:
   enabled: true
-{%- endif %}
+{% endif %}
 
 cni:
   exclusive: false
