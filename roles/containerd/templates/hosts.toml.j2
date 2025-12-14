@@ -1,0 +1,34 @@
+{% if registry_mirror.server is defined %}
+server = {{ registry_mirror.server }}
+{% endif%}
+
+{% if registry_mirror.hosts is defined %}
+{% for host in registry_mirror.hosts %}
+[host."{{ host.host }}"]
+{% if host.ca is defined %}
+  ca = "{{ host.ca }}"
+{% endif %}
+{% if host.capabilities is defined %}
+  capabilities = {{ host.capabilities }}
+{% endif %}
+{% if host.client is defined %}
+  client = {{ host.client }}
+{% endif %}
+{% if host.dial_timeout is defined %}
+  dial_timeout = "{{ host.dial_timeout }}"
+{% endif %}
+{% if host.override_path is defined %}
+  override_path = {{ host.override_path }}
+{% endif %}
+{% if host.skip_verify is defined %}
+  skip_verify = {{ host.skip_verify }}
+{% endif %}
+{% if host.headers is defined %}
+  [host."{{ host.host }}".header]
+{% for header in host.headers %}
+    {{ header.name }} = "{{ header.value }}"
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+{% endif %}

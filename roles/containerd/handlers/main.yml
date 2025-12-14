@@ -5,6 +5,6 @@
       name: containerd
       state: restarted
 
-  - name: Wait for 10 seconds for container d to restart
+  - name: Wait for 10 seconds for containerd to restart
     ansible.builtin.pause:
       seconds: 10
