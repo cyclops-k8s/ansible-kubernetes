@@ -10,41 +10,41 @@
 
 - name: Create keyring directory
   ansible.builtin.file:
-    path: /etc/apt/keyrings
-    state: directory
+    group: root
     mode: '0755'
     owner: root
-    group: root
+    path: /etc/apt/keyrings
+    state: directory
 
 - name: Download GPG keyring
   ansible.builtin.get_url:
-    url: https://download.docker.com/linux/debian/gpg
     dest: /etc/apt/keyrings/docker
+    group: root
     mode: '0644'
     owner: root
-    group: root
+    url: https://download.docker.com/linux/debian/gpg
 
 - name: Dearmor gpg keyring
-  ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/docker
-  args:
+  ansible.builtin.command:
+    cmd: gpg --batch --yes --dearmor /etc/apt/keyrings/docker
     creates: /etc/apt/keyrings/docker.gpg
 
 - name: Set GPG keyring permissions
   ansible.builtin.file:
-    path: /etc/apt/keyrings/docker.gpg
-    state: file
+    group: root
     mode: '0644'
     owner: root
-    group: root
+    path: /etc/apt/keyrings/docker.gpg
+    state: file
 
 - name: Add Docker Repository
   ansible.builtin.apt_repository:
+    filename: docker
     repo: deb [signed-by=/etc/apt/keyrings/docker.gpg] {{ containerd_mirror }} {{ ansible_facts["distribution_release"] | lower }} stable
     state: present
     update_cache: true
-    filename: docker
 
-- name: Install Container-d
+- name: Install containerd
   ansible.builtin.apt:
     name:
     - containerd.io
@@ -59,7 +59,7 @@
   become: true
   ansible.builtin.package_facts:
 
-- name: Set containerd systemd cgroup
+- name: Set containerd options
   block:
 
   # Ensure the containerd configuration directory exists.
@@ -72,52 +72,68 @@
       path: /etc/containerd
       state: directory
 
-  - name: Set containerd systemd cgroup
+  - name: Create default containerd configuration file
     ansible.builtin.shell:
-      cmd: |
-        set -eo pipefail
-        containerd config default | sed "s/SystemdCgroup = false/SystemdCgroup = true/" > /etc/containerd/config.toml
-      executable: /bin/bash
-    register: containerd_configured
-    changed_when: true
-    notify: Restart containerd service
+      cmd: containerd config default > /etc/containerd/config.toml
+      executable: /usr/bin/bash
 
-  - name: Add containerd default credentials
-    with_items: "{{ containerd_credentials }}"
+  - name: Set permissions to 0600 on /etc/containerd/config.toml
+    notify: Restart containerd service
+    ansible.builtin.file:
+      dest: /etc/containerd/config.toml
+      mode: '0600'
+
+  - name: Enable cgroups in the containerd config
+    ansible.builtin.replace:
+      path: /etc/containerd/config.toml
+      regexp: "SystemdCgroup = false"
+      replace: "SystemdCgroup = true"
+
+  - name: Add containerd default credentials for containerd lt 2.0.0
+    loop: "{{ containerd_credentials }}"
+    loop_control:
+      label: "{{ containerd_credential.registry }}"
+      loop_var: containerd_credential
+    no_log: true
+    notify: Restart containerd service
     when:
     - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "lt")) or
       ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "lt"))
     ansible.builtin.blockinfile:
+      block: >2
+                [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ containerd_credential.registry }}".auth]
+                  username = "{{ containerd_credential.username }}"
+                  password = "{{ containerd_credential.password }}"
       dest: /etc/containerd/config.toml
       insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.configs\]'
-      block: >2
-                [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ item.registry }}".auth]
-                  username = "{{ item.username }}"
-                  password = "{{ item.password }}"
+      marker: "# {mark} ANSIBLE MANAGED CREDENTIAL {{ containerd_credential.registry }}"
       validate: containerd --config "%s" config dump
-      marker: "# {mark} ANSIBLE MANAGED CREDENTIAL {{ item.registry }}"
-    notify: Restart containerd service
-    no_log: true
 
-  - name: Add containerd default credentials
-    with_items: "{{ containerd_credentials }}"
+  - name: Add containerd default credentials for containerd ge 2.0.0 and le 2.2.0
+    loop: "{{ containerd_credentials }}"
+    loop_control:
+      label: "{{ containerd_credential.registry }}"
+      loop_var: containerd_credential
+    no_log: true
+    notify: Restart containerd service
     when:
-    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "gt")) or
-      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "gt"))
+    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "ge")) or
+      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "ge"))
+    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.2.0", "le")) or
+      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.2.0", "le"))
     ansible.builtin.blockinfile:
+      block: >2
+                [plugins."io.containerd.cri.v1.images".registry.configs."{{ containerd_credential.registry }}".auth]
+                  username = "{{ containerd_credential.username }}"
+                  password = "{{ containerd_credential.password }}"
       dest: /etc/containerd/config.toml
       insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.configs\]'
-      block: >2
-                [plugins."io.containerd.cri.v1.images".registry.configs."{{ item.registry }}".auth]
-                  username = "{{ item.username }}"
-                  password = "{{ item.password }}"
+      marker: "# {mark} ANSIBLE MANAGED CREDENTIAL {{ containerd_credential.registry }}"
       validate: containerd --config "%s" config dump
-      marker: "# {mark} ANSIBLE MANAGED CREDENTIAL {{ item.registry }}"
-    notify: Restart containerd service
-    no_log: true
 
+  # Adds the mirror configurations for containerd version lt 2.2.0
   # https://github.com/containerd/containerd/blob/main/docs/cri/registry.md
-  - name: Add registry mirrors
+  - name: Add registry mirrors for containerd < 2.0.0
     loop: "{{ containerd_registry_mirrors }}"
     loop_control:
       label: "{{ registry_mirror.registry }}"
@@ -125,8 +141,8 @@
     notify: Restart containerd service
     when:
     - containerd_registry_mirrors is defined
-    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "lt")) or
-      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "lt"))
+    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.2.0", "lt")) or
+      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.2.0", "lt"))
     ansible.builtin.blockinfile:
       block: >2
                 [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ registry_mirror.registry }}"]
@@ -136,25 +152,18 @@
       marker: "# {mark} ANSIBLE MANAGED MIRROR {{ registry_mirror.registry }}"
       validate: containerd --config "%s" config dump
 
-  # https://github.com/containerd/containerd/blob/main/docs/cri/registry.md
-  - name: Add registry mirrors
+  # https://github.com/containerd/containerd/blob/main/docs/hosts.md
+  - name: Add registry mirrors for containerd gt 2.2.0
     loop: "{{ containerd_registry_mirrors }}"
     loop_control:
       label: "{{ registry_mirror.registry }}"
       loop_var: registry_mirror
-    notify: Restart containerd service
     when:
     - containerd_registry_mirrors is defined
-    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "gt")) or
-      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "gt"))
-    ansible.builtin.blockinfile:
-      block: >2
-                [plugins."io.containerd.cri.v1.images".registry.mirrors."{{ registry_mirror.registry }}"]
-                  endpoint  = {{ registry_mirror.endpoints | to_json }}
-      dest: /etc/containerd/config.toml
-      insertafter: '\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.mirrors\]'
-      marker: "# {mark} ANSIBLE MANAGED MIRROR {{ registry_mirror.registry }}"
-      validate: containerd --config "%s" config dump
+    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.2.0", "ge")) or
+      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.2.0", "ge"))
+    ansible.builtin.include_tasks:
+      file: registry-mirror-containerd-2.yaml
 
   - name: Remove disabled plugins
     ansible.builtin.lineinfile:
@@ -163,36 +172,33 @@
       state: absent
     notify: Restart containerd service
 
-  - name: Set permissions to 0600 on /etc/containerd/config.toml
-    ansible.builtin.file:
-      dest: /etc/containerd/config.toml
-      mode: '0600'
-    notify: Restart containerd service
-
   - name: Ensure containerd is enabled and started
+    notify: Restart containerd service
     ansible.builtin.systemd:
       enabled: true
       name: containerd
       state: started
-    notify: Restart containerd service
 
   rescue:
   - name: Output containerd_configured
+    when:
+    - containerd_configured.stdout_lines is defined
     ansible.builtin.debug:
       msg: |
         {{ containerd_configured.stdout_lines }}
         {{ containerd_configured.stderr_lines }}
-    when: containerd_configured.stdout_lines is defined
 
   - name: Remove containerd systemd cgroup
-    ansible.builtin.file:
-      state: absent
-      path: "{{ item }}"
-    with_items:
+    loop:
     - "{{ kubernetes_output_directory }}/containerd-configured"
     - /etc/containerd/config.toml
+    loop_control:
+      loop_var: config_file
+    ansible.builtin.file:
+      path: "{{ config_file }}"
+      state: absent
 
-  - name: Fail containerd systemd cgroup
+  - name: Fail containerd configuration
     ansible.builtin.fail:
       msg: "Failed to set containerd systemd cgroup"
 
