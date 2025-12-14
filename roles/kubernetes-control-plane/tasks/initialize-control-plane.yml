@@ -3,7 +3,7 @@
 
   - name: Create kubeadm file
     ansible.builtin.template:
-      src: first-control-plane-kubeadm.yaml.j2
+      src: kubeadm-init-{{ kubernetes_version }}.yaml.j2
       dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
       owner: root
       group: root
@@ -23,8 +23,7 @@
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
-        kubeadm init --config {{ kubernetes_config_directory }}/kubeadm.yaml \
-          {{ kubernetes_kubeadm_init_extra_args }}
+        kubeadm init --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_init_extra_args }}
       executable: /bin/bash
     changed_when: kubeadm_init_output.rc == 0
     register: kubeadm_init_output
@@ -66,6 +65,7 @@
     when:
     - not kubernetes_already_installed
 
+  # TODO: is this needed in later versions of kubernetes?
   - name: Create cluster role binding to make the kube-scheduler fully happy
     ansible.builtin.shell:
       cmd: |

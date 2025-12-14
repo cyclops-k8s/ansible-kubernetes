@@ -1,0 +1,45 @@
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+
+# CIS 4.2.5
+# STIG V-245541
+streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout}}
+# CIS 4.2.10
+# STIG V-242425
+rotateCertificates: true
+# CIS 4.2.11
+# STIG V-242425
+serverTLSBootstrap: true
+# CIS 4.2.12
+# STIG V-242418
+tlsCipherSuites:
+{{ kubernetes_strong_cypher_suites | to_nice_yaml }}
+# CIS 4.2.15
+podPidsLimit: {{ kubernetes_podpidslimit }}
+# STIG V-242434
+protectKernelDefaults: true
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: "{{ kubernetes_api_endpoint }}:{{ kubernetes_api_port }}"
+    token: "{{ join_token}}"
+    unsafeSkipCAVerification: true
+caCertPath: "{{ kubernetes_pki_directory }}/ca.crt"
+controlPlane:
+  localAPIEndpoint:
+    advertiseAddress: "{{ kubernetes_api_server_bind_address if kubernetes_api_server_bind_address != None else query('community.dns.lookup', ansible_host)[0] }}"
+    bindPort: {{ kubernetes_api_server_port }}
+  certificateKey: "{{ kubeadm_upload_token }}"
+nodeRegistration:
+  kubeletExtraArgs:
+{% if kubernetes_cloud_provider == 'external' %}
+  - name: cloud-provider
+    value: "external"
+{% endif %}
+  - name: node-ip
+    value: "{{ ansible_default_ipv4.address}}"
+patches:
+  directory: {{ kubernetes_config_directory }}/patches

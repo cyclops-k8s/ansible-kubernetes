@@ -70,7 +70,7 @@ resource "ansible_group" "kubernetes" {
 locals {
   kubernetes_config = {
     kubernetes_api_server_port              = 6443
-    kubernetes_version                      = "1.34"
+    kubernetes_version                      = var.kubernetes_version
     kubernetes_cluster_name                 = "testcluster"
     kubernetes_control_plane_check_interval = "250ms"
     kubernetes_api_endpoint                 = "cp.k8s.local"
@@ -105,7 +105,16 @@ locals {
   }
 }
 
+output "vars"{
+    value = var.kubernetes_version
+}
+
 resource "local_file" "second_inventory" {
   content  = yamlencode(local.special_config)
   filename = "vars.yaml"
+}
+
+variable "kubernetes_version" {
+  type    = string
+  default = "1.34"
 }

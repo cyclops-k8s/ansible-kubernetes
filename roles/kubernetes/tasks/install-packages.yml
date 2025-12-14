@@ -50,7 +50,7 @@
     ansible.builtin.set_fact:
       k8s_version: "{{ k8s_version_temp.stdout }}"
 
-  - name: Install kubeadm, kubelet, kubectl and nfs-common
+  - name: Install kubeadm, kubelet, kubectl
     ansible.builtin.apt:
       name: "{{ packages }}"
       state: present
@@ -60,7 +60,6 @@
       - kubeadm={{ k8s_version }}
       - kubelet={{ k8s_version }}
       - kubectl={{ k8s_version }}
-      - nfs-common
     when: ansible_facts.os_family == "Debian"
 
   - name: Hold kubeadm, kubelet and kubectl
