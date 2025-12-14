@@ -186,6 +186,9 @@ kubernetes_control_plane_additional_templates: []
 # How frequently the proxies will check if the control plane is functioning
 kubernetes_control_plane_check_interval: 100ms
 
+# Timeout for the control plane to respond during health checks
+kubernetes_control_plane_timeout: 4m0s
+
 # Extra arguments to pass to the Kubernetes Controller Manager
 # Must not contain any of the following names:
 # authentication-tolerate-lookup-failure
@@ -345,6 +348,11 @@ kubernetes_scripts_directory: /opt/kubernetes/scripts
 # Subnet for the cluster services running in the Kubernetes cluster
 kubernetes_service_subnet: 10.96.0.0/16
 
+# Supported Kubernetes minor versions, do not customize this unless you know what you are doing
+kubernetes_supported_versions:
+- "1.33"
+- "1.34"
+
 # CIS 4.2.5 - Ensure that the --streaming-connection-idle-timeout argument is not set to 0
 # STIG V-245541 - States this should be 5 minutes
 kubernetes_streamingconnectionidletimeout: 5m
@@ -391,7 +399,7 @@ kubernetes_strong_cypher_suites:
 - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
 
 # The minor version of Kubernetes to install. Do not include the patch version, like 1.31.2. Just do the minor, like 1.31.
-kubernetes_version: "1.31"
+kubernetes_version: "1.34"
 
 # Done run the kubernetes-default validation checks. It is not recommended to skip these unless you know what you are doing.
 skip_checks: false

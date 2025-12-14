@@ -156,7 +156,6 @@ apiServer:
       mountPath: "{{ kubernetes_config_directory }}/admission-configuration.yaml"
       readOnly: true
       pathType: File
-  timeoutForControlPlane: 4m0s
 scheduler:
   extraArgs:
     - name: authentication-tolerate-lookup-failure
@@ -216,3 +215,5 @@ nodeRegistration:
     value: "{{ ansible_default_ipv4.address}}"
 patches:
   directory: "{{ kubernetes_config_directory }}/patches"
+timeouts:
+  controlPlaneComponentHealthCheck: {{ kubernetes_control_plane_timeout }}
