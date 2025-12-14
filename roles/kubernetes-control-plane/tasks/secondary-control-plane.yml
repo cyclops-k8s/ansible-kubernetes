@@ -12,7 +12,7 @@
 
 - name: Create kubeadm file
   ansible.builtin.template:
-    src: secondary-control-plane-kubeadm.yaml.j2
+    src: kubeadm-join-{{ kubernetes_version }}.yaml.j2
     dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
     owner: root
     group: root

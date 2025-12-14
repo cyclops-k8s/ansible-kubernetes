@@ -3,7 +3,12 @@
   with_items: "{{ kubernetes_hookfiles.default_configuration }}"
   when: kubernetes_hookfiles.default_configuration is defined
 
-- name: Validate parameters
+- name: Fail when kubernetes_version is not supported
+  ansible.builtin.fail:
+    msg: "kubernetes version {{ kubernetes_version }} is not supported. Supported versions are {{ kubernetes_supported_versions }}."
+  when: kubernetes_version not in kubernetes_supported_versions
+
+- name: Validate required parameters
   ansible.builtin.assert:
     that:
     - kubernetes_api_endpoint != None

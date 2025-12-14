@@ -4,7 +4,7 @@ cgroupDriver: systemd
 
 # CIS 4.2.5
 # STIG V-245541
-streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout}}
+streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout }}
 # CIS 4.2.10
 # STIG V-242425
 rotateCertificates: true
@@ -25,7 +25,7 @@ kind: JoinConfiguration
 discovery:
   bootstrapToken:
     apiServerEndpoint: "{{ kubernetes_api_endpoint }}:{{ kubernetes_api_port }}"
-    token: "{{ join_token}}"
+    token: "{{ join_token }}"
     unsafeSkipCAVerification: true
 caCertPath: "{{ kubernetes_pki_directory }}/ca.crt"
 controlPlane:
@@ -40,6 +40,6 @@ nodeRegistration:
     value: "external"
 {% endif %}
   - name: node-ip
-    value: "{{ ansible_default_ipv4.address}}"
+    value: "{{ ansible_default_ipv4.address }}"
 patches:
   directory: {{ kubernetes_config_directory }}/patches
