@@ -153,7 +153,7 @@
       validate: containerd --config "%s" config dump
 
   # https://github.com/containerd/containerd/blob/main/docs/hosts.md
-  - name: Add registry mirrors for containerd > 2.0.0
+  - name: Add registry mirrors for containerd gt 2.2.0
     loop: "{{ containerd_registry_mirrors }}"
     loop_control:
       label: "{{ registry_mirror.registry }}"
@@ -195,8 +195,8 @@
     loop_control:
       loop_var: config_file
     ansible.builtin.file:
-      state: absent
       path: "{{ config_file }}"
+      state: absent
 
   - name: Fail containerd configuration
     ansible.builtin.fail:
