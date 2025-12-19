@@ -1,0 +1,56 @@
+# execute the containerd roles
+- name: Setup mirrors
+  when: registry_mirrors | default([]) | length > 0
+  block:
+  - name: Include containerd role
+    vars:
+      containerd_registry_mirrors: "{{ proxy_mirrors | default([]) }}"
+    ansible.builtin.include_role:
+      name: containerd
+
+  # unhold containerd.io package if it was held previously
+  - name: Unhold containerd.io package so it can be updated during normal patching cycles
+    ansible.builtin.dpkg_selections:
+      name: containerd.io
+      selection: install
+
+  - name: Install Docker engine
+    ansible.builtin.package:
+      name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+      state: present
+
+  - name: Create mirror configuration directory
+    ansible.builtin.file:
+      path: "{{ registry_mirror_config_path }}"
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Create mirror script directory
+    ansible.builtin.file:
+      path: "{{ registry_mirror_service_path | default(registry_mirror_config_path) }}"
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Copy the service.sh file to the mirror scripts directory
+    ansible.builtin.copy:
+      src: "service.sh"
+      dest: "{{ registry_mirror_service_path | default(registry_mirror_config_path) }}/service.sh"
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Create mirrors
+    loop_control:
+      label: "{{ mirror.registry }}"
+      loop_var: mirror
+    loop: "{{ registry_mirrors }}"
+    ansible.builtin.include_tasks: create-mirror-container.yaml
