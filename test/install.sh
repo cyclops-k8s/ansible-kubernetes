@@ -2,15 +2,14 @@
 
 usage()
 {
-  echo "Usage: $0
-
-  [ ( -v # | --version ) #] [ -h | --help ]
-
-Options:
-
+  echo "Usage: $0 [options] -- tfvar files
   -v | --version  Kubernetes version to install.
                   Default is the version specified in the terraform main.tf file.
   -h | --help     Shows this helpful usage statement.
+
+    Examples:
+        $0 -v 1.34
+        $0 -- ../example-hooks/mirrors/post_proxies/test.tfvars
 "
   exit 2
 }
@@ -40,6 +39,13 @@ do
     # which we checked as VALID_ARGUMENTS when getopt was called...
     *)              echo "Unexpected option: $1"; usage ;;
   esac
+done
+
+#combine the rest of the arguments as tfvar files prefixed with -var-file=
+TFVAR_FILES=()
+for arg in "$@"
+do
+  TFVAR_FILES+=("-var-file=${arg}")
 done
 
 if [ -z "${DEVCONTAINER}" ]
@@ -75,7 +81,7 @@ else
 fi
 
 ${CMD} init
-${CMD} apply -auto-approve
+${CMD} apply -auto-approve "${TFVAR_FILES[@]}"
 
 echo "Running the ansible playbook to install kubernetes"
 ansible-playbook -i "inventory_${CMD}.yaml" -i vars.yaml ../install.yaml

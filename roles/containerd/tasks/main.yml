@@ -76,6 +76,7 @@
     ansible.builtin.shell:
       cmd: containerd config default > /etc/containerd/config.toml
       executable: /usr/bin/bash
+    changed_when: true
 
   - name: Set permissions to 0600 on /etc/containerd/config.toml
     notify: Restart containerd service

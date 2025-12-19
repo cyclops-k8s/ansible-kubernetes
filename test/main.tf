@@ -88,19 +88,22 @@ locals {
   }
   special_config = {
     kubernetes = {
-      vars = {
+      vars = merge(var.extra_kubernetes_configuration, {
         kubernetes_hookfiles = {
+          post_proxies = [
+            "{{ inventory_dir }}/../example-hooks/mirrors/post-proxies/post-proxies.yaml"
+          ]
           post_cluster_init = [
             "{{ inventory_dir }}/../example-hooks/install-calico/post-cluster-init/install-calico.yaml",
             "{{ inventory_dir }}/../example-hooks/copy-admin-config/post-cluster-init/copy-admin-config.yaml"
           ]
         }
-      }
+      })
     }
     proxies = {
-      vars = {
+      vars = merge(var.extra_proxy_configuration, {
         kubernetes_proxy_enable_keepalived = false
-      }
+      })
     }
   }
 }
@@ -113,4 +116,19 @@ resource "local_file" "second_inventory" {
 variable "kubernetes_version" {
   type    = string
   default = "1.34"
+}
+
+variable "kubernetes_configuration" {
+  type = any
+  default = {}
+}
+
+variable "extra_proxy_configuration" {
+  type = any
+  default = {}
+}
+
+variable "extra_kubernetes_configuration" {
+  type = any
+  default = {}
 }
