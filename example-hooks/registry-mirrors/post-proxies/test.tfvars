@@ -6,13 +6,13 @@ extra_kubernetes_configuration = {
   }
 }
 kubernetes_configuration = {
-  kubernetes_proxy_haproxy_config_file = "{{ inventory_dir }}/../example-hooks/mirrors/post-proxies/templates/haproxy.cfg.j2"
+  kubernetes_proxy_haproxy_config_file = "{{ inventory_dir }}/../example-hooks/registry-mirrors/post-proxies/templates/haproxy.cfg.j2"
 }
 extra_proxy_configuration = {
-  kubernetes_proxy_haproxy_config_file = "{{ inventory_dir }}/../example-hooks/mirrors/post-proxies/templates/haproxy.cfg.j2"
+  kubernetes_proxy_haproxy_config_file = "{{ inventory_dir }}/../example-hooks/registry-mirrors/post-proxies/templates/haproxy.cfg.j2"
   kubernetes_hookfiles = {
     post_proxies = [
-      "{{ inventory_dir }}/../example-hooks/mirrors/post-proxies/add-containerd-mirrors.yaml"
+      "{{ inventory_dir }}/../example-hooks/registry-mirrors/post-proxies/add-containerd-mirrors.yaml"
     ]
   }
   registry_mirror_config_path = "/opt/mirrors/config"

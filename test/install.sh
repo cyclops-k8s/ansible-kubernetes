@@ -45,7 +45,12 @@ done
 TFVAR_FILES=()
 for arg in "$@"
 do
-  TFVAR_FILES+=("-var-file=${arg}")
+  if [ ! -f "${arg}" ]
+  then
+    echo "tfvar file does not exist: ${arg}"
+    exit 1
+  fi
+    TFVAR_FILES+=("-var-file=${arg}")
 done
 
 if [ -z "${DEVCONTAINER}" ]
