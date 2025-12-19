@@ -7,6 +7,7 @@
   changed_when: false and kubeapiserver_installed_cmd.rc == 0
   when: inventory_hostname in groups['control_planes']
 
+# noqa: var-naming[no-role-prefix]
 - name: Set the first_kube_control_plane fact to the first node found that has the api server installed
   ansible.builtin.set_fact:
     first_kube_control_plane: "{{ i }}"
@@ -27,6 +28,7 @@
   when: kubernetes_already_installed is not defined
   run_once: true
 
+# noqa: var-naming[no-role-prefix]
 - name: Set fact first_kube_control_plane to the first control plane node if the api server was not found
   ansible.builtin.set_fact:
     first_kube_control_plane: "{{ groups['control_planes'] | first }}"
