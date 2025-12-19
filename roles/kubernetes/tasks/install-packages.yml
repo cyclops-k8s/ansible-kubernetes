@@ -43,9 +43,10 @@
 
         apt-cache madison kubeadm | grep "$REQUESTED_VERSION" | head -n 1 | awk '{print $3}'
       executable: /bin/bash
-    register: k8s_version_temp
-    changed_when: k8s_version_temp.rc != 0
+    register: kubernetes_version_temp
+    changed_when: kubernetes_version_temp.rc != 0
 
+  # noqa: var-naming[no-role-prefix]
   - name: Set k8s_version fact
     ansible.builtin.set_fact:
       k8s_version: "{{ k8s_version_temp.stdout }}"
