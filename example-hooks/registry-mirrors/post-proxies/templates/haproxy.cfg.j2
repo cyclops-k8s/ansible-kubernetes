@@ -59,7 +59,7 @@ listen registry-router
     http-request deny deny_status 400 unless {% for mirror in registry_mirrors %}ns_{{ mirror.registry | regex_replace('[^a-zA-Z0-9]', '-') }}{% if not loop.last %} or {% endif %}{% endfor %}
 
 {% for mirror in registry_mirrors %}
-    server {{ mirror.registry | regex_replace('[^a-zA-Z0-9]', '-')}} 127.0.0.1:{{ mirror.port }}
+    server {{ mirror.registry | regex_replace('[^a-zA-Z0-9]', '-')}} 127.0.0.1:{{ mirror.port }} check port {{ mirror.port }}
 {% endfor %}
 
 {% for mirror in registry_mirrors %}

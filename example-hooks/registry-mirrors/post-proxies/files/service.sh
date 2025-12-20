@@ -103,16 +103,17 @@ then
   echo "******************* Starting mirror container ${NAME} on port ${PORT} *******************"
 
   docker run -d --name "${NAME}" \
+    -e OTEL_TRACES_EXPORTER=none \
     -v "${DATA_PATH}:/var/lib/registry" \
     -v "${CONFIG}:/etc/distribution/config.yml:ro" \
-    -p "${PORT}:5000" \
+    -p "127.0.0.1:${PORT}:5000" \
     --user "${MIRROR_UID}:${MIRROR_GID}" \
     --read-only \
     "${IMAGE}"
 
   echo "******************* Waiting for mirror container ${NAME} on port ${PORT} to start *******************"
   # wait for the container to be ready
-  until curl "http://localhost:${PORT}/v2/" -f --silent --max-time 2 >/dev/null 2>&1
+  until curl "http://127.0.0.1:${PORT}/v2/" -f --silent --max-time 2 >/dev/null 2>&1
   do
     sleep 1
   done
