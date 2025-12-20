@@ -1,4 +1,3 @@
-# set a santized filename for the mirror registry
 - name: Setting sanitized mirror name fact
   ansible.builtin.set_fact:
     sanitized_mirror_name: "{{ mirror.registry | regex_replace('[^a-zA-Z0-9\\.]', '-') }}"

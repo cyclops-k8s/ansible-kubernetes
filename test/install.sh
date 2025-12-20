@@ -9,7 +9,7 @@ usage()
 
     Examples:
         $0 -v 1.34
-        $0 -- ../example-hooks/mirrors/post_proxies/test.tfvars
+        $0 -- ../example-hooks/registry-mirrors/post_proxies/test.tfvars
 "
   exit 2
 }

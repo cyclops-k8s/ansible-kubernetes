@@ -48,7 +48,7 @@ listen controlplane-in
 {% endfor %}
 
 listen registry-router
-    bind :5000
+    bind :{{ registry_mirror_port | default(5000) }}
     mode http
 
 {% for mirror in registry_mirrors %}

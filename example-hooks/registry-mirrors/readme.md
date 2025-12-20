@@ -23,23 +23,23 @@ proxy_mirrors:
 To configure the mirrors set the `containerd_registry_mirrors` variable with the following structure
 
 ```yaml
-proxy_registry_mirrors:
+registry_mirrors:
 - registry: docker.io
   data_path: "The full path to the directory to store data in."
   password: "Password, defaults to no auth to upstream"
   port: "Port on the proxies to listen on, defaults to 5001, must be unique to each mirror"
   remote_url: "The URL to proxy, defaults to https://<registry>"
   username: "Username, defaults to no auth to upstream"
-  ttl: "The time to live for cached images, older images will be pruned. Use 0 to disable. Defaults to 336 hours, or 2 weeks.
+  ttl: "The time to live for cached images, older images will be pruned. Use 0 to disable. Defaults to 336 hours, or 2 weeks."
 ```
 
-It also expects the following variable to be set on the proxies: `mirror_config_path`.
+It also expects the following variable to be set on the proxies: `registry_mirror_config_path`.
 This is a full path to the directory where the configuration files will be stored.
 
-The `proxy_registry_port` which defaults to 5000 can be set to customize the port that you pass to the mirrors.
+The `registry_mirror_port` which defaults to `5000` can be set to customize the port that you pass to the mirrors.
 
 ## TODO
-The `proxy_registry_certificate_file` is a path to a PEM containing the certificate to use for the registries.
+The `registry_mirror_certificate_file` is a path to a PEM containing the certificate to use for the registries.
 If left empty it will be exposed over HTTP, which most runtimes won't support.
 
 # Hooks
