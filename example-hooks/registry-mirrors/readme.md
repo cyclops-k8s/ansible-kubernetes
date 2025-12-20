@@ -20,7 +20,7 @@ proxy_mirrors:
   - https://my.localserver.me:5001
 ```
 
-To configure the mirrors set the `containerd_registry_mirrors` variable with the following structure
+To configure the mirrors set the `registry_mirrors` variable with the following structure
 
 ```yaml
 registry_mirrors:

@@ -28,29 +28,29 @@ kubernetes_admission_control_plugins:
 # CIS 1.2.11 - Ensure that the admission control plugin AlwaysPullImages is set)
 - AlwaysPullImages
 
-# # CIS 1.2.14 - Ensure that the admission control plugin NodeRestriction is set (included by default)
-# - NodeRestriction
+# CIS 1.2.14 - Ensure that the admission control plugin NodeRestriction is set (included by default)
+- NodeRestriction
 
-# # Defaults as of 1.31
-# - CertificateApproval
-# - CertificateSigning
-# - CertificateSubjectRestriction
-# - DefaultIngressClass
-# - DefaultStorageClass
-# - DefaultTolerationSeconds
-# - LimitRanger
-# - MutatingAdmissionWebhook
-# - NamespaceLifecycle
-# - PersistentVolumeClaimResize
-# - PodSecurity
-# - Priority
-# - ResourceQuota
-# - RuntimeClass
-# - ServiceAccount
-# - StorageObjectInUseProtection
-# - TaintNodesByCondition
-# - ValidatingAdmissionPolicy
-# - ValidatingAdmissionWebhook
+# Defaults as of 1.35
+- CertificateApproval
+- CertificateSigning
+- CertificateSubjectRestriction
+- DefaultIngressClass
+- DefaultStorageClass
+- DefaultTolerationSeconds
+- LimitRanger
+- MutatingAdmissionWebhook
+- NamespaceLifecycle
+- PersistentVolumeClaimResize
+- PodSecurity
+- Priority
+- ResourceQuota
+- RuntimeClass
+- ServiceAccount
+- StorageObjectInUseProtection
+- TaintNodesByCondition
+- ValidatingAdmissionPolicy
+- ValidatingAdmissionWebhook
 
 # STIG V-254800
 kubernetes_admission_configuration:
