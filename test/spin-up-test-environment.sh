@@ -132,6 +132,14 @@ function wait_for_ssh() {
     echo -n "."
   done
   echo "SSH is available on ${host}"
+
+  echo "Waiting on cloud-init to finish on ${host}..."
+  while ! ssh "${host}" 'cloud-init status --wait' 2> /dev/null
+  do
+    sleep 2
+    echo -n "."
+  done
+  echo "cloud-init has finished on ${host}"
 }
 
 # Create a directory to hold temporary files

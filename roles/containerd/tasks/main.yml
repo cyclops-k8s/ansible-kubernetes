@@ -137,7 +137,7 @@
   - name: Add registry mirrors for containerd < 2.0.0
     loop: "{{ containerd_registry_mirrors }}"
     loop_control:
-      label: "{{ registry_mirror.registry }}"
+      label: "{{ registry_mirror.registry | default('') }}"
       loop_var: registry_mirror
     notify: Restart containerd service
     when:
@@ -157,7 +157,7 @@
   - name: Add registry mirrors for containerd gt 2.2.0
     loop: "{{ containerd_registry_mirrors }}"
     loop_control:
-      label: "{{ registry_mirror.registry }}"
+      label: "{{ registry_mirror.registry | default('') }}"
       loop_var: registry_mirror
     when:
     - containerd_registry_mirrors is defined
@@ -172,6 +172,12 @@
       regexp: 'disabled_plugins = \[.*\]'
       state: absent
     notify: Restart containerd service
+
+  - name: Fix for bad path in containerd config, issue https://github.com/containerd/containerd/issues/12636
+    ansible.builtin.replace:
+      path: /etc/containerd/config.toml
+      regexp: config_path = '/etc/containerd/certs\.d.*'
+      replace: config_path = '/etc/containerd/certs.d'
 
   - name: Ensure containerd is enabled and started
     notify: Restart containerd service
