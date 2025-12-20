@@ -23,7 +23,7 @@ PARSED_ARGUMENTS=$(getopt -a -n "$0" -o c:d:g:i:n:p:s:u: --long config:,data-pat
 VALID_ARGUMENTS=$?
 
 # Make sure some arguments were passed in
-if [ "$VALID_ARGUMENTS" != "0" ];
+if [ "$VALID_ARGUMENTS" != "0" ]
 then
   usage
 fi
