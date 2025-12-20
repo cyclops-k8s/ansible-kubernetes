@@ -14,6 +14,7 @@ Environment="MIRROR_GID={{ mirror.group_id | default(1000) }}"
 Environment="MIRROR_UID={{ mirror.user_id | default(1000) }}"
 Environment="PORT={{ mirror.port }}"
 Environment="NAME=mirror-{{ sanitized_mirror_name }}"
+Environment="OTEL_TRACES_EXPORTER=none"
 Restart=always
 ExecStart={{ mirror_service_path | default(registry_mirror_config_path) }}/service.sh --state "start"
 ExecStop={{ mirror_service_path | default(registry_mirror_config_path) }}/service.sh --state "stop"

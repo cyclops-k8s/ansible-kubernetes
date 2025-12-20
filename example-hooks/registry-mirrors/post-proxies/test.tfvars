@@ -1,13 +1,24 @@
 extra_kubernetes_configuration = {
-  containerd_registry_mirrors = {
-    "_default" = {
-      endpoint = ["http://px.k8s.local:5000"]
-    }
-  }
+  containerd_registry_mirrors = [{
+    registry = "_default"
+      # server = ["http://px.k8s.local:5000"]
+      hosts = [
+        {
+          capabilities = [
+            "pull",
+            "resolve"
+          ]
+          host = "http://px.k8s.local:5000"
+          # skip_verify = "true"
+        }
+      ]
+  }]
 }
+
 kubernetes_configuration = {
   kubernetes_proxy_haproxy_config_file = "{{ inventory_dir }}/../example-hooks/registry-mirrors/post-proxies/templates/haproxy.cfg.j2"
 }
+
 extra_proxy_configuration = {
   kubernetes_proxy_haproxy_config_file = "{{ inventory_dir }}/../example-hooks/registry-mirrors/post-proxies/templates/haproxy.cfg.j2"
   kubernetes_hookfiles = {

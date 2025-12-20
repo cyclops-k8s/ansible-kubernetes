@@ -19,5 +19,8 @@ write_files:
 - path: /etc/ssh/sshd_config.d/00-nopassword.conf
   content: |
     PasswordAuthentication no
+packages:
+- systemd-timesyncd
+package_reboot_if_required: true
 package_update: true
 package_upgrade: true

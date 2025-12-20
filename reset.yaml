@@ -32,6 +32,15 @@
         ctr --namespace k8s.io containers ls -q | xargs -r ctr --namespace k8s.io containers rm
       executable: /usr/bin/bash
 
+  - name: Remove containerd images
+    changed_when: true
+    failed_when: false
+    ansible.builtin.shell:
+      cmd: |
+        set -o pipefail
+        ctr --namespace k8s.io images ls -q | xargs -r ctr --namespace k8s.io images rm
+      executable: /usr/bin/bash
+
   - name: Stop containerd
     failed_when: false
     loop:
