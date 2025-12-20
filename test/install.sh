@@ -24,9 +24,7 @@ then
   usage
 fi
 
-
 eval set -- "$PARSED_ARGUMENTS"
-
 
 # Parse the command line options
 while :
