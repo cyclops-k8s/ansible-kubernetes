@@ -15,10 +15,6 @@ extra_kubernetes_configuration = {
   }]
 }
 
-kubernetes_configuration = {
-  kubernetes_proxy_haproxy_config_file = "{{ inventory_dir }}/../example-hooks/registry-mirrors/post-proxies/templates/haproxy.cfg.j2"
-}
-
 extra_proxy_configuration = {
   kubernetes_proxy_haproxy_config_file = "{{ inventory_dir }}/../example-hooks/registry-mirrors/post-proxies/templates/haproxy.cfg.j2"
   kubernetes_hookfiles = {
@@ -50,5 +46,5 @@ extra_proxy_configuration = {
       ttl        = "1h"
     }
   ]
-  registry_port = 5000
+  registry_mirror_port = 5000
 }

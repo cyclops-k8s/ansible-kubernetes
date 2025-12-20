@@ -119,6 +119,7 @@ then
   echo "******************* Started mirror container ${NAME} on port ${PORT} *******************"
 
   systemd-notify --ready --status="Mirror ${NAME} is running on port ${PORT}"
+
   # Start a background process to send watchdog notifications as long as we can curl the container
   bash -c "
     while true
@@ -132,6 +133,10 @@ then
       sleep 10
     done
   " &
+  HEALTHCHECK_PID=$!
+
+  # Trap to clean up background health check on exit
+  trap 'kill ${HEALTHCHECK_PID} 2>/dev/null || true' EXIT TERM INT
 
   docker logs -f --since 30s "${NAME}" # This should run for the lifetime of the container and send the logs to journald
 elif [ "${STATE}" == "stop" ]

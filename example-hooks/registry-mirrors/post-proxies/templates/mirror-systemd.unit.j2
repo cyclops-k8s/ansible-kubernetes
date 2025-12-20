@@ -16,8 +16,8 @@ Environment="PORT={{ mirror.port }}"
 Environment="NAME=mirror-{{ sanitized_mirror_name }}"
 Environment="OTEL_TRACES_EXPORTER=none"
 Restart=always
-ExecStart={{ mirror_service_path | default(registry_mirror_config_path) }}/service.sh --state "start"
-ExecStop={{ mirror_service_path | default(registry_mirror_config_path) }}/service.sh --state "stop"
+ExecStart={{ registry_mirror_service_path | default(registry_mirror_config_path) }}/service.sh --state "start"
+ExecStop={{ registry_mirror_service_path | default(registry_mirror_config_path) }}/service.sh --state "stop"
 
 [Install]
 WantedBy=multi-user.target
