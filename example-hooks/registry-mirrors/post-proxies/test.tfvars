@@ -1,17 +1,15 @@
 extra_kubernetes_configuration = {
   containerd_registry_mirrors = [{
     registry = "_default"
-      # server = ["http://px.k8s.local:5000"]
-      hosts = [
-        {
-          capabilities = [
-            "pull",
-            "resolve"
-          ]
-          host = "http://px.k8s.local:5000"
-          # skip_verify = "true"
-        }
-      ]
+    hosts = [
+      {
+        capabilities = [
+          "pull",
+          "resolve"
+        ]
+        host = "http://px.k8s.local:5000"
+      }
+    ]
   }]
 }
 
