@@ -50,7 +50,7 @@ do
     echo "tfvar file does not exist: ${arg}"
     exit 1
   fi
-    TFVAR_FILES+=("-var-file=${arg}")
+  TFVAR_FILES+=("-var-file=${arg}")
 done
 
 if [ -z "${DEVCONTAINER}" ]
