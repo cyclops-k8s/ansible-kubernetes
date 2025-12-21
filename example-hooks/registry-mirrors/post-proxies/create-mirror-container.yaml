@@ -1,0 +1,29 @@
+- name: Setting sanitized mirror name fact
+  ansible.builtin.set_fact:
+    sanitized_mirror_name: "{{ mirror.registry | regex_replace('[^a-zA-Z0-9\\.]', '-') }}"
+
+- name: Create mirror configuration file
+  ansible.builtin.template:
+    src: "mirror-config.yaml.j2"
+    dest: "{{ mirror.config_path | default(registry_mirror_config_path + '/' + sanitized_mirror_name + '.yaml') }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create systemd unit file for mirror registry
+  ansible.builtin.template:
+    src: "mirror-systemd.unit.j2"
+    dest: "/etc/systemd/system/mirror-{{ sanitized_mirror_name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload systemd to pick up new mirror service
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start mirror registry service
+  ansible.builtin.systemd:
+    name: "mirror-{{ sanitized_mirror_name }}.service"
+    enabled: true
+    state: started

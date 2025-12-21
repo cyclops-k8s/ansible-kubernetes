@@ -37,9 +37,9 @@
       kubeadm config images pull 2>&1 | tee {{ kubernetes_output_directory }}/images-pulled-{{ k8s_version }}
     creates: "{{ kubernetes_output_directory }}/images-pulled-{{ k8s_version }}"
     executable: /bin/bash
-  register: kubeadm_images_pulled
+  register: kubernetes_kubeadm_images_pulled
   retries: 10
-  until: kubeadm_images_pulled.rc == 0
+  until: kubernetes_kubeadm_images_pulled.rc == 0
 
 - name: Define first_kube_control_plane
   ansible.builtin.import_tasks: define-first-kube-control.yml
