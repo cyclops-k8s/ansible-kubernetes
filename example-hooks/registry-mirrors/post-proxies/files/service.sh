@@ -86,7 +86,12 @@ then
   exit 1
 fi
 
-[ -f "${CONFIG}" ] || { echo "Config file ${CONFIG} does not exist"; exit 1; }
+if [ -f "${CONFIG}" ]
+then
+  echo "The config file specified with --config does not exist: ${CONFIG}"
+  exit 1
+fi
+
 if [ ! -d "${DATA_PATH}" ]
 then
   echo "Data path ${DATA_PATH} does not exist"
