@@ -40,7 +40,7 @@
   when:
   - kubernetes_needs_to_join_cluster
   ansible.builtin.command:
-    cmd: kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_join_extra_args | default('') }} 2>&1
+    cmd: kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_join_extra_args | default('') }}
 
 # CIS 1.1.20
 - name: CIS 1.1.20 - Secure certificates
@@ -95,6 +95,7 @@
   ansible.builtin.include_tasks:
     file: "{{ post_worker_node_join_hook }}"
 
+# Get an updated list of nodes in the cluster
 - name: Get nodes in the cluster
   changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"
