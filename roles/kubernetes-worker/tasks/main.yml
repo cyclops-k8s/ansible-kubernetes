@@ -11,9 +11,10 @@
   ansible.builtin.set_fact:
     kubernetes_needs_to_join_cluster: "{% if inventory_hostname in kubernetes_nodes.stdout_lines or inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ 'false' | bool }}{% else %}{{ 'true' | bool }}{% endif %}"
 
-- name: Set join token
+- name: Set variables from first control plane
   ansible.builtin.set_fact:
     join_token: "{{ hostvars[first_kube_control_plane].join_token }}"
+    cluster_ca_cert_hash: "{{ hostvars[first_kube_control_plane].cluster_ca_cert_hash }}"
 
 - name: Create kubeadm file
   ansible.builtin.template:

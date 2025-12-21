@@ -208,7 +208,7 @@ skipPhases:
 {% endfor %}
 {% endif %}
 localAPIEndpoint:
-  advertiseAddress: "{{ kubernetes_api_server_bind_address if kubernetes_api_server_bind_address != None else query('community.dns.lookup', ansible_host)[0] }}"
+  advertiseAddress: "{{ kubernetes_api_server_bind_address if kubernetes_api_server_bind_address != None else query('community.dns.lookup', ansible_facts['fqdn'])[0] }}"
   bindPort: {{ kubernetes_api_server_port }}
 nodeRegistration:
   kubeletExtraArgs:
@@ -217,7 +217,7 @@ nodeRegistration:
     value: "external"
 {% endif %}
   - name: node-ip
-    value: "{{ kubernetes_kubelet_node_ip | default(ansible_default_ipv4.address) }}"
+    value: "{{ kubernetes_kubelet_node_ip | default(ansible_facts['default_ipv4'].address) }}"
 patches:
   directory: "{{ kubernetes_config_directory }}/patches"
 timeouts:

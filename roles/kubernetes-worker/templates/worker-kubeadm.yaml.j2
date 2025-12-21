@@ -32,7 +32,8 @@ discovery:
   bootstrapToken:
     apiServerEndpoint: "{{ kubernetes_api_endpoint }}:{{ kubernetes_api_port }}"
     token: "{{ join_token }}"
-    unsafeSkipCAVerification: true
+    caCertHashes:
+    - "{{ cluster_ca_cert_hash }}"
 nodeRegistration:
   kubeletExtraArgs:
 {% if kubernetes_cloud_provider == 'external' %}
@@ -40,4 +41,4 @@ nodeRegistration:
     value: "external"
 {% endif %}
   - name: node-ip
-    value: "{{ kubernetes_kubelet_node_ip | default(ansible_default_ipv4.address) }}"
+    value: "{{ kubernetes_kubelet_node_ip | default(ansible_facts['default_ipv4'].address) }}"
