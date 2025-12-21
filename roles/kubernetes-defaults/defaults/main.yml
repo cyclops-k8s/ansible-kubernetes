@@ -31,7 +31,7 @@ kubernetes_admission_control_plugins:
 # CIS 1.2.14 - Ensure that the admission control plugin NodeRestriction is set (included by default)
 - NodeRestriction
 
-# Defaults as of 1.31
+# Defaults as of 1.35
 - CertificateApproval
 - CertificateSigning
 - CertificateSubjectRestriction
@@ -422,7 +422,7 @@ vrrp_virtual_router_id: null
 vrrp_state: BACKUP
 
 # Registry mirrors to add to containerd configuration
-# containerd_registry_mirrors
+# containerd_registry_mirrors:
 # - registry: docker.io
 #   endpoints:
 #     - https://my.localserver.me:5001

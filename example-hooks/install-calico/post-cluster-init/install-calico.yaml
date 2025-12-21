@@ -11,12 +11,7 @@
     executable: /usr/bin/bash
 
 - name: Wait for calico to be ready
-  loop:
-  - {namespace: kube-system, app: calico-node}
-  loop_control:
-    label: "{{ k8s_app.app }}"
-    loop_var: k8s_app
   register: calico_ready
   retries: 12
   until: calico_ready.rc == 0
-  ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready pod -l k8s-app={{ k8s_app.app }} --timeout=5s --namespace {{ k8s_app.namespace }}
+  ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready pod -l k8s-app=calico-node --timeout=5s --namespace kube-system

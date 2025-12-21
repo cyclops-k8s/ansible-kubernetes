@@ -1,0 +1,24 @@
+version: 0.1
+log:
+  fields:
+    service: registry
+
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+
+http:
+  addr: :5000
+  headers:
+    X-Content-Type-Options: [nosniff]
+
+delete:
+  enabled: true
+
+proxy:
+  remoteurl: "{{ mirror.remote_url | default('https://' + mirror.registry) }}"
+{% if mirror.username is defined and mirror.password is defined %}
+  username: {{ mirror.username | to_yaml }}
+  password: {{ mirror.password | to_yaml }}
+{% endif %}
+  ttl: {{ mirror.ttl | default('336h0m0s') }}

@@ -56,7 +56,7 @@
     sysctl_file: /etc/sysctl.d/99-non-local-bind.conf
     value: '1'
     state: present
-    reload: yes
+    reload: true
 
 - name: Post proxy configuration hooks
   ansible.builtin.include_tasks: "{{ item }}"
