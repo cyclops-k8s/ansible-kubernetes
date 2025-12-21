@@ -60,6 +60,7 @@
   ansible.builtin.import_tasks:
     file: secondary-control-plane.yml
 
+# Get an updated list of nodes in the cluster
 - name: Get nodes in the cluster
   changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"
