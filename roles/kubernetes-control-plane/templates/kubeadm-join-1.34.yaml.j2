@@ -40,6 +40,6 @@ nodeRegistration:
     value: "external"
 {% endif %}
   - name: node-ip
-    value: "{{ ansible_default_ipv4.address }}"
+    value: "{{ kubernetes_kubelet_node_ip | default(ansible_default_ipv4.address) }}"
 patches:
   directory: {{ kubernetes_config_directory }}/patches
