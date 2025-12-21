@@ -16,7 +16,7 @@
 
 ## Purpose
 
-The purpose of this playbook and roles is to install a vanilla Kubernetes cluster with OIDC enabled hardened against the CIS Benchmark and DOD Stig.
+The purpose of this playbook and roles is to install a vanilla Kubernetes cluster with OIDC enabled hardened against the CIS Benchmark 1.12 and DOD Stig.
 
 It is a vanilla `kubeadm` cluster that can be managed by `kubeadm` going forward, or for easy upgrades you can use the included `upgrade` playbook.
 

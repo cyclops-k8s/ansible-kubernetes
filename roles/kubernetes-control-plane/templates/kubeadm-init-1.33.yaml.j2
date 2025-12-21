@@ -19,6 +19,8 @@ tlsCipherSuites:
 podPidsLimit: {{ kubernetes_podpidslimit }}
 # STIG V-242434
 protectKernelDefaults: true
+# CIS 4.2.14
+seccompDefault: {{ kubernetes_seccomp_default }}
 ---
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
@@ -105,6 +107,9 @@ apiServer:
     - name: service-account-issuer
       value: "{{ kubernetes_service_account_issuer }}"
 {% endif %}
+    # CIS 1.2.30
+    - name: service-account-extend-token-expiration
+      value: "{{ kubernetes_service_account_extend_token_expiration | lower }}"
 {% if kubernetes_api_server_extra_args is defined and kubernetes_api_server_extra_args | length > 0 %}
 {% for arg in kubernetes_api_server_extra_args %}
     - name: "{{ arg.name }}"
