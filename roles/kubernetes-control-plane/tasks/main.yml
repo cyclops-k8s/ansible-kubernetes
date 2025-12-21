@@ -23,6 +23,19 @@
   register: temp_token
   changed_when: true
 
+- name: Get CA certificate hash
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | \
+      openssl rsa -pubin -outform der 2>/dev/null | \
+      openssl dgst -sha256 -hex | sed 's/^.* //'
+    executable: /bin/bash
+  delegate_to: "{{ first_kube_control_plane }}"
+  run_once: true
+  register: cluster_ca_cert_hash_temp
+  changed_when: false
+
 - name: Upload certificates so they are fresh and not expired
   ansible.builtin.command:
     cmd: kubeadm init phase --config {{ kubernetes_config_directory }}/kubeadm.yaml upload-certs --upload-certs
@@ -35,6 +48,7 @@
   ansible.builtin.set_fact:
     join_token: "{{ temp_token.stdout }}"
     kubeadm_upload_token: "{{ kubeadm_upload_cert.stdout_lines[-1] | trim }}"
+    cluster_ca_cert_hash: "sha256:{{ cluster_ca_cert_hash_temp.stdout }}"
   run_once: true
 
 - name: Configure additional control planes

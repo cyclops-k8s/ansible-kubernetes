@@ -1,6 +1,6 @@
 # CIS Benchmark
 
-I used the CIS Kubernetes Benchmark 1.9
+I used the CIS Kubernetes Benchmark 1.12
 
 ## 1.1 - Control plane
 
@@ -42,7 +42,7 @@ We use externalIP services
 
 Set by default
 
-### 1.2.5 - Ensure that the --kubelet-certificate-authority argument is set as appropriate (Automated) 
+### 1.2.5 - Ensure that the --kubelet-certificate-authority argument is set as appropriate (Automated)
 
 Fixed using automatic certificate renewal and issuing to kubelets
 
@@ -70,7 +70,7 @@ Set by default
 
 ### 1.2.15
 
-New relic uses the profiling data
+Fixed
 
 ### 1.2.16 - Ensure that the --audit-log-path argument is set
 
@@ -96,7 +96,11 @@ Set by default
 
 Set by default
 
-### 1.2.29 - Ensure that the API Server only makes use of Strong Cryptographic Ciphers (Manual) 
+### 1.2.29 - Ensure that the API Server only makes use of Strong Cryptographic Ciphers (Manual)
+
+Fixed
+
+### 1.2.30 - Ensure that the --service-account-extend-token-expiration parameter is set to false
 
 Fixed
 
@@ -108,7 +112,7 @@ Fixed
 
 ### 1.3.2 - Ensure that the --profiling argument is set to false
 
-New Relic uses the profiling information
+Fixed
 
 ### 1.3.3 - 1.3.7
 
@@ -118,7 +122,7 @@ Set by default
 
 ### 1.4.1 - Ensure that the --profiling argument is set to false
 
-New Relic uses the profiling information
+Fixed
 
 ### 1.4.2
 
@@ -164,7 +168,7 @@ Set by default
 
 Set by default - config file is stored in the container
 
-### 4.1.4 - If proxy kubeconfig file exists ensure ownership is set to root:root (Manual) 
+### 4.1.4 - If proxy kubeconfig file exists ensure ownership is set to root:root (Manual)
 
 Set by default - config file is stored in the container
 
@@ -206,7 +210,7 @@ Setting serverTLSBootstrap resolves this
 
 Set by default
 
-### 4.2.11 - Verify that the RotateKubeletServerCertificate argument is set to true (Manual) 
+### 4.2.11 - Verify that the RotateKubeletServerCertificate argument is set to true (Manual)
 
 Set by default
 
@@ -218,9 +222,13 @@ Fixed
 
 Fixed
 
+### 4.2.14 - Ensure that the --seccomp-default parameter is set to true
+
+Fixed
+
 ## 4.3 - Kube Proxy
 
-### 4.3.1 - Ensure that the kube-proxy metrics service is bound to localhost (Automated) 
+### 4.3.1 - Ensure that the kube-proxy metrics service is bound to localhost (Automated)
 
 Fixed
 
@@ -238,6 +246,6 @@ Set by default
 
 Fixed for initally created namespaces, it's a mnaul process to maintain the configuration on all default service accounts
 
-### 5.1.6 - 5.1.11
+### 5.1.6 - 5.1.13
 
 Set by default
