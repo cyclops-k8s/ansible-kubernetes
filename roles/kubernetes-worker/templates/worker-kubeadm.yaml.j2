@@ -4,7 +4,7 @@ cgroupDriver: systemd
 
 # CIS 4.2.5
 # STIG V-245541
-streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout}}
+streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout }}
 # CIS 4.2.10
 # STIG V-242425
 rotateCertificates: true
@@ -28,7 +28,7 @@ apiVersion: kubeadm.k8s.io/v1beta4
 kind: JoinConfiguration
 discovery:
   bootstrapToken:
-    apiServerEndpoint: "{{ kubernetes_api_endpoint }}:{{ kubernetes_api_port }}" 
+    apiServerEndpoint: "{{ kubernetes_api_endpoint }}:{{ kubernetes_api_port }}"
     token: "{{ join_token}}"
     unsafeSkipCAVerification: true
 nodeRegistration:
@@ -38,4 +38,4 @@ nodeRegistration:
     value: "external"
 {% endif %}
   - name: node-ip
-    value: "{{ ansible_default_ipv4.address}}"
+    value: "{{ kubernetes_kubelet_node_ip | default(ansible_default_ipv4.address) }}"
