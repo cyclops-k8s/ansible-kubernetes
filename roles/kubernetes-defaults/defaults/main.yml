@@ -345,6 +345,12 @@ kubernetes_scheduler_extra_args: []
 # Directory to store scripts for Kubernetes on the nodes
 kubernetes_scripts_directory: /opt/kubernetes/scripts
 
+# CIS 4.2.14 - Ensure that seccomp is enabled by default in the Kubelet
+kubernetes_seccomp_default: true
+
+# CIS 1.2.30 - Ensure that the --service-account-extend-token-expiration argument is set to false
+kubernetes_service_account_extend_token_expiration: false
+
 # Subnet for the cluster services running in the Kubernetes cluster
 kubernetes_service_subnet: 10.96.0.0/16
 

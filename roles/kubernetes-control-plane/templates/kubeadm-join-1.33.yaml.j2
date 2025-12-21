@@ -19,6 +19,8 @@ tlsCipherSuites:
 podPidsLimit: {{ kubernetes_podpidslimit }}
 # STIG V-242434
 protectKernelDefaults: true
+# CIS 4.2.14
+seccompDefault: {{ kubernetes_seccomp_default }}
 ---
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: JoinConfiguration
