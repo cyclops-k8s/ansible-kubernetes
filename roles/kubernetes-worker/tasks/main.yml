@@ -107,18 +107,31 @@
   ansible.builtin.set_fact:
     kubernetes_node_name: "{% if inventory_hostname in kubernetes_nodes.stdout_lines %}{{ inventory_hostname }}{% elif inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ inventory_hostname_short }}{% endif %}"
 
-# This kubectl command returns all certificate signing requests for the node in a single line, space separated if there are multiple
+- name: Fail if Kubernetes node name could not be determined
+  when:
+  - kubernetes_node_name is not defined or
+    kubernetes_node_name | length == 0
+  ansible.builtin.fail:
+    msg: >-
+      Could not determine Kubernetes node name for host {{ inventory_hostname }}.
+      Ensure either '{{ inventory_hostname }}' or '{{ inventory_hostname_short }}' appears
+      in the list of Kubernetes nodes: {{ kubernetes_nodes.stdout_lines | default('') | join(', ') }}
+
+# This kubectl command returns all certificate signing requests for the node, one per line
 - name: Get certificate signing requests
   changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"
   register: csr_check
   ansible.builtin.command:
-    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get csr -o jsonpath='{.items[?(@.spec.username=="system:node:{{ kubernetes_node_name }}")].metadata.name}'
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get csr -o jsonpath='{range .items[?(@.spec.username=="system:node:{{ kubernetes_node_name }}")]}{.metadata.name}{"\n"}{end}'
 
 - name: Approve certificate signing requests
   changed_when: true
   delegate_to: "{{ first_kube_control_plane }}"
+  loop: "{{ csr_check.stdout_lines }}"
+  loop_control:
+    loop_var: csr_name
   when:
-  - csr_check.stdout != ""
+  - csr_check.stdout_lines | length > 0
   ansible.builtin.command:
-    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf certificate approve {{ csr_check.stdout }}
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf certificate approve "{{ csr_name }}"
