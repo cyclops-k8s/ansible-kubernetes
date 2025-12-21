@@ -1,19 +1,22 @@
 - name: Install Calico
+  register: calico
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
       kubectl apply -f \
-        https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/calico.yaml \
+        https://raw.githubusercontent.com/projectcalico/calico/v3.31.3/manifests/calico.yaml \
         --kubeconfig /etc/kubernetes/admin.conf \
         | tee {{ kubernetes_output_directory }}/calico-installed
     creates: "{{ kubernetes_output_directory }}/calico-installed"
-    executable: /bin/bash
-  register: calico
+    executable: /usr/bin/bash
 
 - name: Wait for calico to be ready
-  ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready pod -l k8s-app={{ item.app }} --timeout=5s --namespace {{ item.namespace }}
-  register: calico_ready
-  until: calico_ready.rc == 0
-  retries: 12
-  with_items:
+  loop:
   - {namespace: kube-system, app: calico-node}
+  loop_control:
+    label: "{{ k8s_app.app }}"
+    loop_var: k8s_app
+  register: calico_ready
+  retries: 12
+  until: calico_ready.rc == 0
+  ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready pod -l k8s-app={{ k8s_app.app }} --timeout=5s --namespace {{ k8s_app.namespace }}

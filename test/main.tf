@@ -21,8 +21,9 @@ resource "ansible_host" "control-plane" {
   name   = "cp${count.index + 1}.k8s.local"
   groups = ["control_planes", "kubernetes"]
   variables = {
-    ansible_host = "cp${count.index + 1}.k8s.local"
-    ip_address   = "10.255.254.${count.index + 12}"
+    ansible_host               = "cp${count.index + 1}.k8s.local"
+    ip_address                 = "10.255.254.${count.index + 12}"
+    kubernetes_kubelet_node_ip = "10.255.254.${count.index + 12}"
   }
 }
 
@@ -31,8 +32,9 @@ resource "ansible_host" "worker-nodes" {
   name   = "w${count.index + 1}.k8s.local"
   groups = ["worker_nodes", "kubernetes"]
   variables = {
-    ansible_host = "w${count.index + 1}.k8s.local"
-    ip_address   = "10.255.254.${count.index + 15}"
+    ansible_host               = "w${count.index + 1}.k8s.local"
+    ip_address                 = "10.255.254.${count.index + 15}"
+    kubernetes_kubelet_node_ip = "10.255.254.${count.index + 15}"
   }
 }
 
