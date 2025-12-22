@@ -1,69 +1,102 @@
 - name: Initialize control plane
-  ansible.builtin.import_tasks: initialize-control-plane.yml
   delegate_to: "{{ first_kube_control_plane }}"
   run_once: true
-  when: kubernetes_initialize_ran is not defined or not kubernetes_initialize_ran
+  when:
+  - kubernetes_initialize_ran is not defined or
+    not kubernetes_initialize_ran
+  ansible.builtin.import_tasks:
+    file: initialize-control-plane.yml
 
 - name: Set kubernetes_initialize_ran to true
-  ansible.builtin.set_fact:
-    kubernetes_initialize_ran: true
-  run_once: true
-  loop: "{{ ansible_play_hosts }}"
-  loop_control:
-    loop_var: node
   delegate_facts: true
   delegate_to: "{{ node }}"
+  loop_control:
+    loop_var: node
+  loop: "{{ ansible_play_hosts }}"
+  run_once: true
+  ansible.builtin.set_fact:
+    kubernetes_initialize_ran: true
 
 - name: Get Join token
-  ansible.builtin.shell:
-    cmd: |
-      kubeadm token create --kubeconfig /etc/kubernetes/admin.conf
-  delegate_to: "{{ first_kube_control_plane }}"
-  run_once: true
-  register: temp_token
   changed_when: true
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: temp_token
+  run_once: true
+  ansible.builtin.command:
+    cmd: kubeadm token create --kubeconfig /etc/kubernetes/admin.conf
 
 - name: Get CA certificate hash
+  changed_when: false
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: cluster_ca_cert_hash_temp
+  run_once: true
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
       openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | \
       openssl rsa -pubin -outform der 2>/dev/null | \
       openssl dgst -sha256 -hex | sed 's/^.* //'
-    executable: /bin/bash
-  delegate_to: "{{ first_kube_control_plane }}"
-  run_once: true
-  register: cluster_ca_cert_hash_temp
-  changed_when: false
+    executable: /usr/bin/bash
 
 - name: Upload certificates so they are fresh and not expired
-  ansible.builtin.command:
-    cmd: kubeadm init phase --config {{ kubernetes_config_directory }}/kubeadm.yaml upload-certs --upload-certs
+  changed_when: true
+  delegate_to: "{{ first_kube_control_plane }}"
   register: kubeadm_upload_cert
   run_once: true
-  delegate_to: "{{ first_kube_control_plane }}"
-  changed_when: true
+  ansible.builtin.command:
+    cmd: kubeadm init phase --config {{ kubernetes_config_directory }}/kubeadm.yaml upload-certs --upload-certs
 
 - name: Set facts
+  run_once: true
   ansible.builtin.set_fact:
+    cluster_ca_cert_hash: "sha256:{{ cluster_ca_cert_hash_temp.stdout }}"
     join_token: "{{ temp_token.stdout }}"
     kubeadm_upload_token: "{{ kubeadm_upload_cert.stdout_lines[-1] | trim }}"
-    cluster_ca_cert_hash: "sha256:{{ cluster_ca_cert_hash_temp.stdout }}"
-  run_once: true
 
 - name: Configure additional control planes
-  ansible.builtin.import_tasks: secondary-control-plane.yml
   when:
   - first_kube_control_plane != inventory_hostname
   - inventory_hostname in groups['control_planes']
+  ansible.builtin.import_tasks:
+    file: secondary-control-plane.yml
 
-- name: Approve all CSR's for kubelet's
-  ansible.builtin.shell:
-    cmd: |
-      # don't do a set -e here because we want to continue if there are no pending CSRs
-      set -o pipefail
-      kubectl --namespace kube-system --kubeconfig /etc/kubernetes/admin.conf get csr | grep Pending | awk '{print $1}' | xargs kubectl --namespace kube-system --kubeconfig /etc/kubernetes/admin.conf certificate approve
-      exit 0
-    executable: /bin/bash
+# Get an updated list of nodes in the cluster
+- name: Get nodes in the cluster
+  changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"
+  register: kubernetes_nodes
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o custom-columns=NAME:.metadata.name --no-headers
+
+- name: Set the node name fact
+  ansible.builtin.set_fact:
+    kubernetes_node_name: "{% if inventory_hostname in kubernetes_nodes.stdout_lines %}{{ inventory_hostname }}{% elif inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ inventory_hostname_short }}{% endif %}"
+
+- name: Fail if Kubernetes node name could not be determined
+  when:
+  - kubernetes_node_name is not defined or
+    kubernetes_node_name | length == 0
+  ansible.builtin.fail:
+    msg: >-
+      Could not determine Kubernetes node name for host {{ inventory_hostname }}.
+      Ensure either '{{ inventory_hostname }}' or '{{ inventory_hostname_short }}' appears
+      in the list of Kubernetes nodes: {{ kubernetes_nodes.stdout_lines | default('') | join(', ') }}
+
+# This kubectl command returns all certificate signing requests for the node, one per line
+- name: Get certificate signing requests
+  changed_when: false
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: csr_check
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get csr -o jsonpath='{range .items[?(@.spec.username=="system:node:{{ kubernetes_node_name }}")]}{.metadata.name}{"\n"}{end}'
+
+- name: Approve certificate signing requests
   changed_when: true
+  delegate_to: "{{ first_kube_control_plane }}"
+  loop: "{{ csr_check.stdout_lines }}"
+  loop_control:
+    loop_var: csr_name
+  when:
+  - csr_check.stdout_lines | length > 0
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf certificate approve "{{ csr_name }}"

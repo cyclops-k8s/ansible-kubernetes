@@ -2,10 +2,8 @@
   changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"
   register: kubernetes_nodes
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
-      kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o custom-columns=NAME:.metadata.name --no-headers
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o custom-columns=NAME:.metadata.name --no-headers
 
 - name: Check if the node needs to join the cluster
   ansible.builtin.set_fact:
@@ -13,89 +11,127 @@
 
 - name: Set variables from first control plane
   ansible.builtin.set_fact:
-    join_token: "{{ hostvars[first_kube_control_plane].join_token }}"
     cluster_ca_cert_hash: "{{ hostvars[first_kube_control_plane].cluster_ca_cert_hash }}"
+    join_token: "{{ hostvars[first_kube_control_plane].join_token }}"
 
 - name: Create kubeadm file
+  register: kubeadm_file
+  when:
+  - kubernetes_needs_to_join_cluster
   ansible.builtin.template:
-    src: worker-kubeadm.yaml.j2
+    backup: true
     dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
-    owner: root
     group: root
     mode: '0644'
-    backup: true
-  register: kubeadm_file
-  when: kubernetes_needs_to_join_cluster
+    owner: root
+    src: worker-kubeadm.yaml.j2
 
-- name: Stop kubelet
+- name: Stop kubelet service
+  when:
+  - kubernetes_needs_to_join_cluster
   ansible.builtin.systemd:
+    enabled: true
     name: kubelet
     state: stopped
-    enabled: true
-  when: kubernetes_needs_to_join_cluster
 
 - name: Add the worker node
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
-      set -e
-      kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_join_extra_args | default('') }} 2>&1
-    executable: /bin/bash
   changed_when: kubernetes_join_output.rc == 0
   register: kubernetes_join_output
-  when: kubernetes_needs_to_join_cluster
+  when:
+  - kubernetes_needs_to_join_cluster
+  ansible.builtin.command:
+    cmd: kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_join_extra_args | default('') }}
 
 # CIS 1.1.20
 - name: CIS 1.1.20 - Secure certificates
   ansible.builtin.file:
-    path: "{{ kubernetes_pki_directory }}"
     mode: '0600'
+    path: "{{ kubernetes_pki_directory }}"
     recurse: true
 
 # CIS 4.1.1
-- name: CIS 4.1.1 - Set kubelet.service to 0600
+- name: CIS 4.1.1 - Set kubelet.service file permissions to 0600
   ansible.builtin.file:
-    path: /usr/lib/systemd/system/kubelet.service
     mode: '0600'
+    path: /usr/lib/systemd/system/kubelet.service
 
 # CIS 4.1.9
 # STIG V-242407
-- name: CIS 4.1.9, STIG V-242407 - Set kubelet config.yaml to 0600
+- name: CIS 4.1.9, STIG V-242407 - Set kubelet config.yaml file permissions to 0600
   ansible.builtin.file:
-    path: /var/lib/kubelet/config.yaml
     mode: '0600'
+    path: /var/lib/kubelet/config.yaml
 
 # STIG V-242397
 - name: Secure static pod path
   ansible.builtin.replace:
+    path: /var/lib/kubelet/config.yaml
     regexp: 'staticPodPath:.*'
     replace: 'staticPodPath:'
-    path: /var/lib/kubelet/config.yaml
 
-- name: Retart kubelet
+- name: Restart kubelet
+  when:
+  - kubernetes_needs_to_join_cluster
   ansible.builtin.service:
+    enabled: true
     name: kubelet
     state: restarted
-    enabled: true
-  when: kubernetes_needs_to_join_cluster
 
 - name: Post security hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_security }}"
-  when: kubernetes_hookfiles.post_security is defined
+  loop: "{{ kubernetes_hookfiles.post_security }}"
+  loop_control:
+    loop_var: post_security_hook
+  when:
+  - kubernetes_hookfiles.post_security is defined
+  ansible.builtin.include_tasks:
+    file: "{{ post_security_hook }}"
 
 - name: Post worker node join hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_worker_join }}"
-  when: kubernetes_hookfiles.post_worker_join is defined
+  loop: "{{ kubernetes_hookfiles.post_worker_join }}"
+  loop_control:
+    loop_var: post_worker_node_join_hook
+  when:
+  - kubernetes_hookfiles.post_worker_join is defined
+  ansible.builtin.include_tasks:
+    file: "{{ post_worker_node_join_hook }}"
 
-- name: Approve all CSR's for kubelet's
-  ansible.builtin.shell:
-    cmd: |
-      # don't do a set -e here because we want to continue if there are no pending CSRs
-      set -o pipefail
-      kubectl --namespace kube-system --kubeconfig /etc/kubernetes/admin.conf get csr | grep Pending | awk '{print $1}' | xargs kubectl --namespace kube-system --kubeconfig /etc/kubernetes/admin.conf certificate approve
-      exit 0
-    executable: /bin/bash
+# Get an updated list of nodes in the cluster
+- name: Get nodes in the cluster
+  changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"
+  register: kubernetes_nodes
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o custom-columns=NAME:.metadata.name --no-headers
+
+- name: Set the node name fact
+  ansible.builtin.set_fact:
+    kubernetes_node_name: "{% if inventory_hostname in kubernetes_nodes.stdout_lines %}{{ inventory_hostname }}{% elif inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ inventory_hostname_short }}{% endif %}"
+
+- name: Fail if Kubernetes node name could not be determined
+  when:
+  - kubernetes_node_name is not defined or
+    kubernetes_node_name | length == 0
+  ansible.builtin.fail:
+    msg: >-
+      Could not determine Kubernetes node name for host {{ inventory_hostname }}.
+      Ensure either '{{ inventory_hostname }}' or '{{ inventory_hostname_short }}' appears
+      in the list of Kubernetes nodes: {{ kubernetes_nodes.stdout_lines | default('') | join(', ') }}
+
+# This kubectl command returns all certificate signing requests for the node, one per line
+- name: Get certificate signing requests
+  changed_when: false
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: csr_check
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get csr -o jsonpath='{range .items[?(@.spec.username=="system:node:{{ kubernetes_node_name }}")]}{.metadata.name}{"\n"}{end}'
+
+- name: Approve certificate signing requests
   changed_when: true
+  delegate_to: "{{ first_kube_control_plane }}"
+  loop: "{{ csr_check.stdout_lines }}"
+  loop_control:
+    loop_var: csr_name
+  when:
+  - csr_check.stdout_lines | length > 0
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf certificate approve "{{ csr_name }}"
