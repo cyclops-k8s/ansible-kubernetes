@@ -23,6 +23,7 @@ spec:
   - name: etcd-certs
     emptyDir:
       medium: Memory
+    hostPath: ~
   - name: etcd-certs-original
     hostPath:
       path: /etc/kubernetes/pki/etcd
