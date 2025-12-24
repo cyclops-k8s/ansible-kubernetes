@@ -48,8 +48,10 @@
     - not kubernetes_already_installed
 
   - name: Post cluster init hooks
-    ansible.builtin.include_tasks: "{{ item }}"
-    with_items: "{{ kubernetes_hookfiles.post_cluster_init }}"
+    ansible.builtin.include_tasks: "{{ hook }}"
+    loop: "{{ kubernetes_hookfiles.post_cluster_init }}"
+    loop_control:
+      loop_var: hook
     when:
     - kubernetes_hookfiles.post_cluster_init is defined
     - not kubernetes_already_installed
@@ -178,8 +180,10 @@
     - not kubernetes_already_installed
 
   - name: Post security hooks
-    ansible.builtin.include_tasks: "{{ item }}"
-    with_items: "{{ kubernetes_hookfiles.post_security }}"
+    ansible.builtin.include_tasks: "{{ hook }}"
+    loop: "{{ kubernetes_hookfiles.post_security }}"
+    loop_control:
+      loop_var: hook
     when:
     - kubernetes_hookfiles.post_security is defined
 
