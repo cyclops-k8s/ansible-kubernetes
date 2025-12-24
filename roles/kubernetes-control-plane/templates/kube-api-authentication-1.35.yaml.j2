@@ -1,0 +1,26 @@
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+jwt:
+- issuer:
+    url: "{{ kubernetes_oidc_issuer_url }}"
+    audiences:
+    - "{{ kubernetes_oidc_client_id }}"
+  claimMappings:
+    # username represents an option for the username attribute.
+    # This is the only required attribute.
+    username:
+{% if kubernetes_oidc_username_expression %}
+      expression: "{{ kubernetes_oidc_username_expression }}"
+{% else %}
+      claim: "{{ kubernetes_oidc_username_claim }}"
+      prefix: "{{ kubernetes_oidc_username_prefix }}"
+{% endif %}
+    groups:
+      claim: "{{ kubernetes_oidc_group_claim }}"
+      prefix: "{{ kubernetes_oidc_group_prefix }}"
+      # Mutually exclusive with groups.claim and groups.prefix.
+      # expression is a CEL expression that evaluates to a string or a list of strings.
+      # expression: 'claims.roles.split(",")'
+    # uid represents an option for the uid attribute.
+    uid:
+      claim: "{{ kubernetes_oidc_uid_claim }}"
