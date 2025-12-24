@@ -1,6 +1,6 @@
 - name: Pre configure control plane hooks
   ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_configure_control_planes }}"
+  with_items: "{{ kubernetes_hookfiles.pre_configure_control_planes }}"
   when:
   - kubernetes_hookfiles.pre_configure_control_planes is defined
 
