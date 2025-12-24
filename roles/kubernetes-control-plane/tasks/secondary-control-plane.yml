@@ -95,6 +95,8 @@
   when: kubernetes_needs_to_join_cluster
 
 - name: Post control plane join hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_control_plane_join }}"
+  ansible.builtin.include_tasks: "{{ hook }}"
+  loop: "{{ kubernetes_hookfiles.post_control_plane_join }}"
+  loop_control:
+    loop_var: hook
   when: kubernetes_hookfiles.post_control_plane_join is defined
