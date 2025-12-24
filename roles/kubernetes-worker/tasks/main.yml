@@ -24,7 +24,13 @@
     group: root
     mode: '0644'
     owner: root
-    src: worker-kubeadm.yaml.j2
+    src: worker-kubeadm-{{ kubernetes_version }}.yaml.j2
+
+- name: Post configure worker hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.post_configure_workers }}"
+  when:
+  - kubernetes_hookfiles.post_configure_workers is defined
 
 - name: Stop kubelet service
   when:

@@ -1,3 +1,175 @@
+- name: Pre configure control plane hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.post_configure_control_planes }}"
+  when:
+  - kubernetes_hookfiles.pre_configure_control_planes is defined
+
+- name: Create kubernetes/config/patches directory
+  ansible.builtin.file:
+    dest: "{{ item }}"
+    state: directory
+    mode: '0700'
+  with_items:
+  - "{{ kubernetes_config_directory }}/patches"
+  - "{{ kubernetes_scripts_directory }}"
+
+- name: Create kubernetes configuration files
+  ansible.builtin.template:
+    src: "{{ item.file }}"
+    dest: "{{ item.destination }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode | default('0600') }}"
+    backup: false
+  with_items:
+  - {file: "encryption-{{ kubernetes_version }}.yaml.j2", destination: "{{ kubernetes_config_directory }}/encryption.yaml"}
+  # CIS 3.1.1, 3.1.2, 3.1.3
+  - {file: "kube-api-authentication-{{ kubernetes_version }}.yaml.j2", destination: "{{ kubernetes_config_directory }}/kube-api-authentication.yaml"}
+  # CIS 1.2.6, 1.2.7, 1.2.8
+  # STIG V-242382
+  - {file: "kube-api-authorization-{{ kubernetes_version }}.yaml.j2", destination: "{{ kubernetes_config_directory }}/kube-api-authorization.yaml"}
+  # STIG V-254800
+  - {file: "admission-configuration-{{ kubernetes_version }}.yaml.j2", destination: "{{ kubernetes_config_directory }}/admission-configuration.yaml"}
+  # CIS 1.1.12
+  # STIG V-242459
+  - {file: "etcd-patch-{{ kubernetes_version }}.yaml.j2", destination: "{{ kubernetes_config_directory }}/patches/etcd.yaml"}
+
+- name: Create kubernetes automatic certificate renewal scripts and service files
+  ansible.builtin.template:
+    src: "{{ item.file }}"
+    dest: "{{ item.destination }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode | default('0600') }}"
+    backup: false
+  when: kubernetes_manage_cert_renewal
+  with_items:
+  - {file: "k8s-certs-renew.sh.j2", destination: "{{ kubernetes_scripts_directory }}/k8s-certs-renew.sh", mode: "0755"}
+  - {file: "k8s-certs-renew.service.j2", destination: "/etc/systemd/system/k8s-certs-renew.service", mode: "0644"}
+  - {file: "k8s-certs-renew.timer.j2", destination: "/etc/systemd/system/k8s-certs-renew.timer", mode: "0644"}
+
+- name: Copy additional control plane files
+  ansible.builtin.copy:
+    src: "{{ item.source }}"
+    dest: "{{ item.destination }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode | default('0600') }}"
+  with_items: "{{ kubernetes_control_plane_additional_files }}"
+
+- name: Copy additional control plane templates
+  ansible.builtin.template:
+    src: "{{ item.source }}"
+    dest: "{{ item.destination }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode | default('0600') }}"
+  with_items: "{{ kubernetes_control_plane_additional_templates }}"
+
+# CIS 3.2.1
+- name: Create kubernetes audit policy file
+  ansible.builtin.copy:
+    src: audit-policy.yaml
+    dest: "{{ kubernetes_config_directory }}/audit-policy.yaml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Create etcd group
+  ansible.builtin.group:
+    name: etcd
+    system: true
+    gid: 500
+
+- name: Create etcd user
+  ansible.builtin.user:
+    name: etcd
+    comment: "etcd user"
+    system: true
+    shell: /bin/false
+    uid: 500
+    group: etcd
+    create_home: false
+
+- name: Renew K8S control plane certificates monthly systemd timer
+  ansible.builtin.systemd_service:
+    name: k8s-certs-renew.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: kubernetes_manage_cert_renewal
+
+- name: Install Helm
+  when: kubernetes_install_helm
+  block:
+  - name: Helm - Download GPG keyring
+    ansible.builtin.get_url:
+      url: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
+      dest: /etc/apt/keyrings/helm
+      mode: '0644'
+      owner: root
+      group: root
+
+  - name: Add an apt signing key for Helm
+    ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/helm
+    args:
+      creates: /etc/apt/keyrings/helm.gpg
+
+  - name: Set helm gpg signing key permissions
+    ansible.builtin.file:
+      dest: /etc/apt/keyrings/helm.gpg
+      mode: '0644'
+      owner: root
+      group: root
+
+  - name: Add helm apt repository
+    ansible.builtin.apt_repository:
+      repo: deb [signed-by=/etc/apt/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main
+      state: present
+      filename: helm
+      update_cache: true
+
+  - name: Install helm
+    ansible.builtin.apt:
+      name: helm
+      state: present
+
+- name: Install etcd-client
+  ansible.builtin.apt:
+    name: etcd-client
+    state: present
+
+- name: Install Kustomize
+  when: kubernetes_install_kustomize
+  block:
+  - name: Download Kustomize
+    ansible.builtin.get_url:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
+      dest: /tmp/install_kustomize.sh
+      mode: '0755'
+      owner: root
+      group: root
+
+  - name: Install Kustomize
+    ansible.builtin.shell:
+      cmd: |
+        set -eo pipefail
+        /tmp/install_kustomize.sh
+        mv kustomize /usr/local/bin/kustomize
+      creates: /usr/local/bin/kustomize
+      executable: /bin/bash
+
+  - name: Remove Kustomize install script
+    ansible.builtin.file:
+      state: absent
+      path: /tmp/install_kustomize.sh
+
+- name: Post configure control plane hooks
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items: "{{ kubernetes_hookfiles.post_configure_control_planes }}"
+  when:
+  - kubernetes_hookfiles.post_configure_control_planes is defined
+
 - name: Initialize control plane
   delegate_to: "{{ first_kube_control_plane }}"
   run_once: true

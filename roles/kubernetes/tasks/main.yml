@@ -43,29 +43,3 @@
 
 - name: Define first_kube_control_plane
   ansible.builtin.import_tasks: define-first-kube-control.yml
-
-- name: Pre configure control plane hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_configure_control_planes }}"
-  when:
-  - inventory_hostname in groups['control_planes']
-  - kubernetes_hookfiles.pre_configure_control_planes is defined
-
-- name: Configure control planes
-  ansible.builtin.import_tasks: configure-control-plane.yml
-  when: inventory_hostname in groups['control_planes']
-
-- name: Post configure control plane hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_configure_control_planes }}"
-  when:
-  - inventory_hostname in groups['control_planes']
-  - kubernetes_hookfiles.post_configure_control_planes is defined
-
-- name: Configure worker hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_configure_workers }}"
-  when:
-  - groups['worker_nodes'] is defined
-  - inventory_hostname in groups['worker_nodes']
-  - kubernetes_hookfiles.post_configure_workers is defined

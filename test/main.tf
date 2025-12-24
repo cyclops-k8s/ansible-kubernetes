@@ -114,7 +114,7 @@ resource "local_file" "second_inventory" {
 
 variable "kubernetes_version" {
   type    = string
-  default = "1.34"
+  default = "1.35"
 }
 
 variable "extra_proxy_configuration" {
