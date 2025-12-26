@@ -6,7 +6,7 @@ spec:
   - name: fix-permissions
     securityContext:
       runAsUser: 0
-      runAsGrdoup: 0
+      runAsGroup: 0
     image: {{ kubernetes_etcd_init_container_image }}
     volumeMounts:
     - mountPath: /var/lib/etcd
@@ -23,7 +23,7 @@ spec:
   - name: etcd-certs
     emptyDir:
       medium: Memory
-    hostPath:
+    hostPath: ~
   - name: etcd-certs-original
     hostPath:
       path: /etc/kubernetes/pki/etcd

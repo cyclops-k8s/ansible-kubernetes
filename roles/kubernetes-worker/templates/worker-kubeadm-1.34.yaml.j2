@@ -1,0 +1,44 @@
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+
+# CIS 4.2.5
+# STIG V-245541
+streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout }}
+# CIS 4.2.10
+# STIG V-242425
+rotateCertificates: true
+# CIS 4.2.11
+# STIG V-242425
+serverTLSBootstrap: true
+# CIS 4.2.12
+# STIG V-242418
+tlsCipherSuites:
+{{ kubernetes_strong_cypher_suites | to_nice_yaml }}
+# CIS 4.2.15
+podPidsLimit: {{ kubernetes_podpidslimit }}
+# STIG V-242434
+protectKernelDefaults: true
+# CIS 4.2.14
+seccompDefault: {{ kubernetes_seccomp_default }}
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+mode: "ipvs"
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: "{{ kubernetes_api_endpoint }}:{{ kubernetes_api_port }}"
+    token: "{{ join_token }}"
+    caCertHashes:
+    - "{{ cluster_ca_cert_hash }}"
+nodeRegistration:
+  kubeletExtraArgs:
+{% if kubernetes_cloud_provider == 'external' %}
+  - name: cloud-provider
+    value: "external"
+{% endif %}
+  - name: node-ip
+    value: "{{ kubernetes_kubelet_node_ip | default(ansible_facts['default_ipv4'].address) }}"
