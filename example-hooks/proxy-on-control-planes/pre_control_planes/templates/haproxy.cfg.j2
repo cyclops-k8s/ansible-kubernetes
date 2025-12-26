@@ -1,5 +1,5 @@
 global
-    log stdout format raw local0 notice
+    log stdout format raw local0 info
 
 defaults
     log global
@@ -21,6 +21,7 @@ listen stats
 listen kubernetes-controlplane
     mode tcp
     bind {{ kubernetes_proxy_bind_address }}:{{ kubernetes_proxy_port }}
+    option tcplog
 
     option httpchk GET /readyz
     http-check connect ssl alpn h2,http/1.1

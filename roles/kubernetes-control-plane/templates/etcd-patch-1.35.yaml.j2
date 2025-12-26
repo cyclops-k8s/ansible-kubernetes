@@ -1,0 +1,30 @@
+spec:
+  securityContext:
+    runAsUser: {{ kubernetes_etcd_user_id }}
+    runAsGroup: {{ kubernetes_etcd_group_id }}
+  initContainers:
+  - name: fix-permissions
+    securityContext:
+      runAsUser: 0
+      runAsGroup: 0
+    image: {{ kubernetes_etcd_init_container_image }}
+    volumeMounts:
+    - mountPath: /var/lib/etcd
+      name: etcd-data
+    - mountPath: /certs
+      name: etcd-certs
+    - mountPath: /original-certs
+      name: etcd-certs-original
+    command:
+    - sh
+    - -c
+    - 'sleep 10 && cp -v /original-certs/* /certs && chown -R {{ kubernetes_etcd_user_id }}:{{ kubernetes_etcd_group_id }} /certs/* /var/lib/etcd'
+  volumes:
+  - name: etcd-certs
+    emptyDir:
+      medium: Memory
+    hostPath: ~
+  - name: etcd-certs-original
+    hostPath:
+      path: /etc/kubernetes/pki/etcd
+      type: DirectoryOrCreate

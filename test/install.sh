@@ -8,7 +8,7 @@ usage()
   -h | --help     Shows this helpful usage statement.
 
     Examples:
-        $0 -v 1.34
+        $0 -v 1.35
         $0 -- ../example-hooks/registry-mirrors/post_proxies/test.tfvars
 "
   exit 2

@@ -86,7 +86,7 @@ then
   exit 1
 fi
 
-if [ -f "${CONFIG}" ]
+if [ ! -f "${CONFIG}" ]
 then
   echo "The config file specified with --config does not exist: ${CONFIG}"
   exit 1

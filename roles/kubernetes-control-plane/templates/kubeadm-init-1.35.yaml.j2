@@ -1,0 +1,224 @@
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+
+# CIS 4.2.5
+# STIG V-245541
+streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout }}
+# CIS 4.2.10
+# STIG V-242425
+rotateCertificates: true
+# CIS 4.2.11
+# STIG V-242425
+serverTLSBootstrap: true
+# CIS 4.2.12
+# STIG V-242418
+tlsCipherSuites:
+{{ kubernetes_strong_cypher_suites | to_nice_yaml }}
+# CIS 4.2.15
+podPidsLimit: {{ kubernetes_podpidslimit }}
+# STIG V-242434
+protectKernelDefaults: true
+# CIS 4.2.14
+seccompDefault: {{ kubernetes_seccomp_default }}
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+controlPlaneEndpoint: "{{ kubernetes_api_endpoint }}:{{ kubernetes_api_port }}"
+controllerManager:
+  extraArgs:
+    - name: node-cidr-mask-size
+      value: "{{ kubernetes_node_cidr_mask_size }}"
+    # CIS 1.3.1
+    - name: terminated-pod-gc-threshold
+      value: "{{ kubernetes_terminated_pod_gc_threshold }}"
+    - name: cluster-signing-duration
+      value: "{{ kubernetes_cluster_signing_duration }}"
+    # CIS 1.3.2
+    - name: profiling
+      value: "{{ kubernetes_profiling | upper }}"
+    # STIG V-242378
+    - name: tls-min-version
+      value: VersionTLS13
+{% if kubernetes_controller_manager_extra_args is defined and kubernetes_controller_manager_extra_args | length > 0 %}
+{% for arg in kubernetes_controller_manager_extra_args %}
+    - name: "{{ arg.name }}"
+      value: "{{ arg.value }}"
+{% endfor %}
+{% endif %}
+networking:
+  dnsDomain: "{{ kubernetes_dns_domain }}"
+  podSubnet: "{{ kubernetes_pod_subnet }}"
+  serviceSubnet: "{{ kubernetes_service_subnet }}"
+apiServer:
+  extraArgs:
+    # CIS 1.2.16
+    # STIG V-242465
+    # STIG V-242402
+    - name: audit-log-path
+      value: "{{ kubernetes_audit_log_path }}"
+    # CIS 1.2.17
+    # STIG V-242464
+    - name: audit-log-maxage
+      value: "{{ kubernetes_audit_log_max_age }}"
+    # CIS 1.2.18
+    # STIG V-242463
+    - name: audit-log-maxbackup
+      value: "{{ kubernetes_audit_log_max_backup }}"
+    # CIS 1.2.19
+    # STIG V-242462
+    - name: audit-log-maxsize
+      value: "{{ kubernetes_audit_log_max_size }}"
+    # CIS 1.2.29
+    - name: tls-cipher-suites
+      value: "{{ kubernetes_strong_cypher_suites | join(",") }}"
+    # CIS 3.2.1
+    # STIG V-242461
+    - name: audit-policy-file
+      value: "{{ kubernetes_config_directory }}/audit-policy.yaml"
+    # CIS 3.1.1, 3.1.2, 3.1.3
+    - name: authentication-config
+      value: "{{ kubernetes_config_directory }}/kube-api-authentication.yaml"
+    # CIS 1.2.6, 1.2.7, 1.2.8
+    # STIG V-242382
+    - name: authorization-config
+      value: "{{ kubernetes_config_directory }}/kube-api-authorization.yaml"
+    # CIS 1.2.11
+    - name: enable-admission-plugins
+      value: {{ kubernetes_admission_control_plugins | join(",") }}
+    # CIS 1.2.27
+    - name: encryption-provider-config
+      value: "{{ kubernetes_config_directory }}/encryption.yaml"
+    - name: encryption-provider-config-automatic-reload
+      value: "true"
+    # CIS 1.2.5
+    - name: kubelet-certificate-authority
+      value: "{{ kubernetes_pki_directory }}/ca.crt"
+    # CIS 1.2.15
+    - name: profiling
+      value: "{{ kubernetes_profiling | upper}}"
+    # STIG V-254800
+    - name: admission-control-config-file
+      value: "{{ kubernetes_config_directory }}/admission-configuration.yaml"
+    # STIG V-242378
+    - name: tls-min-version
+      value: VersionTLS13
+{% if kubernetes_service_account_issuer != None %}
+    - name: service-account-issuer
+      value: "{{ kubernetes_service_account_issuer }}"
+{% endif %}
+    # CIS 1.2.30
+    - name: service-account-extend-token-expiration
+      value: "{{ kubernetes_service_account_extend_token_expiration | lower }}"
+{% if kubernetes_api_server_extra_args is defined and kubernetes_api_server_extra_args | length > 0 %}
+{% for arg in kubernetes_api_server_extra_args %}
+    - name: "{{ arg.name }}"
+      value: "{{ arg.value }}"
+{% endfor %}
+{% endif %}
+  certSANs:
+  - "{{ kubernetes_api_endpoint }}"
+  extraVolumes:
+{% for volume in kubernetes_api_server_additional_mounts %}
+    - name: {{ volume.name }}
+      hostPath: "{{ volume.source }}"
+      mountPath: "{{ volume.destination | default(volume.source) }}"
+      readOnly: true
+      pathType: "{{ volume.mode | default('File') }}"
+{% endfor %}
+    - name: authentication
+      hostPath: "{{ kubernetes_config_directory }}/kube-api-authentication.yaml"
+      mountPath: "{{ kubernetes_config_directory }}/kube-api-authentication.yaml"
+      readOnly: true
+      pathType: File
+
+    # CIS 1.2.6
+    # CIS 1.2.7
+    # CIS 1.2.8
+    # STIG V-242382
+    - name: authorization
+      hostPath: "{{ kubernetes_config_directory }}/kube-api-authorization.yaml"
+      mountPath: "{{ kubernetes_config_directory }}/kube-api-authorization.yaml"
+      readOnly: true
+      pathType: File
+    - name: encryption-config
+      hostPath: "{{ kubernetes_config_directory }}/encryption.yaml"
+      mountPath: "{{ kubernetes_config_directory }}/encryption.yaml"
+      readOnly: true
+      pathType: File
+    - name: audit-policy
+      hostPath: "{{ kubernetes_config_directory }}/audit-policy.yaml"
+      mountPath: "{{ kubernetes_config_directory }}/audit-policy.yaml"
+      readOnly: true
+      pathType: File
+    - name: audit-log
+      hostPath: /var/log/apiserver
+      mountPath: /var/log/apiserver
+      readOnly: false
+      pathType: DirectoryOrCreate
+    - name: admission-configuration
+      hostPath: "{{ kubernetes_config_directory }}/admission-configuration.yaml"
+      mountPath: "{{ kubernetes_config_directory }}/admission-configuration.yaml"
+      readOnly: true
+      pathType: File
+scheduler:
+  extraArgs:
+    - name: authentication-tolerate-lookup-failure
+      value: "false"
+    # CIS 1.4.1
+    - name: profiling
+      value: "{{ kubernetes_profiling | upper }}"
+    # STIG V-242377
+    - name: tls-min-version
+      value: VersionTLS13
+{% if kubernetes_scheduler_extra_args is defined and kubernetes_scheduler_extra_args | length > 0 %}
+{% for arg in kubernetes_scheduler_extra_args %}
+    - name: "{{ arg.name }}"
+      value: "{{ arg.value }}"
+{% endfor %}
+{% endif %}
+clusterName: "{{ kubernetes_cluster_name }}"
+etcd:
+  local:
+    extraArgs:
+      # STIG V-242380
+      - name: peer-auto-tls
+        value: "false"
+      # STIG V-242379
+      - name: auto-tls
+        value: "false"
+{% if kubernetes_etcd_extra_args is defined and kubernetes_etcd_extra_args | length > 0 %}
+{% for arg in kubernetes_etcd_extra_args %}
+      - name: "{{ arg.name }}"
+        value: "{{ arg.value }}"
+{% endfor %}
+{% endif %}
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+# CIS 4.3.1
+metricsBindAddress: "127.0.0.1:10249"
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+{% if kubernetes_init_skip_phases is defined and kubernetes_init_skip_phases | length > 0 %}
+skipPhases:
+{% for phase in kubernetes_init_skip_phases %}
+- "{{ phase }}"
+{% endfor %}
+{% endif %}
+localAPIEndpoint:
+  advertiseAddress: "{{ kubernetes_api_server_bind_address if kubernetes_api_server_bind_address != None else query('community.dns.lookup', ansible_facts['fqdn'])[0] }}"
+  bindPort: {{ kubernetes_api_server_port }}
+nodeRegistration:
+  kubeletExtraArgs:
+{% if kubernetes_cloud_provider == 'external' %}
+  - name: cloud-provider
+    value: "external"
+{% endif %}
+  - name: node-ip
+    value: "{{ kubernetes_kubelet_node_ip | default(ansible_facts['default_ipv4'].address) }}"
+patches:
+  directory: "{{ kubernetes_config_directory }}/patches"
+timeouts:
+  controlPlaneComponentHealthCheck: {{ kubernetes_control_plane_timeout }}
