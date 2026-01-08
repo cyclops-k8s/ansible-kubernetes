@@ -1,7 +1,7 @@
 - name: Pre proxy configuration hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.pre_proxies }}"
   when: kubernetes_hookfiles.pre_proxies is defined
+  with_items: "{{ kubernetes_hookfiles.pre_proxies }}"
+  ansible.builtin.include_tasks: "{{ item }}"
 
 - name: Validate Proxy Configuration
   ansible.builtin.assert:
@@ -27,34 +27,34 @@
     mode: '0644'
 
 - name: Enable haproxy
+  enabled: true
+  name: haproxy
   ansible.builtin.systemd_service:
-    enabled: true
-    name: haproxy
 
 - name: Install keepalived
   notify: restart-keepalived
+  when: kubernetes_proxy_enable_keepalived | default(true)
   ansible.builtin.package:
     name:
     - keepalived
     state: present
-  when: kubernetes_proxy_enable_keepalived | default(true)
 
 - name: Copy keepalived.conf
   notify: restart-keepalived
+  when: kubernetes_proxy_enable_keepalived | default(true)
   ansible.builtin.template:
     src: "{{ kubernetes_proxy_keepalived_config_file }}"
     dest: /etc/keepalived/keepalived.conf
     owner: root
     mode: '0644'
-  when: kubernetes_proxy_enable_keepalived | default(true)
 
 - name: Enable keepalived
+  when: kubernetes_proxy_enable_keepalived | default(true)
   ansible.builtin.systemd_service:
     enabled: true
     name: keepalived
-  when: kubernetes_proxy_enable_keepalived | default(true)
 
 - name: Post proxy configuration hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_proxies }}"
   when: kubernetes_hookfiles.post_proxies is defined
+  with_items: "{{ kubernetes_hookfiles.post_proxies }}"
+  ansible.builtin.include_tasks: "{{ item }}"

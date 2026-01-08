@@ -1,7 +1,7 @@
 - name: Pre proxy configuration hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.pre_proxies }}"
   when: kubernetes_hookfiles.pre_proxies is defined
+  with_items: "{{ kubernetes_hookfiles.pre_proxies }}"
+  ansible.builtin.include_tasks: "{{ item }}"
 
 - name: Validate Proxy Configuration
   ansible.builtin.assert:
@@ -12,19 +12,19 @@
 
 - name: Copy haproxy.cfg
   ansible.builtin.template:
-    src: "{{ kubernetes_proxy_haproxy_config_file }}"
     dest: /etc/kubernetes/config/haproxy.cfg
-    owner: root
     group: root
     mode: '0644'
+    owner: root
+    src: "{{ kubernetes_proxy_haproxy_config_file }}"
 
 - name: Copy kube-apiserver-proxy manifest
   ansible.builtin.template:
-    src: api-server-proxy.yaml.j2
     dest: /etc/kubernetes/manifests/kube-apiserver-proxy.yaml
-    owner: root
     group: root
     mode: '0644'
+    owner: root
+    src: api-server-proxy.yaml.j2
 
 - name: Install keepalived
   ansible.builtin.package:
@@ -34,10 +34,10 @@
 
 - name: Copy keepalived.conf
   ansible.builtin.template:
-    src: "{{ kubernetes_proxy_keepalived_config_file }}"
     dest: /etc/keepalived/keepalived.conf
-    owner: root
     mode: '0644'
+    owner: root
+    src: "{{ kubernetes_proxy_keepalived_config_file }}"
 
 - name: Enable keepalived
   ansible.builtin.systemd_service:
@@ -46,19 +46,19 @@
 
 - name: Restart keepalived
   ansible.builtin.systemd_service:
+    daemon_reload: true
     name: keepalived
     state: restarted
-    daemon_reload: true
 
 - name: Set the net.ipv4.ip_nonlocal_bind=1 sysctl
   ansible.builtin.sysctl:
     name: net.ipv4.ip_nonlocal_bind
+    reload: true
+    state: present
     sysctl_file: /etc/sysctl.d/99-non-local-bind.conf
     value: '1'
-    state: present
-    reload: true
 
 - name: Post proxy configuration hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_proxies }}"
   when: kubernetes_hookfiles.post_proxies is defined
+  with_items: "{{ kubernetes_hookfiles.post_proxies }}"
+  ansible.builtin.include_tasks: "{{ item }}"

@@ -1,17 +1,15 @@
 - name: Install Cilium
-  run_once: true
   delegate_to: "{{ first_kube_control_plane }}"
+  run_once: true
   block:
   - name: Check for Cilium
     register: cilium_installed_cmd
-    run_once: true
     ansible.builtin.shell:
       cmd: |
         kubectl get pods -n kube-system --kubeconfig /etc/kubernetes/admin.conf 2> /dev/null | grep cilium > /dev/null 2> /dev/null || echo "Not installed"
         echo "Installed"
 
   - name: Set install_cilium fact
-    run_once: true
     ansible.builtin.set_fact:
       install_cilium: "{{ cilium_installed_cmd.stdout_lines[0] == 'Not installed' }}"
 
@@ -50,7 +48,6 @@
   - name: Wait for Cilium to be ready
     delay: 1
     register: cilium_pods
-    # ~120 seconds
     retries: 12
     until: cilium_pods.rc == 0
     when: install_cilium

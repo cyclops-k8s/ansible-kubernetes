@@ -27,10 +27,10 @@
     src: worker-kubeadm-{{ kubernetes_version }}.yaml.j2
 
 - name: Post configure worker hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_configure_workers }}"
   when:
   - kubernetes_hookfiles.post_configure_workers is defined
+  with_items: "{{ kubernetes_hookfiles.post_configure_workers }}"
+  ansible.builtin.include_tasks: "{{ item }}"
 
 - name: Stop kubelet service
   when:
@@ -50,30 +50,30 @@
 
 # CIS 1.1.20
 - name: CIS 1.1.20 - Secure certificates
+  mode: '0600'
+  path: "{{ kubernetes_pki_directory }}"
+  recurse: true
   ansible.builtin.file:
-    mode: '0600'
-    path: "{{ kubernetes_pki_directory }}"
-    recurse: true
 
 # CIS 4.1.1
 - name: CIS 4.1.1 - Set kubelet.service file permissions to 0600
+  mode: '0600'
+  path: /usr/lib/systemd/system/kubelet.service
   ansible.builtin.file:
-    mode: '0600'
-    path: /usr/lib/systemd/system/kubelet.service
 
 # CIS 4.1.9
 # STIG V-242407
 - name: CIS 4.1.9, STIG V-242407 - Set kubelet config.yaml file permissions to 0600
+  mode: '0600'
+  path: /var/lib/kubelet/config.yaml
   ansible.builtin.file:
-    mode: '0600'
-    path: /var/lib/kubelet/config.yaml
 
 # STIG V-242397
 - name: Secure static pod path
+  path: /var/lib/kubelet/config.yaml
+  regexp: 'staticPodPath:.*'
+  replace: 'staticPodPath:'
   ansible.builtin.replace:
-    path: /var/lib/kubelet/config.yaml
-    regexp: 'staticPodPath:.*'
-    replace: 'staticPodPath:'
 
 - name: Restart kubelet
   when:
@@ -98,6 +98,8 @@
     loop_var: post_worker_node_join_hook
   when:
   - kubernetes_hookfiles.post_worker_join is defined
+  ansible.builtin.include_tasks:
+    file: "{{ post_worker_node_join_hook }}"
   ansible.builtin.include_tasks:
     file: "{{ post_worker_node_join_hook }}"
 

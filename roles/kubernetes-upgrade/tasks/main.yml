@@ -1,12 +1,12 @@
 - name: Ensure version variable is set
+  when: version is not defined
   ansible.builtin.fail:
     msg: "version variable is not set"
-  when: version is not defined
 
 - name: Define first control plane node
+  run_once: true
   ansible.builtin.set_fact:
     first_kube_control_plane: "{{ groups['control_planes'] | first }}"
-  run_once: true
 
 - name: Upgrade primary control plane node
   ansible.builtin.import_tasks: update-node.yml

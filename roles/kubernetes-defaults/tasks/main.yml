@@ -1,14 +1,15 @@
 - name: Default configuration hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.default_configuration }}"
   when: kubernetes_hookfiles.default_configuration is defined
+  with_items: "{{ kubernetes_hookfiles.default_configuration }}"
+  ansible.builtin.include_tasks: "{{ item }}"
 
 - name: Fail when kubernetes_version is not supported
+  when: kubernetes_version not in kubernetes_supported_versions
   ansible.builtin.fail:
     msg: "kubernetes version {{ kubernetes_version }} is not supported. Supported versions are {{ kubernetes_supported_versions }}."
-  when: kubernetes_version not in kubernetes_supported_versions
 
 - name: Validate required parameters
+  when: not skip_checks
   ansible.builtin.assert:
     that:
     - kubernetes_api_endpoint != None
@@ -17,4 +18,3 @@
     - kubernetes_oidc_client_id != None
     - kubernetes_encryption_key != None
     - kubernetes_cloud_provider == 'external' or kubernetes_cloud_provider == None
-  when: not skip_checks
