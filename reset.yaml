@@ -1,52 +1,52 @@
-- name: Cleanup
-  become: true
+- become: true
   hosts: kubernetes
+  name: Cleanup
   serial: 100
   tasks:
 
-  - name: Reset kubeadm
-    changed_when: true
+  - changed_when: true
     failed_when: false
+    name: Reset kubeadm
     ansible.builtin.command:
       cmd: kubeadm reset -f
 
-  - name: Stop systemd units
-    failed_when: false
+  - failed_when: false
     loop:
     - k8s-certs-renew.timer
     - kubelet.service
     - keepalived.service
     loop_control:
       loop_var: unit
+    name: Stop systemd units
     ansible.builtin.systemd_service:
       enabled: false
       name: "{{ unit }}"
       state: stopped
 
-  - name: Remove containerd containers
-    changed_when: true
+  - changed_when: true
     failed_when: false
+    name: Remove containerd containers
     ansible.builtin.shell:
       cmd: |
         set -o pipefail
         ctr --namespace k8s.io containers ls -q | xargs -r ctr --namespace k8s.io containers rm
       executable: /usr/bin/bash
 
-  - name: Remove containerd images
-    changed_when: true
+  - changed_when: true
     failed_when: false
+    name: Remove containerd images
     ansible.builtin.shell:
       cmd: |
         set -o pipefail
         ctr --namespace k8s.io images ls -q | xargs -r ctr --namespace k8s.io images rm
       executable: /usr/bin/bash
 
-  - name: Stop containerd
-    failed_when: false
+  - failed_when: false
     loop:
     - containerd.service
     loop_control:
       loop_var: unit
+    name: Stop containerd
     ansible.builtin.systemd_service:
       enabled: false
       name: "{{ unit }}"
@@ -77,8 +77,8 @@
   # them from the dpkg database. This prevents issues on future installs where
   # the config files would not be installed because the dpkg database says
   # they are already present.
-  - name: Clean up unused package configuration files
-    failed_when: false
+  - failed_when: false
+    name: Clean up unused package configuration files
     ansible.builtin.shell:
       cmd: |
         apt-get autopurge --yes $(dpkg-query --show --showformat='${binary:Package} ${db:Status-Abbrev}\n' | grep ' rc' | cut -f 1 -d ' ' | tr '\n' ' ')
@@ -90,8 +90,7 @@
       msg: Rebooting to complete package cleanup
       reboot_timeout: 300
 
-  - name: Remove files and directories
-    failed_when: false
+  - failed_when: false
     loop:
     - /etc/apt/keyrings/docker
     - /etc/apt/keyrings/docker.gpg
@@ -122,6 +121,7 @@
     - /var/run/containerd
     loop_control:
       loop_var: file
+    name: Remove files and directories
     ansible.builtin.file:
       path: "{{ file }}"
       state: absent
@@ -138,29 +138,29 @@
       patterns:
       - kubernetes*
 
-  - name: Remove versioned files
-    loop: "{{ kubernetes_files.files }}"
+  - loop: "{{ kubernetes_files.files }}"
     loop_control:
       label: "{{ file.path }}"
       loop_var: file
+    name: Remove versioned files
     ansible.builtin.file:
       path: "{{ file.path }}"
       state: absent
 
-  - name: Delete users
-    loop:
+  - loop:
     - etcd
     loop_control:
       loop_var: user
+    name: Delete users
     ansible.builtin.user:
       name: "{{ user }}"
       state: absent
 
-  - name: Delete groups
-    loop:
+  - loop:
     - etcd
     loop_control:
       loop_var: group
+    name: Delete groups
     ansible.builtin.group:
       name: "{{ group }}"
       state: absent

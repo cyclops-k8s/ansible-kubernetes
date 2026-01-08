@@ -1,33 +1,35 @@
 - name: Install packages
   block:
   - name: Kubernetes - Download GPG keyring
+    dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+    group: root
+    mode: '0644'
+    owner: root
+    url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
     ansible.builtin.get_url:
-      url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
-      dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
-      mode: '0644'
-      owner: root
-      group: root
 
   - name: Add an apt signing key for Kubernetes
-    ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
     args:
       creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+    ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
 
   - name: Set GPG keyring permissions
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+    state: file
     ansible.builtin.file:
-      path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
-      state: file
-      mode: '0644'
-      owner: root
-      group: root
 
   - name: Adding apt repository for Kubernetes
+    filename: kubernetes
+    repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
+    state: present
     ansible.builtin.apt_repository:
-      repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
-      state: present
-      filename: kubernetes
 
   - name: Get latest specified version of kubeadm, kubelet and kubectl
+    changed_when: kubernetes_version_temp.rc != 0
+    register: kubernetes_version_temp
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
@@ -43,8 +45,6 @@
 
         apt-cache madison kubeadm | grep "$REQUESTED_VERSION" | head -n 1 | awk '{print $3}'
       executable: /bin/bash
-    register: kubernetes_version_temp
-    changed_when: kubernetes_version_temp.rc != 0
 
   # noqa: var-naming[no-role-prefix]
   - name: Set k8s_version fact
@@ -52,25 +52,25 @@
       k8s_version: "{{ kubernetes_version_temp.stdout }}"
 
   - name: Install kubeadm, kubelet, kubectl
-    ansible.builtin.apt:
-      name: "{{ packages }}"
-      state: present
-      update_cache: true
     vars:
       packages:
       - kubeadm={{ k8s_version }}
       - kubelet={{ k8s_version }}
       - kubectl={{ k8s_version }}
     when: ansible_facts.os_family == "Debian"
+    ansible.builtin.apt:
+      name: "{{ packages }}"
+      state: present
+      update_cache: true
 
   - name: Hold kubeadm, kubelet and kubectl
-    ansible.builtin.dpkg_selections:
-      name: "{{ item }}"
-      selection: hold
     with_items:
     - kubeadm
     - kubelet
     - kubectl
+    ansible.builtin.dpkg_selections:
+      name: "{{ item }}"
+      selection: hold
 
   - name: Set crictl.yaml options
     ansible.builtin.command:
@@ -78,13 +78,13 @@
       creates: /etc/crictl.yaml
 
   - name: Start kubelet
+    enabled: true
+    name: kubelet
+    state: started
     ansible.builtin.service:
-      name: kubelet
-      state: started
-      enabled: true
 
   rescue:
 
   - name: Fail install packages
+    msg: "Failed to install packages"
     ansible.builtin.fail:
-      msg: "Failed to install packages"

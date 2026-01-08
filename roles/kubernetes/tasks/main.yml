@@ -1,45 +1,45 @@
 - name: Pre-prequisites hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.pre_prerequisites }}"
   when: kubernetes_hookfiles.pre_prerequisites is defined
+  with_items: "{{ kubernetes_hookfiles.pre_prerequisites }}"
+  ansible.builtin.include_tasks: "{{ item }}"
 
 - name: Install Packages
   ansible.builtin.import_tasks: install-packages.yml
 
 - name: Post install packages hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_install_packages }}"
   when: kubernetes_hookfiles.post_install_packages is defined
+  with_items: "{{ kubernetes_hookfiles.post_install_packages }}"
+  ansible.builtin.include_tasks: "{{ item }}"
 
 - name: Make sure kubernetes config directory exists
   ansible.builtin.file:
+    mode: '0700'
     path: "{{ kubernetes_config_directory }}"
     state: directory
-    mode: '0700'
 
 - name: Make sure /etc/kubernetes/output directory exists
   ansible.builtin.file:
+    mode: '0700'
     path: /etc/kubernetes/output
     state: directory
-    mode: '0700'
 
 - name: Configure Kernel
   ansible.builtin.import_tasks: configure-kernel.yml
 
 - name: Configure Swap
-  ansible.builtin.import_tasks: configure-swap.yml
   when: allowswap is not defined
+  ansible.builtin.import_tasks: configure-swap.yml
 
 - name: Pull kubernetes images
+  register: kubernetes_kubeadm_images_pulled
+  retries: 10
+  until: kubernetes_kubeadm_images_pulled.rc == 0
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
       kubeadm config images pull 2>&1 | tee {{ kubernetes_output_directory }}/images-pulled-{{ k8s_version }}
     creates: "{{ kubernetes_output_directory }}/images-pulled-{{ k8s_version }}"
     executable: /bin/bash
-  register: kubernetes_kubeadm_images_pulled
-  retries: 10
-  until: kubernetes_kubeadm_images_pulled.rc == 0
 
 - name: Define first_kube_control_plane
   ansible.builtin.import_tasks: define-first-kube-control.yml
