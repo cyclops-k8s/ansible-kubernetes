@@ -4,7 +4,7 @@
   - none
   ansible.posix.mount:
     fstype: swap
-    name: "{{ item }}"
+    path: "{{ item }}"
     state: absent
 
 - name: Disable swap

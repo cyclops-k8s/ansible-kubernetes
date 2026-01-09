@@ -20,7 +20,7 @@
     name: kubeadm={{ k8s_version }}
     state: present
 
-- name: Hold kubeadm, kubelet and kubectl
+- name: Hold kubeadm
   with_items:
   - kubeadm
   ansible.builtin.dpkg_selections:
@@ -31,6 +31,13 @@
   changed_when: false
   register: kubeadm_version
   ansible.builtin.command: kubeadm version -o short
+
+- name: Update control plane configuration files for new version
+  when:
+  - inventory_hostname in groups['control_planes']
+  ansible.builtin.include_role:
+    name: kubernetes-control-plane
+    tasks_from: configure-control-plane.yml
 
 - name: Create kubeadm upgrade config file
   when:
@@ -85,6 +92,11 @@
     name: containerd.io
     only_upgrade: true
     state: latest
+
+- name: Reconfigure containerd for new version
+  ansible.builtin.include_role:
+    name: containerd
+    tasks_from: configure-containerd.yml
 
 - name: Hold kubelet, kubectl and containerd.io
   with_items:
