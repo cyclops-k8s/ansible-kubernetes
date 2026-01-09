@@ -1,74 +1,74 @@
 - name: Configure the proxies
-  hosts: proxies
   any_errors_fatal: true
   become: true
+  hosts: proxies
+  vars:
+    skip_checks: true
   roles:
   - role: kubernetes-defaults
   - role: kubernetes-proxy
-  vars:
-    skip_checks: true
 
 - name: "Install containerd.io"
-  hosts:
-  - kubernetes
   any_errors_fatal: true
   become: true
   gather_facts: true
-  roles:
-  - role: kubernetes-defaults
-  - role: containerd
+  hosts:
+  - kubernetes
   serial: 100
   vars:
     containerd_credentials: "{{ kubernetes_containerd_credentials }}"
     containerd_mirror: "{{ kubernetes_containerd_mirror }}"
+  roles:
+  - role: kubernetes-defaults
+  - role: containerd
 
 - name: Install kubernetes pre-requisites
-  hosts:
-  - kubernetes
   any_errors_fatal: true
   become: true
+  hosts:
+  - kubernetes
+  serial: 100
   roles:
   - role: kubernetes-defaults
   - role: kubernetes
-  serial: 100
 
 - name: Pre control plane hooks
-  hosts: control_planes
   any_errors_fatal: true
   become: true
+  hosts: control_planes
   roles:
   - role: kubernetes-defaults
   - role: pre-kubernetes-control-plane
 
 - name: Install Control Planes
-  hosts: control_planes
   any_errors_fatal: true
   become: true
+  hosts: control_planes
   serial: 1
   roles:
   - role: kubernetes-defaults
   - role: kubernetes-control-plane
 
 - name: Post control plane hooks
-  hosts: control_planes
   any_errors_fatal: true
   become: true
+  hosts: control_planes
   roles:
   - role: kubernetes-defaults
   - role: post-kubernetes-control-plane
 
 - name: Install worker nodes
-  hosts: worker_nodes
   any_errors_fatal: true
   become: true
+  hosts: worker_nodes
   roles:
   - role: kubernetes-defaults
   - role: kubernetes-worker
 
 - name: Post worker node hooks
-  hosts: worker_nodes
   any_errors_fatal: true
   become: true
+  hosts: worker_nodes
   roles:
   - role: kubernetes-defaults
   - role: post-kubernetes-worker

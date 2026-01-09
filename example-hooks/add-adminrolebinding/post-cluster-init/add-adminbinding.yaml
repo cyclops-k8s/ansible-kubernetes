@@ -3,10 +3,10 @@
   run_once: true
   block:
   - name: Check for oidc cluster roles
+    register: clusterroles_installed_cmd
     ansible.builtin.shell:
       cmd: |
         kubectl get clusterrolebinding --kubeconfig /etc/kubernetes/admin.conf | grep oidc > /dev/null && echo -n "Installed" || echo -n "Not installed"
-    register: clusterroles_installed_cmd
 
   - name: Set install_clusterroles fact
     ansible.builtin.set_fact:
@@ -42,10 +42,10 @@
 
   rescue:
   - name: Write rolebindings init output to stdout
+    when: rolebindings is defined
     ansible.builtin.debug:
       msg: |
         {{ rolebindings }}
-    when: rolebindings is defined
 
   - name: Fail the task
     ansible.builtin.fail:

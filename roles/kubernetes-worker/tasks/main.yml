@@ -27,10 +27,10 @@
     src: worker-kubeadm-{{ kubernetes_version }}.yaml.j2
 
 - name: Post configure worker hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_configure_workers }}"
   when:
   - kubernetes_hookfiles.post_configure_workers is defined
+  with_items: "{{ kubernetes_hookfiles.post_configure_workers }}"
+  ansible.builtin.include_tasks: "{{ item }}"
 
 - name: Stop kubelet service
   when:
@@ -61,6 +61,7 @@
     mode: '0600'
     path: /usr/lib/systemd/system/kubelet.service
 
+# CIS 4.1.2
 # CIS 4.1.9
 # STIG V-242407
 - name: CIS 4.1.9, STIG V-242407 - Set kubelet config.yaml file permissions to 0600

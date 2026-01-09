@@ -1,13 +1,13 @@
 - name: Install etcd-backup
-  run_once: true
   delegate_to: "{{ first_kube_control_plane }}"
+  run_once: true
   block:
   - name: Check for the etcd-backup cronjob
+    register: etcd_backup_installed_cmd
     ansible.builtin.shell:
       cmd: |
         kubectl get cronjob -n kube-system etcd-backup --kubeconfig /etc/kubernetes/admin.conf > /dev/null 2> /dev/null || echo "Not installed"
         echo "Installed"
-    register: etcd_backup_installed_cmd
 
   - name: Set install_etcd_backup fact
     ansible.builtin.set_fact:
@@ -59,17 +59,17 @@
                       path: /etc/kubernetes/pki/etcd
                       type: DirectoryOrCreate
       dest: "{{ kubernetes_config_directory }}/etcd-backup-cronjob.yaml"
-      owner: root
       group: root
       mode: '0600'
+      owner: root
 
   - name: Apply etcd-backup cronjob
-    ansible.builtin.command: kubectl apply -f {{ kubernetes_config_directory }}/etcd-backup-cronjob.yaml --kubeconfig /etc/kubernetes/admin.conf
-    register: etcd_backup_cronjob
-    when: install_etcd_backup
     changed_when: etcd_backup_cronjob.rc != 0
     failed_when: etcd_backup_cronjob.rc != 0
     ignore_errors: true
+    register: etcd_backup_cronjob
+    when: install_etcd_backup
+    ansible.builtin.command: kubectl apply -f {{ kubernetes_config_directory }}/etcd-backup-cronjob.yaml --kubeconfig /etc/kubernetes/admin.conf
 
   rescue:
   - name: Output etcd_backup

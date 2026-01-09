@@ -78,9 +78,11 @@
   # the config files would not be installed because the dpkg database says
   # they are already present.
   - name: Clean up unused package configuration files
+    changed_when: true
     failed_when: false
     ansible.builtin.shell:
       cmd: |
+        set -o pipefail
         apt-get autopurge --yes $(dpkg-query --show --showformat='${binary:Package} ${db:Status-Abbrev}\n' | grep ' rc' | cut -f 1 -d ' ' | tr '\n' ' ')
       executable: /usr/bin/bash
 

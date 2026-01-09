@@ -1,35 +1,37 @@
 - name: Kubernetes - Download GPG keyring
   ansible.builtin.get_url:
-    url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
     dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+    group: root
     mode: '0644'
     owner: root
-    group: root
+    url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
 
 - name: Add an apt signing key for Kubernetes
-  ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
-  changed_when: false
   args:
     creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+  changed_when: false
+  ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
 
 - name: Set file permissions for keyring
   ansible.builtin.file:
-    path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+    group: root
     mode: '0644'
     owner: root
-    group: root
+    path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
 
-- name: update kubernetes list file
+- name: Update kubernetes list file
+  changed_when: true
   ansible.builtin.shell: |
+    set -o pipefail
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
 - name: Adding apt repository for Kubernetes
   ansible.builtin.apt_repository:
+    filename: kubernetes-{{ kubernetes_version }}.list
     repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/ /
     state: present
-    filename: kubernetes-{{ kubernetes_version }}.list
 
 - name: Find latest kubernetes version in apt
   ansible.builtin.apt:
-    update_cache: true
     allow_change_held_packages: true
+    update_cache: true

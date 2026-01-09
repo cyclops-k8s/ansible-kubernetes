@@ -1,7 +1,7 @@
 - name: Post worker node join hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_workers }}"
+  run_once: true
   when:
   - inventory_hostname in groups['worker_nodes']
   - kubernetes_hookfiles.post_workers is defined
-  run_once: true
+  with_items: "{{ kubernetes_hookfiles.post_workers }}"
+  ansible.builtin.include_tasks: "{{ item }}"
