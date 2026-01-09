@@ -49,7 +49,7 @@ All roles are sourced from [roles/](roles/) directory. Each role is **independen
 Hooks enable extensible deployment post-bootstrap (CNI, CSI, CPI installation, OIDC setup, backups).
 
 ### Hook Types & Timing
-- `pre_control_planes` - Before first control plane kubeadm init (e.g., proxy proxy config on control planes)
+- `pre_control_planes` - Before first control plane kubeadm init (e.g., proxy config on control planes)
 - `post_cluster_init` - After cluster initialization, before control plane joins (CNI: Calico, Cilium; OIDC admin binding)
 - `post_control_planes` - After each individual control plane joins (per-node tasks)
 - `post_all_control_planes` - Once all control planes ready; runs per-node but supports `run_once`, `delegate_to` (cert backups, kubeconfig setup)
