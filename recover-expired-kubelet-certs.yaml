@@ -1,24 +1,24 @@
-- become: true
+- name: Recover nodes
+  become: true
   hosts:
   - worker_nodes
   - control_planes
-  name: Recover nodes
   tasks:
   - name: Set first control plane node
     when: first_kube_control_plane is not defined
     ansible.builtin.set_fact:
       first_kube_control_plane: "{{ groups['control_planes'] | first }}"
 
-  - changed_when: false
+  - name: Get ca cert  # noqa: run-once[task]
+    changed_when: false
     delegate_to: "{{ first_kube_control_plane }}"
-    name: Get ca cert  # noqa: run-once[task]
     register: ca_crt_file
     run_once: true
     ansible.builtin.command: kubectl get cm kube-root-ca.crt -o jsonpath='{.data.ca\.crt}' -n kube-system --kubeconfig /etc/kubernetes/admin.conf
 
-  - changed_when: true
+  - name: Generate bootstrap token  # noqa: run-once[task]
+    changed_when: true
     delegate_to: "{{ first_kube_control_plane }}"
-    name: Generate bootstrap token  # noqa: run-once[task]
     register: token_raw
     run_once: true
     ansible.builtin.command: kubeadm token create --kubeconfig /etc/kubernetes/admin.conf

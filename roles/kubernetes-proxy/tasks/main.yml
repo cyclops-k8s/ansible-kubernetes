@@ -27,9 +27,9 @@
     mode: '0644'
 
 - name: Enable haproxy
-  enabled: true
-  name: haproxy
   ansible.builtin.systemd_service:
+    enabled: true
+    name: haproxy
 
 - name: Install keepalived
   notify: restart-keepalived

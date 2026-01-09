@@ -79,19 +79,19 @@
     src: "{{ file.source }}"
 
 # CIS 3.2.1
-- name: Create kubernetes audit policy file
-  dest: "{{ kubernetes_config_directory }}/audit-policy.yaml"
-  group: root
-  mode: '0600'
-  owner: root
-  src: audit-policy.yaml
+- name: Create Kubernetes audit policy file
   ansible.builtin.copy:
+    dest: "{{ kubernetes_config_directory }}/audit-policy.yaml"
+    group: root
+    mode: '0600'
+    owner: root
+    src: audit-policy.yaml
 
 - name: Create etcd group
-  gid: 500
-  name: etcd
-  system: true
   ansible.builtin.group:
+    gid: 500
+    name: etcd
+    system: true
 
 - name: Create etcd user
   ansible.builtin.user:
@@ -115,12 +115,12 @@
   when: kubernetes_install_helm
   block:
   - name: Helm - Download GPG keyring
-    dest: /etc/apt/keyrings/helm
-    group: root
-    mode: '0644'
-    owner: root
-    url: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
     ansible.builtin.get_url:
+      dest: /etc/apt/keyrings/helm
+      group: root
+      mode: '0644'
+      owner: root
+      url: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
 
   - name: Add an apt signing key for Helm
     args:
@@ -128,39 +128,39 @@
     ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/helm
 
   - name: Set helm gpg signing key permissions
-    dest: /etc/apt/keyrings/helm.gpg
-    group: root
-    mode: '0644'
-    owner: root
     ansible.builtin.file:
+      dest: /etc/apt/keyrings/helm.gpg
+      group: root
+      mode: '0644'
+      owner: root
 
   - name: Add helm apt repository
-    filename: helm
-    repo: deb [signed-by=/etc/apt/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main
-    state: present
-    update_cache: true
     ansible.builtin.apt_repository:
+      filename: helm
+      repo: deb [signed-by=/etc/apt/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main
+      state: present
+      update_cache: true
 
   - name: Install helm
-    name: helm
-    state: present
     ansible.builtin.apt:
+      name: helm
+      state: present
 
 - name: Install etcd-client
-  name: etcd-client
-  state: present
   ansible.builtin.apt:
+    name: etcd-client
+    state: present
 
 - name: Install Kustomize
   when: kubernetes_install_kustomize
   block:
   - name: Download Kustomize
-    dest: /tmp/install_kustomize.sh
-    group: root
-    mode: '0755'
-    owner: root
-    url: https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
     ansible.builtin.get_url:
+      dest: /tmp/install_kustomize.sh
+      group: root
+      mode: '0755'
+      owner: root
+      url: https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
 
   - name: Install Kustomize
     ansible.builtin.shell:
@@ -172,9 +172,9 @@
       executable: /bin/bash
 
   - name: Remove Kustomize install script
-    path: /tmp/install_kustomize.sh
-    state: absent
     ansible.builtin.file:
+      path: /tmp/install_kustomize.sh
+      state: absent
 
 - name: Post configure control plane hooks
   loop: "{{ kubernetes_hookfiles.post_configure_control_planes }}"

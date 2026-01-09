@@ -231,5 +231,5 @@
         {{ serviceaccount_patch.stderr_lines }}
 
   - name: Fail kubeadm init
-    msg: "Failed to initialize the Kubernetes cluster"
     ansible.builtin.fail:
+      msg: "Failed to initialize the Kubernetes cluster"
