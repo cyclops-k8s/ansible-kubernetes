@@ -26,31 +26,31 @@
 
   - name: Create mirror configuration directory
     ansible.builtin.file:
-      path: "{{ registry_mirror_config_path }}"
-      state: directory
-      owner: root
       group: root
       mode: '0755'
+      owner: root
+      path: "{{ registry_mirror_config_path }}"
+      state: directory
 
   - name: Create mirror script directory
     ansible.builtin.file:
-      path: "{{ registry_mirror_service_path | default(registry_mirror_config_path) }}"
-      state: directory
-      owner: root
       group: root
       mode: '0755'
+      owner: root
+      path: "{{ registry_mirror_service_path | default(registry_mirror_config_path) }}"
+      state: directory
 
   - name: Copy the service.sh file to the mirror scripts directory
     ansible.builtin.copy:
-      src: "service.sh"
       dest: "{{ registry_mirror_service_path | default(registry_mirror_config_path) }}/service.sh"
-      owner: root
       group: root
       mode: '0755'
+      owner: root
+      src: "service.sh"
 
   - name: Create mirrors
+    loop: "{{ registry_mirrors }}"
     loop_control:
       label: "{{ mirror.registry }}"
       loop_var: mirror
-    loop: "{{ registry_mirrors }}"
     ansible.builtin.include_tasks: create-mirror-container.yaml

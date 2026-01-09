@@ -1,7 +1,7 @@
 - name: Post control planes join hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.post_control_planes }}"
+  run_once: true
   when:
   - inventory_hostname in groups['control_planes']
   - kubernetes_hookfiles.post_control_planes is defined
-  run_once: true
+  with_items: "{{ kubernetes_hookfiles.post_control_planes }}"
+  ansible.builtin.include_tasks: "{{ item }}"

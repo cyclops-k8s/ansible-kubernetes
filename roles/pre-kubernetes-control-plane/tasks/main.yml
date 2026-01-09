@@ -1,6 +1,6 @@
 - name: Pre control planes hooks
-  ansible.builtin.include_tasks: "{{ item }}"
-  with_items: "{{ kubernetes_hookfiles.pre_control_planes }}"
   when:
   - inventory_hostname in groups['control_planes']
   - kubernetes_hookfiles.pre_control_planes is defined
+  with_items: "{{ kubernetes_hookfiles.pre_control_planes }}"
+  ansible.builtin.include_tasks: "{{ item }}"

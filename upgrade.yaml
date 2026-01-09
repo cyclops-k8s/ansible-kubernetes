@@ -1,10 +1,10 @@
 - name: Upgrade nodes
-  hosts: kubernetes
   become: true
   gather_facts: true
+  hosts: kubernetes
   serial: 1
+  vars:
+    version: "{{ kubernetes_version }}"
   roles:
   - role: kubernetes-defaults
   - role: kubernetes-upgrade
-  vars:
-    version: "{{ kubernetes_version }}"

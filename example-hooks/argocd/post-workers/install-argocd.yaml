@@ -3,57 +3,59 @@
   run_once: true
   block:
   - name: Check for ArgoCD
+    register: argo_installed_cmd
     ansible.builtin.shell:
       cmd: |
         kubectl get ns argocd --kubeconfig /etc/kubernetes/admin.conf > /dev/null 2> /dev/null || echo "Not installed"
         echo "Installed"
-    register: argo_installed_cmd
 
   - name: Set install_argo_cd fact
     ansible.builtin.set_fact:
       install_argo_cd: "{{ argo_installed_cmd.stdout_lines[0] == 'Not installed' }}"
 
   - name: Create argo config directory
+    when: install_argo_cd
     ansible.builtin.file:
       path: "{{ kubernetes_config_directory }}/argo"
       state: directory
       owner: root
       group: root
       mode: '0700'
-    when: install_argo_cd
 
   - name: Copy argo manifests
+    loop_control:
+      loop_var: file
+    when: install_argo_cd
+    with_items:
+    - {name: kustomization.yaml, src: argocd-kustomization.yaml}
+    - {name: argocd-rbac-cm.yaml, src: argocd-rbac-cm.yaml}
+    - {name: argocd-service.yaml, src: argocd-service.yaml}
+    - {name: argocd-cmd-params-cm.yaml, src: argocd-cmd-params-cm.yaml}
     ansible.builtin.copy:
       src: "{{ file.src }}"
       dest: "{{ kubernetes_config_directory }}/argo/{{ file.name }}"
       owner: root
       group: root
       mode: '0600'
-    loop_control:
-      loop_var: file
-    with_items:
-    - {name: kustomization.yaml, src: argocd-kustomization.yaml}
-    - {name: argocd-rbac-cm.yaml, src: argocd-rbac-cm.yaml}
-    - {name: argocd-service.yaml, src: argocd-service.yaml}
-    - {name: argocd-cmd-params-cm.yaml, src: argocd-cmd-params-cm.yaml}
-    when: install_argo_cd
 
   - name: Copy argo templates
+    loop_control:
+      loop_var: file
+    when: install_argo_cd
+    with_items:
+    - {name: argocd-cm.yaml, src: argocd-cm.yaml.j2}
+    - {name: argocd-secret.yaml, src: argocd-secret.yaml.j2}
+    - {name: argocd-ingress.yaml, src: argocd-ingress.yaml.j2}
     ansible.builtin.template:
       src: "{{ file.src }}"
       dest: "{{ kubernetes_config_directory }}/argo/{{ file.name }}"
       owner: root
       group: root
       mode: '0600'
-    loop_control:
-      loop_var: file
-    with_items:
-    - {name: argocd-cm.yaml, src: argocd-cm.yaml.j2}
-    - {name: argocd-secret.yaml, src: argocd-secret.yaml.j2}
-    - {name: argocd-ingress.yaml, src: argocd-ingress.yaml.j2}
-    when: install_argo_cd
 
   - name: Install ArgoCD
+    register: argocd_install
+    when: install_argo_cd
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
@@ -61,19 +63,17 @@
         kustomize build {{ kubernetes_config_directory }}/argo | kubectl apply -f - -n argocd
         touch {{ kubernetes_output_directory }}/argocd-installed
       executable: /bin/bash
-    register: argocd_install
-    when: install_argo_cd
 
   rescue:
   - name: Write argocd_install to stdout
+    when: argocd_install is defined
     ansible.builtin.debug:
       msg: "{{ argocd_install }}"
-    when: argocd_install is defined
 
   - name: Write argo_installed_cmd to stdout
+    when: argo_installed_cmd is defined
     ansible.builtin.debug:
       msg: "{{ argo_installed_cmd }}"
-    when: argo_installed_cmd is defined
 
   - name: ArgoCD failed to install
     ansible.builtin.fail:

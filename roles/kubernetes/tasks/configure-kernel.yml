@@ -1,18 +1,12 @@
 - name: Enable required kernel modules
-  community.general.modprobe:
-    name: "{{ item }}"
-    persistent: present
   with_items:
   - overlay
   - br_netfilter
+  community.general.modprobe:
+    name: "{{ item }}"
+    persistent: present
 
 - name: Set sysctl's
-  ansible.posix.sysctl:
-    name: "{{ item.name }}"
-    value: "{{ item.value }}"
-    state: present
-    reload: true
-    sysctl_file: /etc/sysctl.d/99-kubernetes-cri.conf
   with_items:
   - name: fs.inotify.max_user_instances
     value: 8192
@@ -30,3 +24,9 @@
     value: 1
   - name: kernel.panic
     value: 10
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    reload: true
+    state: present
+    sysctl_file: /etc/sysctl.d/99-kubernetes-cri.conf
+    value: "{{ item.value }}"

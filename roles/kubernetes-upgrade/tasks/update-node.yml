@@ -2,13 +2,13 @@
   ansible.builtin.import_tasks: update-apt-repositories.yml
 
 - name: Get latest specified version of kubeadm, kubelet and kubectl
+  changed_when: true
+  register: k8s_version_temp
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
       apt-cache madison kubeadm | grep "{{ version }}" | head -n 1 | awk '{print $3}'
     executable: /bin/bash
-  changed_when: true
-  register: k8s_version_temp
 
 - name: Set k8s_version fact
   ansible.builtin.set_fact:
@@ -16,23 +16,27 @@
 
 - name: Update kubeadm k8s_version
   ansible.builtin.apt:
+    allow_change_held_packages: true
     name: kubeadm={{ k8s_version }}
     state: present
-    allow_change_held_packages: true
 
 - name: Hold kubeadm, kubelet and kubectl
+  with_items:
+  - kubeadm
   ansible.builtin.dpkg_selections:
     name: "{{ item }}"
     selection: hold
-  with_items:
-  - kubeadm
 
 - name: Get kubeadm version
-  ansible.builtin.command: kubeadm version -o short
-  register: kubeadm_version
   changed_when: false
+  register: kubeadm_version
+  ansible.builtin.command: kubeadm version -o short
 
 - name: Create kubeadm upgrade config file
+  when:
+  - inventory_hostname in groups['control_planes']
+  with_items:
+  - {file: "kubeadm-upgrade.yaml.j2", destination: "{{ kubernetes_config_directory }}/kubeadm-upgrade.yaml"}
   ansible.builtin.template:
     src: "{{ item.file }}"
     dest: "{{ item.destination }}"
@@ -40,76 +44,72 @@
     group: root
     mode: "{{ item.mode | default('0600') }}"
     backup: false
-  with_items:
-  - {file: "kubeadm-upgrade.yaml.j2", destination: "{{ kubernetes_config_directory }}/kubeadm-upgrade.yaml"}
-  when:
-  - inventory_hostname in groups['control_planes']
 
 - name: Upgrade kubernetes primary control plane node
-  ansible.builtin.command: kubeadm upgrade apply {{ kubeadm_version.stdout }} --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml --yes
   changed_when: true
   when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.command: kubeadm upgrade apply {{ kubeadm_version.stdout }} --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml --yes
 
 - name: Upgrade non kubernetes primary control plane node
-  ansible.builtin.command: kubeadm upgrade node --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml
   changed_when: true
   when:
   - first_kube_control_plane != inventory_hostname
   - inventory_hostname in groups['control_planes']
+  ansible.builtin.command: kubeadm upgrade node --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml
 
 - name: Upgrade worker nodes
-  ansible.builtin.command: kubeadm upgrade node
   changed_when: true
   when:
   - inventory_hostname not in groups['control_planes']
+  ansible.builtin.command: kubeadm upgrade node
 
 - name: Drain kubernetes node
+  changed_when: true
+  delegate_to: "{{ first_kube_control_plane }}"
   ansible.builtin.shell:
     cmd: |
       kubectl drain {{ inventory_hostname_short }} --ignore-daemonsets --delete-emptydir-data --force --grace-period=30 --kubeconfig /etc/kubernetes/admin.conf
-  changed_when: true
-  delegate_to: "{{ first_kube_control_plane }}"
 
 - name: Update kubelet and kubectl to specified k8s_version
-  ansible.builtin.apt:
-    name: "{{ item }}"
-    state: present
-    allow_change_held_packages: true
   with_items:
   - kubelet={{ k8s_version }}
   - kubectl={{ k8s_version }}
+  ansible.builtin.apt:
+    allow_change_held_packages: true
+    name: "{{ item }}"
+    state: present
 
 - name: Upgrade containerd to latest version
   ansible.builtin.apt:
-    name: containerd.io
-    state: latest
     allow_change_held_packages: true
+    name: containerd.io
     only_upgrade: true
+    state: latest
 
 - name: Hold kubelet, kubectl and containerd.io
-  ansible.builtin.dpkg_selections:
-    name: "{{ item }}"
-    selection: hold
   with_items:
   - kubelet
   - kubectl
   - containerd.io
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
 
 - name: Reload kubelet
-  ansible.builtin.service:
+  ansible.builtin.systemd_service:
     daemon_reload: true
+    enabled: true
     name: kubelet
     state: restarted
-    enabled: true
 
 - name: Uncordon kubernetes node
-  ansible.builtin.shell:
-    cmd: timeout 300 bash -c 'while [[ ! `sudo kubectl uncordon {{ inventory_hostname_short }} --kubeconfig /etc/kubernetes/admin.conf` ]]; do sleep 5; done'
   changed_when: true
   delegate_to: "{{ first_kube_control_plane }}"
+  ansible.builtin.shell:
+    cmd: timeout 300 bash -c 'while [[ ! `sudo kubectl uncordon {{ inventory_hostname_short }} --kubeconfig /etc/kubernetes/admin.conf` ]]; do sleep 5; done'
 
 - name: Wait for kubernetes node to be ready
-  ansible.builtin.shell:
-    cmd: timeout 300 bash -c 'while [[ ! `kubectl wait --for=condition=Ready node/{{ inventory_hostname_short }} --timeout=5m --kubeconfig /etc/kubernetes/admin.conf` ]]; do sleep 5; done'
   changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"
+  ansible.builtin.shell:
+    cmd: timeout 300 bash -c 'while [[ ! `kubectl wait --for=condition=Ready node/{{ inventory_hostname_short }} --timeout=5m --kubeconfig /etc/kubernetes/admin.conf` ]]; do sleep 5; done'

@@ -73,10 +73,10 @@
       state: directory
 
   - name: Create default containerd configuration file
+    changed_when: true
     ansible.builtin.shell:
       cmd: containerd config default > /etc/containerd/config.toml
       executable: /usr/bin/bash
-    changed_when: true
 
   - name: Set permissions to 0600 on /etc/containerd/config.toml
     notify: Restart containerd service
@@ -167,11 +167,11 @@
       file: registry-mirror-containerd-2.yaml
 
   - name: Remove disabled plugins
+    notify: Restart containerd service
     ansible.builtin.lineinfile:
       dest: /etc/containerd/config.toml
       regexp: 'disabled_plugins = \[.*\]'
       state: absent
-    notify: Restart containerd service
 
   - name: Fix for bad path in containerd config, issue https://github.com/containerd/containerd/issues/12636
     ansible.builtin.replace:
