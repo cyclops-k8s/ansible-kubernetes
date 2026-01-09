@@ -69,7 +69,7 @@ which tofu && CMD=tofu
 if [ "${CMD}" == "" ]
 then
   echo "terraform or tofu needs to be installed"
-  echo 1
+  exit 1
 fi
 
 echo "VMs are running."
