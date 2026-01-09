@@ -15,10 +15,10 @@
     k8s_version: "{{ k8s_version_temp.stdout }}"
 
 - name: Update kubeadm k8s_version
-  allow_change_held_packages: true
-  name: kubeadm={{ k8s_version }}
-  state: present
   ansible.builtin.apt:
+    allow_change_held_packages: true
+    name: kubeadm={{ k8s_version }}
+    state: present
 
 - name: Hold kubeadm, kubelet and kubectl
   with_items:
@@ -71,20 +71,20 @@
       kubectl drain {{ inventory_hostname_short }} --ignore-daemonsets --delete-emptydir-data --force --grace-period=30 --kubeconfig /etc/kubernetes/admin.conf
 
 - name: Update kubelet and kubectl to specified k8s_version
-  allow_change_held_packages: true
-  state: present
   with_items:
   - kubelet={{ k8s_version }}
   - kubectl={{ k8s_version }}
   ansible.builtin.apt:
+    allow_change_held_packages: true
     name: "{{ item }}"
+    state: present
 
 - name: Upgrade containerd to latest version
-  allow_change_held_packages: true
-  name: containerd.io
-  only_upgrade: true
-  state: latest
   ansible.builtin.apt:
+    allow_change_held_packages: true
+    name: containerd.io
+    only_upgrade: true
+    state: latest
 
 - name: Hold kubelet, kubectl and containerd.io
   with_items:
@@ -96,11 +96,11 @@
     selection: hold
 
 - name: Reload kubelet
-  daemon_reload: true
-  enabled: true
-  name: kubelet
-  state: restarted
-  ansible.builtin.service:
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    enabled: true
+    name: kubelet
+    state: restarted
 
 - name: Uncordon kubernetes node
   changed_when: true

@@ -1,31 +1,31 @@
 - name: Install packages
   block:
   - name: Kubernetes - Download GPG keyring
-    dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
-    group: root
-    mode: '0644'
-    owner: root
-    url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
     ansible.builtin.get_url:
+      dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+      group: root
+      mode: '0644'
+      owner: root
+      url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
 
   - name: Add an apt signing key for Kubernetes
-    args:
+    ansible.builtin.command:
+      cmd: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
       creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
-    ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
 
   - name: Set GPG keyring permissions
-    group: root
-    mode: '0644'
-    owner: root
-    path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
-    state: file
     ansible.builtin.file:
+      group: root
+      mode: '0644'
+      owner: root
+      path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+      state: file
 
   - name: Adding apt repository for Kubernetes
-    filename: kubernetes
-    repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
-    state: present
     ansible.builtin.apt_repository:
+      filename: kubernetes
+      repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
+      state: present
 
   - name: Get latest specified version of kubeadm, kubelet and kubectl
     changed_when: kubernetes_version_temp.rc != 0
@@ -78,13 +78,13 @@
       creates: /etc/crictl.yaml
 
   - name: Start kubelet
-    enabled: true
-    name: kubelet
-    state: started
     ansible.builtin.service:
+      enabled: true
+      name: kubelet
+      state: started
 
   rescue:
 
-  - name: Fail install packages
-    msg: "Failed to install packages"
+  - name: Failed to install packages
     ansible.builtin.fail:
+      msg: "Failed to install packages"

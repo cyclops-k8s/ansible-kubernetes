@@ -1,14 +1,14 @@
-- delegate_to: "{{ first_kube_control_plane }}"
-  name: Copy kube-vip.yaml
+- name: Copy kube-vip.yaml
+  delegate_to: "{{ first_kube_control_plane }}"
   register: kubevip_copy
   run_once: true
   ansible.builtin.copy:
     src: kube-vip.yaml
     dest: "{{ kubernetes_config_directory }}/kube-vip.yaml"
 
-- changed_when: kubevip_copy.changed and kubevip.rc == 0
+- name: Apply kube-vip
+  changed_when: kubevip_copy.changed and kubevip.rc == 0
   delegate_to: "{{ first_kube_control_plane }}"
-  name: Apply kube-vip
   register: kubevip
   run_once: true
   ansible.builtin.shell: |
@@ -20,8 +20,8 @@
 
     touch {{ kubernetes_output_directory }}/kube-vip
 
-- delegate_to: "{{ first_kube_control_plane }}"
-  name: Output kubevip
+- name: Output kubevip
+  delegate_to: "{{ first_kube_control_plane }}"
   run_once: true
   ansible.builtin.debug:
     msg: "{{ kubevip }}"

@@ -5,26 +5,28 @@
   run_once: true
   block:
   - name: Check for kubelet-csr-approver
+    register: kubelet_csr_approver_installed_cmd
     ansible.builtin.shell:
       cmd: |
         kubectl get ns kubelet-csr-approver-system --kubeconfig /etc/kubernetes/admin.conf > /dev/null 2> /dev/null || echo "Not installed"
         echo "Installed"
-    register: kubelet_csr_approver_installed_cmd
 
   - name: Set install_kubelet_csr_approver fact
     ansible.builtin.set_fact:
       install_kubelet_csr_approver: "{{ kubelet_csr_approver_installed_cmd.stdout_lines[0] == 'Not installed' }}"
 
   - name: Configure kubelet-csr-approver
+    when: install_kubelet_csr_approver
     ansible.builtin.template:
       src: kubelet-csr-approver.yaml.j2
       dest: "{{ kubernetes_config_directory }}/kubelet-csr-approver.yaml"
       owner: root
       group: root
       mode: '0600'
-    when: install_kubelet_csr_approver
 
   - name: Install kubelet-csr-approver
+    register: csr_approver
+    when: install_kubelet_csr_approver
     ansible.builtin.shell:
       cmd: |
         set -eo pipefail
@@ -41,15 +43,13 @@
         touch "{{ kubernetes_output_directory }}/kubelet-csr-approver-installed"
       executable: /bin/bash
       creates: "{{ kubernetes_output_directory }}/kubelet-csr-approver-installed"
-    register: csr_approver
-    when: install_kubelet_csr_approver
 
   - name: Write kubelet-csr-approver to stdout
-    ansible.builtin.debug:
-      msg: "{{ csr_approver }}"
     when:
     - csr_approver is defined
     - install_kubelet_csr_approver
+    ansible.builtin.debug:
+      msg: "{{ csr_approver }}"
 
   rescue:
   - name: Delete kubelet-csr-approver-installed
@@ -58,11 +58,11 @@
       state: absent
 
   - name: Output csr_approver lines
+    when: csr_approver.stdout_lines is defined
     ansible.builtin.debug:
       msg: |
         {{ csr_approver.stdout_lines }}
         {{ csr_approver.stderr_lines }}
-    when: csr_approver.stdout_lines is defined
 
   - name: Fail kubelet-csr-approver
     ansible.builtin.fail:

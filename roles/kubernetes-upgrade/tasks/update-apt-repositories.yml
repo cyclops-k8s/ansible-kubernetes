@@ -1,10 +1,10 @@
 - name: Kubernetes - Download GPG keyring
-  dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
-  group: root
-  mode: '0644'
-  owner: root
-  url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
   ansible.builtin.get_url:
+    dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+    group: root
+    mode: '0644'
+    owner: root
+    url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
 
 - name: Add an apt signing key for Kubernetes
   args:
@@ -13,23 +13,25 @@
   ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
 
 - name: Set file permissions for keyring
-  group: root
-  mode: '0644'
-  owner: root
-  path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
   ansible.builtin.file:
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
 
-- name: update kubernetes list file
+- name: Update kubernetes list file
+  changed_when: true
   ansible.builtin.shell: |
+    set -o pipefail
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
 - name: Adding apt repository for Kubernetes
-  filename: kubernetes-{{ kubernetes_version }}.list
-  repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/ /
-  state: present
   ansible.builtin.apt_repository:
+    filename: kubernetes-{{ kubernetes_version }}.list
+    repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/ /
+    state: present
 
 - name: Find latest kubernetes version in apt
-  allow_change_held_packages: true
-  update_cache: true
   ansible.builtin.apt:
+    allow_change_held_packages: true
+    update_cache: true

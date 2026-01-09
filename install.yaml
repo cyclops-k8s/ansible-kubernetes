@@ -1,19 +1,19 @@
-- any_errors_fatal: true
+- name: Configure the proxies
+  any_errors_fatal: true
   become: true
   hosts: proxies
-  name: Configure the proxies
   vars:
     skip_checks: true
   roles:
   - role: kubernetes-defaults
   - role: kubernetes-proxy
 
-- any_errors_fatal: true
+- name: "Install containerd.io"
+  any_errors_fatal: true
   become: true
   gather_facts: true
   hosts:
   - kubernetes
-  name: "Install containerd.io"
   serial: 100
   vars:
     containerd_credentials: "{{ kubernetes_containerd_credentials }}"
@@ -22,53 +22,53 @@
   - role: kubernetes-defaults
   - role: containerd
 
-- any_errors_fatal: true
+- name: Install kubernetes pre-requisites
+  any_errors_fatal: true
   become: true
   hosts:
   - kubernetes
-  name: Install kubernetes pre-requisites
   serial: 100
   roles:
   - role: kubernetes-defaults
   - role: kubernetes
 
-- any_errors_fatal: true
+- name: Pre control plane hooks
+  any_errors_fatal: true
   become: true
   hosts: control_planes
-  name: Pre control plane hooks
   roles:
   - role: kubernetes-defaults
   - role: pre-kubernetes-control-plane
 
-- any_errors_fatal: true
+- name: Install Control Planes
+  any_errors_fatal: true
   become: true
   hosts: control_planes
-  name: Install Control Planes
   serial: 1
   roles:
   - role: kubernetes-defaults
   - role: kubernetes-control-plane
 
-- any_errors_fatal: true
+- name: Post control plane hooks
+  any_errors_fatal: true
   become: true
   hosts: control_planes
-  name: Post control plane hooks
   roles:
   - role: kubernetes-defaults
   - role: post-kubernetes-control-plane
 
-- any_errors_fatal: true
+- name: Install worker nodes
+  any_errors_fatal: true
   become: true
   hosts: worker_nodes
-  name: Install worker nodes
   roles:
   - role: kubernetes-defaults
   - role: kubernetes-worker
 
-- any_errors_fatal: true
+- name: Post worker node hooks
+  any_errors_fatal: true
   become: true
   hosts: worker_nodes
-  name: Post worker node hooks
   roles:
   - role: kubernetes-defaults
   - role: post-kubernetes-worker
