@@ -1,5 +1,4 @@
 - name: Create containerd hosts configuration directory
-  notify: Restart containerd service
   ansible.builtin.file:
     group: root
     mode: '0700'
@@ -8,7 +7,6 @@
     state: directory
 
 - name: Create containerd hosts file
-  notify: Restart containerd service
   ansible.builtin.template:
     dest: "/etc/containerd/certs.d/{{ registry_mirror.registry }}/hosts.toml"
     group: root
@@ -21,7 +19,6 @@
   loop_control:
     label: "{{ extra_file.name }}"
     loop_var: extra_file
-  notify: Restart containerd service
   when:
   - registry_mirror.extra_files is defined
   ansible.builtin.copy:
