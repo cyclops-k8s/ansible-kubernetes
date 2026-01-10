@@ -69,6 +69,42 @@ Each option, if it is related to a CIS benchmark or STIG, is noted in the defaul
 
 You can see all of the different options in [roles/kubernetes-defaults/defaults/main.yml](roles/kubernetes-defaults/defaults/main.yml).
 
+### Required Configuration Options
+
+Before running the playbook, you **must** configure the following required variables. These can be set in your inventory file, group_vars, or passed via `-e` flag:
+
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `kubernetes_control_plane_ip` | IP address | The IP address that the proxies will bind to for load balancing the Kubernetes control plane. This is the IP that HAProxy/Keepalived will listen on and kubeadm will bind the API server to. | `192.168.1.100` |
+| `kubernetes_api_endpoint` | FQDN | The fully qualified domain name (FQDN) of the control plane API endpoint. Your clients will use this endpoint to interface with the cluster. **This DNS entry must already be configured and resolving before running the playbook.** | `k8s-api.example.com` |
+| `kubernetes_encryption_key` | Base64 string | A 32-byte base64-encoded key used to encrypt etcd data at rest. Generate with: `head -c 32 /dev/urandom \| base64` | `xyzABC123...` (44 chars) |
+
+#### Example Configuration
+
+In your `group_vars/all.yml`:
+
+```yaml
+# Required: IP for proxy load balancer
+kubernetes_control_plane_ip: 192.168.1.100
+
+# Required: FQDN for API access (must have DNS resolution before running playbook)
+kubernetes_api_endpoint: k8s-api.example.com
+
+# Required: Base64-encoded 32-byte encryption key for etcd
+kubernetes_encryption_key: "{{ lookup('env', 'K8S_ENCRYPTION_KEY') }}"
+```
+
+Or pass directly via command line:
+
+```bash
+ansible-playbook -i inventory install.yaml \
+  -e kubernetes_control_plane_ip=192.168.1.100 \
+  -e kubernetes_api_endpoint=k8s-api.example.com \
+  -e kubernetes_encryption_key="YOUR_BASE64_KEY_HERE"
+```
+
+**Important:** The playbook will fail if any of these required variables are not set or are set to `null`.
+
 ## CIS Benchmark
 
 Review the [CIS Hardening.md](CIS%20hardening.md) to see the status of each benchmark test. Most of them were handled out of the box by kubeadm, the ones that could be resolved by the playbook are.
