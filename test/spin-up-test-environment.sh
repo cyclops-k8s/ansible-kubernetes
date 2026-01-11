@@ -234,21 +234,21 @@ function get_options() {
   done
 
   # Download cloud image if not already present
-  OS_IMAGE=${OS_IMAGE:-ubuntu-25.10}
+  OS_IMAGE=${OS_IMAGE:-ubuntu-24.04}
   if [ "${OS_IMAGE}" = "centos" ]
   then
     IMAGE_URL="${URL:-https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2}"
     IMAGE_FILE="${TEMP_DIR}/centos.img"
     USE_UEFI=false
-  elif [ "${OS_IMAGE}" = "ubuntu-25.10" ]
-  then
-    IMAGE_URL="${URL:-https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img}"
-    IMAGE_FILE="${TEMP_DIR}/ubuntu-25.10.img"
-    USE_UEFI=true
   elif [ "${OS_IMAGE}" = "ubuntu-24.04" ]
   then
     IMAGE_URL="${URL:-https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img}"
     IMAGE_FILE="${TEMP_DIR}/ubuntu-24.04.img"
+    USE_UEFI=true
+  elif [ "${OS_IMAGE}" = "ubuntu-25.10" ]
+  then
+    IMAGE_URL="${URL:-https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img}"
+    IMAGE_FILE="${TEMP_DIR}/ubuntu-25.10.img"
     USE_UEFI=true
   else
     echo "Unsupported os-image: ${OS_IMAGE}"
