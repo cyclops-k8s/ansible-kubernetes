@@ -1,6 +1,6 @@
 - name: Remove kubernetes apt repository
-  ansible.builtin.apt_repository:
-    filename: kubernetes.list
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/kubernetes.list
     state: absent
 
 - name: Kubernetes - Download GPG keyring

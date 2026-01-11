@@ -2,7 +2,7 @@
 
 usage()
 {
-  echo "Usage: $0 [options] -- tfvar files
+  echo "Usage: $0 [options] [-- tfvar files]
   -d | --domain               The domain to use for the VMs.
                               Default is k8s.local
                               Environment Variable: DOMAIN
@@ -40,7 +40,7 @@ Examples:
 
   # Specify all options
   $0 -d somethingrandom.tld \\
-    -o centos9 \
+    -o centos9 \\
     -p 10.251.251 \\
     -s ~/.ssh/k8s.id \\
     -S ~/.ssh/k8s.id.pub \\
@@ -51,14 +51,14 @@ Examples:
     ../example-hooks/registry-mirrors/post_proxies/test.tfvars
 
   # Using Environment Variables:
-    export DOMAIN=somethingrandom.tld \\
-    export OS_IMAGE=centos \\
-    export IP_PREFIX=10.251.251 \\
-    export SSH_KEY_FILE=~/.ssh/k8s.id \\
-    export SSH_PUBLIC_KEY_FILE=~/.ssh/k8s.id.pub \\
-    export TEMP_DIR=/tmp/k8s-vms \\
-    export URL=https://example.com/custom-centos-image.qcow2 \\
-    export OVMF_FILE=~/ovmf.fd \\
+    export DOMAIN=somethingrandom.tld
+    export OS_IMAGE=centos9
+    export IP_PREFIX=10.251.251
+    export SSH_KEY_FILE=~/.ssh/k8s.id
+    export SSH_PUBLIC_KEY_FILE=~/.ssh/k8s.id.pub
+    export TEMP_DIR=/tmp/k8s-vms
+    export URL=https://example.com/custom-centos-image.qcow2
+    export OVMF_FILE=~/ovmf.fd
     $0 \\
     -- \\
     ../example-hooks/registry-mirrors/post_proxies/test.tfvars
