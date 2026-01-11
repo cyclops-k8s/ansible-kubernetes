@@ -1,59 +1,91 @@
-- name: Update apt repositories
-  ansible.builtin.apt:
-    update_cache: true
+- name: Install containerd (Debian/Ubuntu)
+  when: ansible_facts.os_family == "Debian"
+  block:
+  - name: Update apt repositories
+    ansible.builtin.apt:
+      update_cache: true
 
-- name: Make sure the gpg package is installed
-  ansible.builtin.apt:
-    name:
-    - gpg
-    state: present
+  - name: Make sure the gpg package is installed
+    ansible.builtin.apt:
+      name:
+      - gpg
+      state: present
 
-- name: Create keyring directory
-  ansible.builtin.file:
-    group: root
-    mode: '0755'
-    owner: root
-    path: /etc/apt/keyrings
-    state: directory
+  - name: Create keyring directory
+    ansible.builtin.file:
+      group: root
+      mode: '0755'
+      owner: root
+      path: /etc/apt/keyrings
+      state: directory
 
-- name: Download GPG keyring
-  ansible.builtin.get_url:
-    dest: /etc/apt/keyrings/docker
-    group: root
-    mode: '0644'
-    owner: root
-    url: https://download.docker.com/linux/debian/gpg
+  - name: Download GPG keyring
+    ansible.builtin.get_url:
+      dest: /etc/apt/keyrings/docker
+      group: root
+      mode: '0644'
+      owner: root
+      url: "{{ kubernetes_containerd_mirror_gpgkey }}"
 
-- name: Dearmor gpg keyring
-  ansible.builtin.command:
-    cmd: gpg --batch --yes --dearmor /etc/apt/keyrings/docker
-    creates: /etc/apt/keyrings/docker.gpg
+  - name: Dearmor gpg keyring
+    ansible.builtin.command:
+      cmd: gpg --batch --yes --dearmor /etc/apt/keyrings/docker
+      creates: /etc/apt/keyrings/docker.gpg
 
-- name: Set GPG keyring permissions
-  ansible.builtin.file:
-    group: root
-    mode: '0644'
-    owner: root
-    path: /etc/apt/keyrings/docker.gpg
-    state: file
+  - name: Set GPG keyring permissions
+    ansible.builtin.file:
+      group: root
+      mode: '0644'
+      owner: root
+      path: /etc/apt/keyrings/docker.gpg
+      state: file
 
-- name: Add Docker Repository
-  ansible.builtin.apt_repository:
-    filename: docker
-    repo: deb [signed-by=/etc/apt/keyrings/docker.gpg] {{ containerd_mirror }} {{ ansible_facts["distribution_release"] | lower }} stable
-    state: present
-    update_cache: true
+  - name: Add Docker Repository
+    ansible.builtin.apt_repository:
+      filename: docker
+      repo: deb [signed-by=/etc/apt/keyrings/docker.gpg] {{ containerd_mirror }} {{ ansible_facts["distribution_release"] | lower }} stable
+      state: present
+      update_cache: true
 
-- name: Install containerd
-  ansible.builtin.apt:
-    name:
-    - containerd.io
-    state: present
+  - name: Install containerd
+    ansible.builtin.apt:
+      name:
+      - containerd.io
+      state: present
 
-- name: Hold containerd.io
-  ansible.builtin.dpkg_selections:
-    name: containerd.io
-    selection: hold
+  - name: Hold containerd.io
+    ansible.builtin.dpkg_selections:
+      name: containerd.io
+      selection: hold
+
+- name: Install containerd (RedHat/Rocky/Alma/Fedora)
+  when: ansible_facts.os_family == "RedHat"
+  block:
+  - name: Add Docker CE repository
+    ansible.builtin.yum_repository:
+      baseurl: "{{ containerd_mirror }}"
+      description: Docker CE Stable - $basearch
+      enabled: true
+      gpgcheck: true
+      gpgkey: "{{ kubernetes_containerd_mirror_gpgkey }}"
+      name: docker-ce-stable
+
+  - name: Install versionlock plugin
+    ansible.builtin.dnf:
+      name: python3-dnf-plugin-versionlock
+      state: present
+
+  - name: Install containerd
+    ansible.builtin.dnf:
+      name:
+      - containerd.io
+      state: present
+
+  - name: Hold containerd.io
+    ansible.builtin.command:
+      cmd: dnf versionlock add containerd.io
+    changed_when: false
+    failed_when: false
 
 - name: Configure containerd
   ansible.builtin.include_tasks:

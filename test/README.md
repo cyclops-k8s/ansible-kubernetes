@@ -23,10 +23,30 @@ To use the test harness, execute the `spin-up-test-environment.sh` file.
 
 Once that script exits, you will have the required VMs. Then run install.sh
 
+### Choosing the OS Distribution
+
+By default, the test environment uses Ubuntu. You can test with CentOS Stream instead by setting the `OS_IMAGE` environment variable:
+
+```bash
+# Use Ubuntu (default)
+./spin-up-test-environment.sh
+
+# Use CentOS Stream 9
+OS_IMAGE=centos ./spin-up-test-environment.sh
+```
+
+**Note:** When testing with CentOS Stream, you may want to enable SELinux and firewall configuration:
+
+```bash
+# In test/vars.yaml, add:
+# kubernetes_configure_selinux: true
+# kubernetes_configure_firewall: true
+```
+
 ## How it works
 ### `spin-up-test-environment.sh`
 
-The script will download the latest Ubuntu image and build VMs from that.
+The script will download the latest Ubuntu image (or CentOS Stream 9 if `OS_IMAGE=centos`) and build VMs from that.
 
 We use cloud-init to configure the VMs base operating system.
 

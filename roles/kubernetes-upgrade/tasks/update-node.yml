@@ -1,31 +1,67 @@
 - name: Upgrade packages
-  ansible.builtin.import_tasks: update-apt-repositories.yml
+  ansible.builtin.import_tasks: update-repositories.yml
 
-- name: Get latest specified version of kubeadm, kubelet and kubectl
-  changed_when: true
-  register: k8s_version_temp
-  ansible.builtin.shell:
-    cmd: |
-      set -eo pipefail
-      apt-cache madison kubeadm | grep "{{ version }}" | head -n 1 | awk '{print $3}'
-    executable: /bin/bash
+- name: Get latest specified version (Debian/Ubuntu)
+  when: ansible_facts.os_family == "Debian"
+  block:
+  - name: Get latest specified version of kubeadm, kubelet and kubectl
+    changed_when: true
+    register: k8s_version_temp
+    ansible.builtin.shell:
+      cmd: |
+        set -eo pipefail
+        apt-cache madison kubeadm | grep "{{ version }}" | head -n 1 | awk '{print $3}'
+      executable: /bin/bash
 
-- name: Set k8s_version fact
-  ansible.builtin.set_fact:
-    k8s_version: "{{ k8s_version_temp.stdout }}"
+  - name: Set k8s_version fact
+    ansible.builtin.set_fact:
+      k8s_version: "{{ k8s_version_temp.stdout }}"
 
-- name: Update kubeadm k8s_version
-  ansible.builtin.apt:
-    allow_change_held_packages: true
-    name: kubeadm={{ k8s_version }}
-    state: present
+  - name: Update kubeadm k8s_version
+    ansible.builtin.apt:
+      allow_change_held_packages: true
+      name: kubeadm={{ k8s_version }}
+      state: present
 
-- name: Hold kubeadm
-  with_items:
-  - kubeadm
-  ansible.builtin.dpkg_selections:
-    name: "{{ item }}"
-    selection: hold
+  - name: Hold kubeadm
+    with_items:
+    - kubeadm
+    ansible.builtin.dpkg_selections:
+      name: "{{ item }}"
+      selection: hold
+
+- name: Get latest specified version (RedHat/Rocky/Alma/Fedora)
+  when: ansible_facts.os_family == "RedHat"
+  block:
+  - name: Get latest specified version of kubeadm, kubelet and kubectl
+    changed_when: true
+    register: k8s_version_temp
+    ansible.builtin.shell:
+      cmd: |
+        set -eo pipefail
+        dnf list --showduplicates kubeadm | grep "{{ version }}" | head -n 1 | awk '{print $2}' | cut -d ':' -f 2
+      executable: /bin/bash
+
+  - name: Set k8s_version fact
+    ansible.builtin.set_fact:
+      k8s_version: "{{ k8s_version_temp.stdout }}"
+
+  - name: Remove kubeadm version lock
+    ansible.builtin.command:
+      cmd: dnf versionlock delete kubeadm
+    changed_when: false
+    failed_when: false
+
+  - name: Update kubeadm k8s_version
+    ansible.builtin.dnf:
+      name: kubeadm-{{ k8s_version }}
+      state: present
+
+  - name: Hold kubeadm
+    ansible.builtin.command:
+      cmd: dnf versionlock add kubeadm
+    changed_when: false
+    failed_when: false
 
 - name: Get kubeadm version
   changed_when: false
@@ -77,35 +113,79 @@
     cmd: |
       kubectl drain {{ inventory_hostname_short }} --ignore-daemonsets --delete-emptydir-data --force --grace-period=30 --kubeconfig /etc/kubernetes/admin.conf
 
-- name: Update kubelet and kubectl to specified k8s_version
-  with_items:
-  - kubelet={{ k8s_version }}
-  - kubectl={{ k8s_version }}
-  ansible.builtin.apt:
-    allow_change_held_packages: true
-    name: "{{ item }}"
-    state: present
+- name: Update kubelet and kubectl (Debian/Ubuntu)
+  when: ansible_facts.os_family == "Debian"
+  block:
+  - name: Update kubelet and kubectl to specified k8s_version
+    with_items:
+    - kubelet={{ k8s_version }}
+    - kubectl={{ k8s_version }}
+    ansible.builtin.apt:
+      allow_change_held_packages: true
+      name: "{{ item }}"
+      state: present
 
-- name: Upgrade containerd to latest version
-  ansible.builtin.apt:
-    allow_change_held_packages: true
-    name: containerd.io
-    only_upgrade: true
-    state: latest
+  - name: Upgrade containerd to latest version
+    ansible.builtin.apt:
+      allow_change_held_packages: true
+      name: containerd.io
+      only_upgrade: true
+      state: latest
 
-- name: Reconfigure containerd for new version
-  ansible.builtin.include_role:
-    name: containerd
-    tasks_from: configure-containerd.yml
+  - name: Reconfigure containerd for new version
+    ansible.builtin.include_role:
+      name: containerd
+      tasks_from: configure-containerd.yml
 
-- name: Hold kubelet, kubectl and containerd.io
-  with_items:
-  - kubelet
-  - kubectl
-  - containerd.io
-  ansible.builtin.dpkg_selections:
-    name: "{{ item }}"
-    selection: hold
+  - name: Hold kubelet, kubectl and containerd.io
+    with_items:
+    - kubelet
+    - kubectl
+    - containerd.io
+    ansible.builtin.dpkg_selections:
+      name: "{{ item }}"
+      selection: hold
+
+- name: Update kubelet and kubectl (RedHat/Rocky/Alma/Fedora)
+  when: ansible_facts.os_family == "RedHat"
+  block:
+  - name: Remove version locks
+    with_items:
+    - kubelet
+    - kubectl
+    - containerd.io
+    ansible.builtin.command:
+      cmd: dnf versionlock delete {{ item }}
+    changed_when: false
+    failed_when: false
+
+  - name: Update kubelet and kubectl to specified k8s_version
+    with_items:
+    - kubelet-{{ k8s_version }}
+    - kubectl-{{ k8s_version }}
+    ansible.builtin.dnf:
+      name: "{{ item }}"
+      state: present
+
+  - name: Upgrade containerd to the latest version
+    ansible.builtin.dnf:
+      name: containerd.io
+      state: latest  # noqa: package-latest
+
+  - name: Reconfigure containerd for new version
+    ansible.builtin.include_role:
+      name: containerd
+      tasks_from: configure-containerd.yml
+
+  - name: Hold kubelet, kubectl and containerd.io
+    with_items:
+    - kubelet
+    - kubectl
+    - containerd.io
+    ansible.builtin.command:
+      cmd: dnf versionlock add {{ item }}
+    changed_when: false
+    failed_when: false
 
 - name: Reload kubelet
   ansible.builtin.systemd_service:

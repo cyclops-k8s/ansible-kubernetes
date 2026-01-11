@@ -1,0 +1,69 @@
+- name: Configure firewall (RedHat/Rocky/Alma/Fedora)
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - kubernetes_configure_firewall | default(true)
+  block:
+  - name: Install firewalld
+    ansible.builtin.dnf:
+      name: firewalld
+      state: present
+
+  - name: Start and enable firewalld
+    ansible.builtin.service:
+      enabled: true
+      name: firewalld
+      state: started
+
+  - name: Allow Kubernetes API server
+    ansible.posix.firewalld:
+      permanent: true
+      port: 6443/tcp
+      state: enabled
+      zone: public
+
+  - name: Allow etcd server client API
+    ansible.posix.firewalld:
+      permanent: true
+      port: 2379-2380/tcp
+      state: enabled
+      zone: public
+
+  - name: Allow Kubelet API
+    ansible.posix.firewalld:
+      permanent: true
+      port: 10250/tcp
+      state: enabled
+      zone: public
+
+  - name: Allow kube-scheduler
+    ansible.posix.firewalld:
+      permanent: true
+      port: 10259/tcp
+      state: enabled
+      zone: public
+
+  - name: Allow kube-controller-manager
+    ansible.posix.firewalld:
+      permanent: true
+      port: 10257/tcp
+      state: enabled
+      zone: public
+
+  - name: Allow NodePort Services
+    ansible.posix.firewalld:
+      permanent: true
+      port: 30000-32767/tcp
+      state: enabled
+      zone: public
+
+  - name: Enable masquerading for pod network
+    ansible.posix.firewalld:
+      masquerade: true
+      permanent: true
+      state: enabled
+      zone: public
+
+  - name: Reload firewalld
+    ansible.builtin.command:
+      cmd: firewall-cmd --reload
+    changed_when: true

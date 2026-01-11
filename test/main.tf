@@ -42,13 +42,13 @@ resource "ansible_host" "proxy" {
   name   = "px.k8s.local"
   groups = ["proxies"]
   variables = {
-    ansible_host                       = "px.k8s.local"
-    vrrp_priority                      = 1
-    vrrp_state                         = "BACKUP" #count.index == 0 ? "MASTER" : "BACKUP"
-    vrrp_password                      = random_password.proxy_vrrp_password.result
-    vrrp_interface                     = "ens4"
-    vrrp_virtual_router_id             = 1
-    control_plane_ip                   = "10.255.254.11"
+    ansible_host           = "px.k8s.local"
+    vrrp_priority          = 1
+    vrrp_state             = "BACKUP" #count.index == 0 ? "MASTER" : "BACKUP"
+    vrrp_password          = random_password.proxy_vrrp_password.result
+    vrrp_interface         = "ens4"
+    vrrp_virtual_router_id = 1
+    control_plane_ip       = "10.255.254.11"
   }
 }
 
@@ -85,7 +85,6 @@ locals {
     kubernetes_kubelet_csr_approver_regex             = "^(cp|w)[0-9]+$"
     kubernetes_kubelet_csr_approver_ips               = "10.255.254.0/24"
     kubernetes_kubelet_csr_approver_bypass_dns_checks = "true"
-    kubernetes_proxy_bind_address                     = "0.0.0.0"
     kubernetes_proxy_enable_keepalived                = false
   }
   special_config = {
@@ -102,6 +101,7 @@ locals {
     proxies = {
       vars = merge(var.extra_proxy_configuration, {
         kubernetes_proxy_enable_keepalived = false
+        kubernetes_proxy_bind_address      = "*"
       })
     }
   }
@@ -118,11 +118,11 @@ variable "kubernetes_version" {
 }
 
 variable "extra_proxy_configuration" {
-  type = any
+  type    = any
   default = {}
 }
 
 variable "extra_kubernetes_configuration" {
-  type = any
+  type    = any
   default = {}
 }

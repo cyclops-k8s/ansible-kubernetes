@@ -31,6 +31,14 @@
     enabled: true
     name: haproxy
 
+- name: Configure SELinux for HAProxy (RedHat/Rocky/Alma/Fedora)
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - kubernetes_configure_selinux
+  ansible.builtin.command:
+    cmd: setsebool -P haproxy_connect_any 1
+  changed_when: false
+
 - name: Install keepalived
   notify: restart-keepalived
   when: kubernetes_proxy_enable_keepalived | default(true)

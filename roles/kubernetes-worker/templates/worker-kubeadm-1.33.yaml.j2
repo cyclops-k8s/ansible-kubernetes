@@ -35,6 +35,7 @@ discovery:
     caCertHashes:
     - "{{ cluster_ca_cert_hash }}"
 nodeRegistration:
+  name: "{{ inventory_hostname_short }}"
   kubeletExtraArgs:
 {% if kubernetes_cloud_provider == 'external' %}
   - name: cloud-provider
