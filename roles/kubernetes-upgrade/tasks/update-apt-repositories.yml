@@ -1,3 +1,8 @@
+- name: Remove kubernetes apt repository
+  ansible.builtin.apt_repository:
+    filename: kubernetes.list
+    state: absent
+
 - name: Kubernetes - Download GPG keyring
   ansible.builtin.get_url:
     dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
@@ -18,12 +23,6 @@
     mode: '0644'
     owner: root
     path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
-
-- name: Update kubernetes list file
-  changed_when: true
-  ansible.builtin.shell: |
-    set -o pipefail
-    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
 - name: Adding apt repository for Kubernetes
   ansible.builtin.apt_repository:
