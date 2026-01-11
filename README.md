@@ -23,6 +23,7 @@ It is tested on the following:
 
 **RPM-based:**
 * CentOS Stream 9
+* CentOS Stream 10
 
 The playbook automatically detects the OS family and uses the appropriate package manager (apt for Debian-based, dnf/yum for RPM-based distributions).
 

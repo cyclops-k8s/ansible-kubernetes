@@ -47,10 +47,9 @@
       k8s_version: "{{ k8s_version_temp.stdout }}"
 
   - name: Remove kubeadm version lock
+    changed_when: false
     ansible.builtin.command:
       cmd: dnf versionlock delete kubeadm
-    changed_when: false
-    failed_when: false
 
   - name: Update kubeadm k8s_version
     ansible.builtin.dnf:
@@ -58,10 +57,9 @@
       state: present
 
   - name: Hold kubeadm
+    changed_when: false
     ansible.builtin.command:
       cmd: dnf versionlock add kubeadm
-    changed_when: false
-    failed_when: false
 
 - name: Get kubeadm version
   changed_when: false
@@ -150,14 +148,13 @@
   when: ansible_facts.os_family == "RedHat"
   block:
   - name: Remove version locks
+    changed_when: true
     with_items:
     - kubelet
     - kubectl
     - containerd.io
     ansible.builtin.command:
       cmd: dnf versionlock delete {{ item }}
-    changed_when: false
-    failed_when: false
 
   - name: Update kubelet and kubectl to specified k8s_version
     with_items:
@@ -178,14 +175,13 @@
       tasks_from: configure-containerd.yml
 
   - name: Hold kubelet, kubectl and containerd.io
+    changed_when: true
     with_items:
     - kubelet
     - kubectl
     - containerd.io
     ansible.builtin.command:
       cmd: dnf versionlock add {{ item }}
-    changed_when: false
-    failed_when: false
 
 - name: Reload kubelet
   ansible.builtin.systemd_service:
