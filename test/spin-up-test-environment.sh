@@ -113,8 +113,8 @@ function create_vm() {
     >> "${TEMP_DIR}/${name}.user-data"
 
   # Set MAC addresses and IP configuration in network config
-  MAC0="52:54:00:00:00:${ip}"
-  MAC1="52:54:00:00:01:${ip}"
+  MAC0=$(printf "52:54:00:00:00:%02x" "${ip}")
+  MAC1=$(printf "52:54:00:00:01:%02x" "${ip}")
   cat cloud-init/network | \
     yq --yaml-output \
       ".network.ethernets.eth0.match.macaddress = \"${MAC0}\" | \
@@ -305,7 +305,7 @@ fi
 mkdir -p "${TEMP_DIR}"
 
 # Copy the UEFI file
-cp "${OVMF_FILE}" "${TEMP_DIR}/"
+[ "${USE_UEFI}" = true ] && cp "${OVMF_FILE}" "${TEMP_DIR}/"
 
 # Stop any previous running virtual machines
 pkill ssh -x || true

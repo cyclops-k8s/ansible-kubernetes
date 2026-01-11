@@ -108,7 +108,7 @@
             REQUESTED_VERSION="$(sed 's/v//' <<< $CURRENT_VERSION)-"
           fi
 
-          dnf list --showduplicates kubeadm | grep "$REQUESTED_VERSION" | head -n 1 | awk '{print $2}' | cut -d ':' -f 2
+          dnf list --showduplicates kubeadm | grep "$REQUESTED_VERSION" | tail -n 1 | awk '{print $2}' | cut -d ':' -f 2
         executable: /bin/bash
 
     # noqa: var-naming[no-role-prefix]

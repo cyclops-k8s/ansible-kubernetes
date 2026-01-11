@@ -10,10 +10,10 @@
       url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
 
   - name: Add an apt signing key for Kubernetes
-    args:
-      creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
     changed_when: false
-    ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+    ansible.builtin.command:
+      cmd: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+      creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
 
   - name: Set file permissions for keyring
     ansible.builtin.file:
@@ -21,12 +21,12 @@
       mode: '0644'
       owner: root
       path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+      state: file
 
-  - name: Update kubernetes list file
-    changed_when: true
-    ansible.builtin.shell: |
-      set -o pipefail
-      echo "deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+  - name: Remove old style Kubernetes apt repository
+    ansible.builtin.file:
+      path: /etc/apt/sources.list.d/kubernetes.list
+      state: absent
 
   - name: Adding apt repository for Kubernetes
     ansible.builtin.apt_repository:
