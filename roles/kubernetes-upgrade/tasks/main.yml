@@ -3,10 +3,70 @@
   ansible.builtin.fail:
     msg: "version variable is not set"
 
+- name: Install versionlock plugin (RedHat/Rocky/Alma/Fedora)
+  when: ansible_facts.os_family == "RedHat"
+  ansible.builtin.dnf:
+    name: python3-dnf-plugin-versionlock
+    state: present
+
 - name: Define first control plane node
   run_once: true
   ansible.builtin.set_fact:
     first_kube_control_plane: "{{ groups['control_planes'] | first }}"
+
+- name: Upgrade Helm on control planes
+  when:
+  - inventory_hostname in groups['control_planes']
+  - kubernetes_install_helm | default(true)
+  block:
+  - name: Install git (required for Helm install script)
+    ansible.builtin.package:
+      name: git
+      state: present
+
+  - name: Remove Helm from apt (Debian/Ubuntu)
+    when: ansible_facts.os_family == "Debian"
+    block:
+    - name: Uninstall Helm package
+      ansible.builtin.apt:
+        name: helm
+        state: absent
+
+    - name: Remove Helm apt repository
+      ansible.builtin.apt_repository:
+        filename: helm
+        repo: deb [signed-by=/etc/apt/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main
+        state: absent
+
+    - name: Remove Helm GPG keyring files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+      - /etc/apt/keyrings/helm
+      - /etc/apt/keyrings/helm.gpg
+
+  - name: Download latest Helm install script
+    ansible.builtin.get_url:
+      dest: /tmp/install_helm.sh
+      force: true
+      group: root
+      mode: '0755'
+      owner: root
+      url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4
+
+  - name: Upgrade Helm
+    changed_when: true
+    environment:
+      HELM_INSTALL_DIR: /usr/bin
+    ansible.builtin.shell:
+      cmd: /tmp/install_helm.sh
+      executable: /bin/bash
+
+  - name: Remove Helm install script
+    ansible.builtin.file:
+      path: /tmp/install_helm.sh
+      state: absent
 
 - name: Upgrade primary control plane node
   ansible.builtin.import_tasks: update-node.yml

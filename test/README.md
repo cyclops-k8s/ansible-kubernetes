@@ -5,7 +5,7 @@
     * If you don't want Docker Desktop you'll need Docker and Docker Compose.
 * Devcontainer extension in VSCode
 * Host requires QEMU. This is already included in WSL2. Be sure to turn on nested virtualization for WSL2 for better performance.
-* Host must be x86/64. Arm (Apple Silicon) is not working, we'll need someone with an Apple device to make that work.
+* Host must be x86/64. Arm (Apple Silicon) is not supported yet, we'll need someone with an Apple device to make that work.
 * Must be ran through the dev container. It may work outside of the dev container, but no guarantees and issues arising from such a scenario will likely not be resolved. Too many variables.
 * The dev container needs at least 24 GB available memory to run the VMs.
     * This can be provided via swap, it'll be slower, but it'll work.
@@ -23,10 +23,35 @@ To use the test harness, execute the `spin-up-test-environment.sh` file.
 
 Once that script exits, you will have the required VMs. Then run install.sh
 
+### Choosing the OS Distribution
+
+By default, the test environment uses Ubuntu 24.04. You can test with CentOS Stream 9/10 or Ubuntu 25.10 by using the `--os-image` parameter:
+
+```bash
+# Use Ubuntu 24.04 (default)
+./spin-up-test-environment.sh
+
+# Use Ubuntu 25.10
+./spin-up-test-environment.sh --os-image ubuntu-25.10
+
+# Use CentOS Stream 9
+./spin-up-test-environment.sh --os-image centos9
+
+# Use CentOS Stream 10
+./spin-up-test-environment.sh --os-image centos10
+```
+
+**Note:** When testing with CentOS Stream, you may want to enable SELinux configuration, by default this is enabled:
+
+```bash
+# In test/vars.yaml, add:
+# kubernetes_configure_selinux: true
+```
+
 ## How it works
 ### `spin-up-test-environment.sh`
 
-The script will download the latest Ubuntu image and build VMs from that.
+The script will download the latest Ubuntu image (or CentOS Stream if `OS_IMAGE=centos9` or `OS_IMAGE=centos10`) and build VMs from that.
 
 We use cloud-init to configure the VMs base operating system.
 

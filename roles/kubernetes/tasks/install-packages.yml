@@ -1,76 +1,140 @@
 - name: Install packages
   block:
-  - name: Kubernetes - Download GPG keyring
-    ansible.builtin.get_url:
-      dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
-      group: root
-      mode: '0644'
-      owner: root
-      url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
-
-  - name: Add an apt signing key for Kubernetes
-    ansible.builtin.command:
-      cmd: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
-      creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
-
-  - name: Set GPG keyring permissions
-    ansible.builtin.file:
-      group: root
-      mode: '0644'
-      owner: root
-      path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
-      state: file
-
-  - name: Adding apt repository for Kubernetes
-    ansible.builtin.apt_repository:
-      filename: kubernetes
-      repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
+  - name: Install versionlock plugin (RedHat/Rocky/Alma/Fedora)
+    when: ansible_facts.os_family == "RedHat"
+    ansible.builtin.dnf:
+      name: python3-dnf-plugin-versionlock
       state: present
 
-  - name: Get latest specified version of kubeadm, kubelet and kubectl
-    changed_when: kubernetes_version_temp.rc != 0
-    register: kubernetes_version_temp
-    ansible.builtin.shell:
-      cmd: |
-        set -eo pipefail
-
-        # get the version of the currently installed kubeadm
-        REQUESTED_VERSION="{{ kubernetes_version }}"
-        CURRENT_VERSION=$(kubeadm version -o short 2>/dev/null || echo -n "")
-
-        if [[ "$CURRENT_VERSION" != "" ]]
-        then
-          REQUESTED_VERSION="$(sed 's/v//' <<< $CURRENT_VERSION)-"
-        fi
-
-        apt-cache madison kubeadm | grep "$REQUESTED_VERSION" | head -n 1 | awk '{print $3}'
-      executable: /bin/bash
-
-  # noqa: var-naming[no-role-prefix]
-  - name: Set k8s_version fact
-    ansible.builtin.set_fact:
-      k8s_version: "{{ kubernetes_version_temp.stdout }}"
-
-  - name: Install kubeadm, kubelet, kubectl
-    vars:
-      packages:
-      - kubeadm={{ k8s_version }}
-      - kubelet={{ k8s_version }}
-      - kubectl={{ k8s_version }}
+  - name: Install packages (Debian/Ubuntu)
     when: ansible_facts.os_family == "Debian"
-    ansible.builtin.apt:
-      name: "{{ packages }}"
-      state: present
-      update_cache: true
+    block:
+    - name: Kubernetes - Download GPG keyring
+      ansible.builtin.get_url:
+        dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+        group: root
+        mode: '0644'
+        owner: root
+        url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
 
-  - name: Hold kubeadm, kubelet and kubectl
-    with_items:
-    - kubeadm
-    - kubelet
-    - kubectl
-    ansible.builtin.dpkg_selections:
-      name: "{{ item }}"
-      selection: hold
+    - name: Add an apt signing key for Kubernetes
+      ansible.builtin.command:
+        cmd: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+        creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+
+    - name: Set GPG keyring permissions
+      ansible.builtin.file:
+        group: root
+        mode: '0644'
+        owner: root
+        path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+        state: file
+
+    - name: Adding apt repository for Kubernetes
+      ansible.builtin.apt_repository:
+        filename: kubernetes
+        repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
+        state: present
+
+    - name: Get latest specified version of kubeadm, kubelet and kubectl
+      changed_when: kubernetes_version_temp.rc != 0
+      register: kubernetes_version_temp
+      ansible.builtin.shell:
+        cmd: |
+          set -eo pipefail
+
+          # get the version of the currently installed kubeadm
+          REQUESTED_VERSION="{{ kubernetes_version }}"
+          CURRENT_VERSION=$(kubeadm version -o short 2>/dev/null || echo -n "")
+
+          if [[ "$CURRENT_VERSION" != "" ]]
+          then
+            REQUESTED_VERSION="$(sed 's/v//' <<< $CURRENT_VERSION)-"
+          fi
+
+          apt-cache madison kubeadm | grep "$REQUESTED_VERSION" | head -n 1 | awk '{print $3}'
+        executable: /bin/bash
+
+    # noqa: var-naming[no-role-prefix]
+    - name: Set k8s_version fact
+      ansible.builtin.set_fact:
+        k8s_version: "{{ kubernetes_version_temp.stdout }}"
+
+    - name: Install kubeadm, kubelet, kubectl
+      vars:
+        packages:
+        - kubeadm={{ k8s_version }}
+        - kubelet={{ k8s_version }}
+        - kubectl={{ k8s_version }}
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: true
+
+    - name: Hold kubeadm, kubelet and kubectl
+      with_items:
+      - kubeadm
+      - kubelet
+      - kubectl
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+
+  - name: Install packages (RedHat/Rocky/Alma/Fedora)
+    when: ansible_facts.os_family == "RedHat"
+    block:
+    - name: Add Kubernetes repository
+      ansible.builtin.yum_repository:
+        baseurl: "{{ kubernetes_mirror }}"
+        description: Kubernetes
+        enabled: true
+        gpgcheck: true
+        gpgkey: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/repodata/repomd.xml.key
+        name: kubernetes
+
+    - name: Get latest specified version of kubeadm, kubelet and kubectl
+      changed_when: kubernetes_version_temp.rc != 0
+      register: kubernetes_version_temp
+      ansible.builtin.shell:
+        cmd: |
+          set -eo pipefail
+
+          # get the version of the currently installed kubeadm
+          REQUESTED_VERSION="{{ kubernetes_version }}"
+          CURRENT_VERSION=$(kubeadm version -o short 2>/dev/null || echo -n "")
+
+          if [[ "$CURRENT_VERSION" != "" ]]
+          then
+            REQUESTED_VERSION="$(sed 's/v//' <<< $CURRENT_VERSION)-"
+          fi
+
+          dnf list --showduplicates kubeadm | grep "$REQUESTED_VERSION" | tail -n 1 | awk '{print $2}' | cut -d ':' -f 2
+        executable: /bin/bash
+
+    # noqa: var-naming[no-role-prefix]
+    - name: Set k8s_version fact
+      ansible.builtin.set_fact:
+        k8s_version: "{{ kubernetes_version_temp.stdout }}"
+
+    - name: Install kubeadm, kubelet, kubectl
+      vars:
+        packages:
+        - kubeadm-{{ k8s_version }}
+        - kubelet-{{ k8s_version }}
+        - kubectl-{{ k8s_version }}
+      ansible.builtin.dnf:
+        name: "{{ packages }}"
+        state: present
+
+    - name: Hold kubeadm, kubelet and kubectl
+      with_items:
+      - kubeadm
+      - kubelet
+      - kubectl
+      ansible.builtin.command:
+        cmd: dnf versionlock add {{ item }}
+      changed_when: false
+      failed_when: false
 
   - name: Set crictl.yaml options
     ansible.builtin.command:

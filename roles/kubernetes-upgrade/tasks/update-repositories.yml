@@ -1,0 +1,52 @@
+- name: Update repositories (Debian/Ubuntu)
+  when: ansible_facts.os_family == "Debian"
+  block:
+  - name: Kubernetes - Download GPG keyring
+    ansible.builtin.get_url:
+      dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+      group: root
+      mode: '0644'
+      owner: root
+      url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
+
+  - name: Add an apt signing key for Kubernetes
+    changed_when: false
+    ansible.builtin.command:
+      cmd: gpg --batch --yes --dearmor /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
+      creates: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+
+  - name: Set file permissions for keyring
+    ansible.builtin.file:
+      group: root
+      mode: '0644'
+      owner: root
+      path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+      state: file
+
+  - name: Remove old style Kubernetes apt repository
+    ansible.builtin.file:
+      path: /etc/apt/sources.list.d/kubernetes.list
+      state: absent
+
+  - name: Adding apt repository for Kubernetes
+    ansible.builtin.apt_repository:
+      filename: kubernetes-{{ kubernetes_version }}.list
+      repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/ /
+      state: present
+
+  - name: Find latest kubernetes version in apt
+    ansible.builtin.apt:
+      allow_change_held_packages: true
+      update_cache: true
+
+- name: Update repositories (RedHat/Rocky/Alma/Fedora)
+  when: ansible_facts.os_family == "RedHat"
+  block:
+  - name: Update Kubernetes repository
+    ansible.builtin.yum_repository:
+      baseurl: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/"
+      description: Kubernetes
+      enabled: true
+      gpgcheck: true
+      gpgkey: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/repodata/repomd.xml.key
+      name: kubernetes
