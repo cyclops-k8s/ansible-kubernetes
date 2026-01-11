@@ -262,7 +262,7 @@ function get_options() {
   fi
 }
 
-# SSH into a host and exits. Retries until successfull.
+# SSH into a host and exits. Retries until successful.
 # Host configuration should already be set up in your ~/.ssh/config file
 #   wait_for_ssh <hostname|fqdn>
 function wait_for_ssh() {
