@@ -7,7 +7,7 @@ usage()
                               Default is k8s.local
                               Environment Variable: DOMAIN
   -o | --os-image             The OS image to use for the VMs. Supported values are 'ubuntu-25.10', 'ubuntu-24.04', 'centos9', and 'centos10'.
-                              Default is 'ubuntu-25.10'.
+                              Default is 'ubuntu-24.04'.
                               Valid values are:
                                 centos9
                                 centos10
