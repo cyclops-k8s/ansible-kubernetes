@@ -31,14 +31,12 @@
       ansible.builtin.apt:
         name: helm
         state: absent
-      failed_when: false
 
     - name: Remove Helm apt repository
       ansible.builtin.apt_repository:
         filename: helm
         repo: deb [signed-by=/etc/apt/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main
         state: absent
-      failed_when: false
 
     - name: Remove Helm GPG keyring files
       ansible.builtin.file:
@@ -47,7 +45,6 @@
       loop:
       - /etc/apt/keyrings/helm
       - /etc/apt/keyrings/helm.gpg
-      failed_when: false
 
   - name: Download latest Helm install script
     ansible.builtin.get_url:
@@ -60,11 +57,11 @@
 
   - name: Upgrade Helm
     changed_when: true
+    environment:
+      HELM_INSTALL_DIR: /usr/bin
     ansible.builtin.shell:
       cmd: /tmp/install_helm.sh
       executable: /bin/bash
-    environment:
-      HELM_INSTALL_DIR: /usr/bin
 
   - name: Remove Helm install script
     ansible.builtin.file:

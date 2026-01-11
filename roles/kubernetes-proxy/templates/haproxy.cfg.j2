@@ -1,7 +1,7 @@
 global
     log /dev/log local0
     log /dev/log local1 notice
-    stats socket {% if ansible_facts.os_family == "RedHat" %}/run/haproxy.sock{% else %}/run/haproxy/admin.sock{% endif %} mode 660 level admin expose-fd listeners
+    stats socket {% if ansible_facts.os_family == "Debian" %}/run/haproxy/admin.sock{% else %}/run/haproxy.sock{% endif %} mode 660 level admin expose-fd listeners
     user haproxy
     group haproxy
     daemon

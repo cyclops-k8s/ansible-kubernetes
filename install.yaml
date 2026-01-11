@@ -15,9 +15,6 @@
   hosts:
   - kubernetes
   serial: 100
-  vars:
-    containerd_credentials: "{{ kubernetes_containerd_credentials }}"
-    containerd_mirror: "{{ kubernetes_containerd_mirror }}"
   roles:
   - role: kubernetes-defaults
   - role: containerd

@@ -5,34 +5,31 @@ usage()
   echo "Usage: $0 [options] [-- tfvar files]
   -d | --domain               The domain to use for the VMs.
                               Default is k8s.local
-                              Environment Variable: DOMAIN
-  -o | --os-image             The OS image to use for the VMs. Supported values are 'ubuntu-25.10', 'ubuntu-24.04', 'centos9', and 'centos10'.
+                              Environment variable: DOMAIN
+  -o | --os-image             The OS image to use for the VMs.
                               Default is 'ubuntu-24.04'.
                               Valid values are:
                                 centos9
                                 centos10
-                                ubuntu-25.10
                                 ubuntu-24.04
-                              Environment Variable: OS_IMAGE
+                                ubuntu-25.10
+                              Environment variable: OS_IMAGE
   -v | --ovmf-file            The OVMF file to use for UEFI booting.
                               Default is /usr/share/OVMF/OVMF_CODE_4M.fd
-                              Environment Variable: OVMF_FILE
+                              Environment variable: OVMF_FILE
   -p | --ip-prefix            The IP prefix to use for the VMs.
                               Default is 10.255.254
-                              Environment Variable: IP_PREFIX
-  -s | --ssh-key-file         The SSH private key file to use for VM access.
-                              Default is ~/.ssh/devcontainer.id_rsa
-                              Environment Variable: SSH_KEY_FILE
-  -S | --ssh-public-key-file  The SSH public key file to use for VM access.
+                              Environment variable: IP_PREFIX
+  -s | --ssh-public-key-file  The SSH public key file to use for VM access.
                               Default is ~/.ssh/devcontainer.id_rsa.pub
-                              Environment Variable: SSH_PUBLIC_KEY_FILE
+                              Environment variable: SSH_PUBLIC_KEY_FILE
   -t | --temp-dir             The temporary directory to store VM files.
                               Default is ./.temp
-                              Environment Variable: TEMP_DIR
+                              Environment variable: TEMP_DIR
   -u | --url                  The URL to download the OS image from.
-                              Default is the official cloud image URLs.
-                              Environment Variable: URL
-  -h | --help                 Shows this helpful usage statement.
+                              Default is the official cloud image URL.
+                              Environment variable: URL
+  -h | --help                 Shows this same thing.
 
 Examples:
   # Use default values
@@ -42,8 +39,7 @@ Examples:
   $0 -d somethingrandom.tld \\
     -o centos9 \\
     -p 10.251.251 \\
-    -s ~/.ssh/k8s.id \\
-    -S ~/.ssh/k8s.id.pub \\
+    -s ~/.ssh/k8s.id.pub \\
     -t /tmp/k8s-vms \\
     -u https://example.com/custom-centos-image.qcow2 \\
     -v ~/ovmf.fd \\
@@ -54,7 +50,6 @@ Examples:
     export DOMAIN=somethingrandom.tld
     export OS_IMAGE=centos9
     export IP_PREFIX=10.251.251
-    export SSH_KEY_FILE=~/.ssh/k8s.id
     export SSH_PUBLIC_KEY_FILE=~/.ssh/k8s.id.pub
     export TEMP_DIR=/tmp/k8s-vms
     export URL=https://example.com/custom-centos-image.qcow2
@@ -135,9 +130,8 @@ function create_vm() {
   # Qemu needs permissions to write to the drive files
   chmod o+w "${TEMP_DIR}/${name}.img"
   QEMU_BOOT_ARGS=""
-  # Build QEMU command based on boot type
 
-  if [ "${USE_UEFI}" = true ]
+  if [ "${USE_UEFI}" = "true" ]
   then
     # UEFI boot (Ubuntu)
     QEMU_BOOT_ARGS="-drive if=pflash,format=raw,readonly=on,file=${TEMP_DIR}/OVMF_CODE_4M.fd -drive if=pflash,format=raw,file=${TEMP_DIR}/${name}.ovmf_vars_4m.fd -smbios type=0,uefi=on"
@@ -173,8 +167,8 @@ function create_vm() {
 function get_options() {
   # Store the command line arguments as a variable
   PARSED_ARGUMENTS=$(getopt -a -n "$0" \
-                     -o o:s:S:t:d:p:u:v:h \
-                     --long os-image:,ssh-key-file:,ssh-public-key-file:,temp-dir:,domain:,ip-prefix:,url:,ovmf-file:,help \
+                     -o o:s:t:d:p:u:v:h \
+                     --long os-image:,ssh-public-key-file:,temp-dir:,domain:,ip-prefix:,url:,ovmf-file:,help \
                      -- "$@")
   VALID_ARGUMENTS=$?
 
@@ -190,17 +184,16 @@ function get_options() {
   while :
   do
     case "$1" in
-      -d | --domain)       export DOMAIN="$2"; shift 2 ;;
-      -p | --ip-prefix)    export IP_PREFIX="$2"; shift 2 ;;
-      -o | --os-image)     export OS_IMAGE="$2"; shift 2 ;;
-      -s | --ssh-key-file) export SSH_KEY_FILE="$2"; shift 2 ;;
-      -S | --ssh-public-key-file) export SSH_PUBLIC_KEY_FILE="$2"; shift 2 ;;
-      -t | --temp-dir)     export TEMP_DIR="$2"; shift 2 ;;
-      -u | --url)          export URL="$2"; shift 2 ;;
-      -v | --ovmf-file)    export OVMF_FILE="$2"; shift 2 ;;
-      -h | --help)         usage;;
-      --)                  shift; break ;;
-      *)                   echo "Unexpected option: $1"; usage ;;
+      -d | --domain)              DOMAIN="$2"; shift 2 ;;
+      -p | --ip-prefix)           IP_PREFIX="$2"; shift 2 ;;
+      -o | --os-image)            OS_IMAGE="$2"; shift 2 ;;
+      -S | --ssh-public-key-file) SSH_PUBLIC_KEY_FILE="$2"; shift 2 ;;
+      -t | --temp-dir)            TEMP_DIR="$2"; shift 2 ;;
+      -u | --url)                 URL="$2"; shift 2 ;;
+      -v | --ovmf-file)           OVMF_FILE="$2"; shift 2 ;;
+      -h | --help)                usage;;
+      --)                         shift; break ;;
+      *)                          echo "Unexpected option: $1"; usage ;;
     esac
   done
 
@@ -305,7 +298,7 @@ fi
 mkdir -p "${TEMP_DIR}"
 
 # Copy the UEFI file
-[ "${USE_UEFI}" = true ] && cp "${OVMF_FILE}" "${TEMP_DIR}/"
+[ "${USE_UEFI}" = "true" ] && cp "${OVMF_FILE}" "${TEMP_DIR}/"
 
 # Stop any previous running virtual machines
 pkill ssh -x || true

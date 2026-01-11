@@ -43,7 +43,7 @@
   - name: Add Docker Repository
     ansible.builtin.apt_repository:
       filename: docker
-      repo: deb [signed-by=/etc/apt/keyrings/docker.gpg] {{ containerd_mirror }} {{ ansible_facts["distribution_release"] | lower }} stable
+      repo: deb [signed-by=/etc/apt/keyrings/docker.gpg] {{ kubernetes_containerd_mirror }} {{ ansible_facts["distribution_release"] | lower }} stable
       state: present
       update_cache: true
 
@@ -63,7 +63,7 @@
   block:
   - name: Add Docker CE repository
     ansible.builtin.yum_repository:
-      baseurl: "{{ containerd_mirror }}"
+      baseurl: "{{ kubernetes_containerd_mirror }}"
       description: Docker CE Stable - $basearch
       enabled: true
       gpgcheck: true
@@ -82,10 +82,9 @@
       state: present
 
   - name: Hold containerd.io
+    changed_when: true
     ansible.builtin.command:
       cmd: dnf versionlock add containerd.io
-    changed_when: false
-    failed_when: false
 
 - name: Configure containerd
   ansible.builtin.include_tasks:

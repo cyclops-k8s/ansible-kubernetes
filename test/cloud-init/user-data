@@ -25,7 +25,8 @@ write_files:
 # CentOS/RHEL uses chrony which is already installed by default
 runcmd:
 - |
-  if [ -f /etc/debian_version ]; then
+  if [ -f /etc/debian_version ]
+  then
     apt-get install -y systemd-timesyncd
   fi
 
