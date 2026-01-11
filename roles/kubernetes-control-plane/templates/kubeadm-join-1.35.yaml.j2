@@ -37,6 +37,7 @@ controlPlane:
     bindPort: {{ kubernetes_api_server_port }}
   certificateKey: "{{ kubeadm_upload_token }}"
 nodeRegistration:
+  name: "{{ inventory_hostname_short }}"
   kubeletExtraArgs:
 {% if kubernetes_cloud_provider == 'external' %}
   - name: cloud-provider

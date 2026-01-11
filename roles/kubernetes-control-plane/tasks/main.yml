@@ -34,45 +34,36 @@
     name: k8s-certs-renew.timer
     state: started
 
-- name: Install Helm
+- name: Install git (required for Helm install script)
   when: kubernetes_install_helm
-  block:
-  - name: Helm - Download GPG keyring
-    ansible.builtin.get_url:
-      dest: /etc/apt/keyrings/helm
-      group: root
-      mode: '0644'
-      owner: root
-      url: https://packages.buildkite.com/helm-linux/helm-debian/gpgkey
-
-  - name: Add an apt signing key for Helm
-    args:
-      creates: /etc/apt/keyrings/helm.gpg
-    ansible.builtin.command: gpg --batch --yes --dearmor /etc/apt/keyrings/helm
-
-  - name: Set helm gpg signing key permissions
-    ansible.builtin.file:
-      dest: /etc/apt/keyrings/helm.gpg
-      group: root
-      mode: '0644'
-      owner: root
-
-  - name: Add helm apt repository
-    ansible.builtin.apt_repository:
-      filename: helm
-      repo: deb [signed-by=/etc/apt/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main
-      state: present
-      update_cache: true
-
-  - name: Install helm
-    ansible.builtin.apt:
-      name: helm
-      state: present
-
-- name: Install etcd-client
-  ansible.builtin.apt:
-    name: etcd-client
+  ansible.builtin.package:
+    name: git
     state: present
+
+- name: Download Helm install script
+  when: kubernetes_install_helm
+  ansible.builtin.get_url:
+    dest: /tmp/install_helm.sh
+    group: root
+    mode: '0755'
+    owner: root
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4
+
+- name: Install Helm
+  changed_when: true
+  when: kubernetes_install_helm
+  ansible.builtin.shell:
+    cmd: /tmp/install_helm.sh
+    creates: /usr/bin/helm
+    executable: /bin/bash
+  environment:
+    HELM_INSTALL_DIR: /usr/bin
+
+- name: Remove Helm install script
+  when: kubernetes_install_helm
+  ansible.builtin.file:
+    path: /tmp/install_helm.sh
+    state: absent
 
 - name: Install Kustomize
   when: kubernetes_install_kustomize
@@ -90,8 +81,8 @@
       cmd: |
         set -eo pipefail
         /tmp/install_kustomize.sh
-        mv kustomize /usr/local/bin/kustomize
-      creates: /usr/local/bin/kustomize
+        mv kustomize /usr/bin/kustomize
+      creates: /usr/bin/kustomize
       executable: /bin/bash
 
   - name: Remove Kustomize install script

@@ -79,40 +79,69 @@ function create_vm() {
 
   # Update cloud-init files
   SSH_PUBLIC_KEY=$(cat "${SSH_PUBLIC_KEY_FILE}")
-  cat cloud-init/user-data | yq --yaml-output ".hostname = \"${name}\" | .fqdn = \"${name}.${DOMAIN}\" | .users[0].ssh_authorized_keys = [\"${SSH_PUBLIC_KEY}\"]" >> "${TEMP_DIR}/${name}.user-data"
-  cat cloud-init/network | yq --yaml-output ".network.ethernets.enp0s3.addresses += [\"${IP_PREFIX}.${ip}/24\"] | .network.ethernets.enp0s2.nameservers.search = [ \"${DOMAIN}\" ]" >> "${TEMP_DIR}/${name}.network"
+  cat cloud-init/user-data | \
+    yq --yaml-output \
+      ".hostname = \"${name}\" | \
+       .fqdn = \"${name}.${DOMAIN}\" | \
+       .users[0].ssh_authorized_keys = [\"${SSH_PUBLIC_KEY}\"]" \
+    >> "${TEMP_DIR}/${name}.user-data"
+
+  # Set MAC addresses and IP configuration in network config
+  MAC0="52:54:00:00:00:${ip}"
+  MAC1="52:54:00:00:01:${ip}"
+  cat cloud-init/network | \
+    yq --yaml-output \
+      ".network.ethernets.eth0.match.macaddress = \"${MAC0}\" | \
+       .network.ethernets.eth0.nameservers.search = [ \"${DOMAIN}\" ] | \
+       .network.ethernets.eth1.match.macaddress = \"${MAC1}\" | \
+       .network.ethernets.eth1.addresses += [\"${IP_PREFIX}.${ip}/24\"]" \
+    >> "${TEMP_DIR}/${name}.network"
 
   # Create the cloud-init iso
   cloud-localds "${TEMP_DIR}/${name}.cloud-init.iso" "${TEMP_DIR}/${name}.user-data" -N "${TEMP_DIR}/${name}.network" > /dev/null
 
   # Create the virtual machine hard drive
   echo "Creating VM ${name} on port ${ssh_port}..."
-  qemu-img create -b ubuntu.img -F qcow2 -f qcow2 "${TEMP_DIR}/${name}.img" "${hdd_size}G"
+  BASE_IMAGE=$(basename "${IMAGE_FILE}")
+  qemu-img create -b "${BASE_IMAGE}" -F qcow2 -f qcow2 "${TEMP_DIR}/${name}.img" "${hdd_size}G"
 
-  # Each VM needs its own UEFI vars file
-  cp /usr/share/OVMF/OVMF_VARS_4M.fd "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
+  # Determine if we should use UEFI or BIOS boot
+  # CentOS Stream works better with legacy BIOS boot
+  if [ "${OS_IMAGE}" = "centos" ]; then
+    USE_UEFI=false
+  else
+    USE_UEFI=true
+    # Each VM needs its own UEFI vars file
+    cp /usr/share/OVMF/OVMF_VARS_4M.fd "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
+    # Qemu needs permissions to write to the UEFI vars file
+    chmod o+w "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
+  fi
 
-  # Qemu needs permissons to write to the drive files
+  # Qemu needs permissions to write to the drive files
   chmod o+w "${TEMP_DIR}/${name}.img"
-  chmod o+w "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
+  QEMU_BOOT_ARGS=""
+  # Build QEMU command based on boot type
+
+  if [ "${USE_UEFI}" = true ]; then
+    # UEFI boot (Ubuntu)
+    QEMU_BOOT_ARGS="-drive if=pflash,format=raw,readonly=on,file=${TEMP_DIR}/OVMF_CODE_4M.fd -drive if=pflash,format=raw,file=${TEMP_DIR}/${name}.ovmf_vars_4m.fd -smbios type=0,uefi=on"
+  fi
 
   # Create/start the virtual machine
   sudo -b qemu-system-x86_64 \
       -boot menu=off \
       -cdrom "${TEMP_DIR}/${name}.cloud-init.iso" \
       -cpu host \
-      -drive if=pflash,format=raw,readonly=on,file="${TEMP_DIR}/OVMF_CODE_4M.fd" \
-      -drive if=pflash,format=raw,file="${TEMP_DIR}/${name}.ovmf_vars_4m.fd" \
+      ${QEMU_BOOT_ARGS} \
       -drive file="${TEMP_DIR}/${name}.img" \
       -enable-kvm \
-      -device virtio-net-pci,netdev=net0,mac="52:54:00:00:00:${ip}" \
-      -device virtio-net-pci,netdev=net1,mac="52:54:00:00:01:${ip}" \
+      -device virtio-net-pci,netdev=net0,mac="${MAC0}" \
+      -device virtio-net-pci,netdev=net1,mac="${MAC1}" \
       -m "${mem_size}G" \
       -machine accel=kvm,type=q35 \
       -nographic \
       -netdev user,id=net0,hostfwd="tcp::${ssh_port}-:22${additional_forwarding}" \
       -netdev socket,id=net1,mcast=230.0.0.1:1234 \
-      -smbios type=0,uefi=on \
       -smp "${cpu_num}" 1>"${TEMP_DIR}/${name}.stdout.log" 2>"${TEMP_DIR}/${name}.stderr.log"
 
   # Allow the virtual machine some time to boot
@@ -134,7 +163,7 @@ function wait_for_ssh() {
   echo "SSH is available on ${host}"
 
   echo "Waiting on cloud-init to finish on ${host}..."
-  while ! ssh "${host}" 'cloud-init status --wait' 2> /dev/null
+  while ! ssh "${host}" 'sudo cloud-init status --wait' 2> /dev/null
   do
     sleep 2
     echo -n "."
@@ -145,10 +174,20 @@ function wait_for_ssh() {
 # Create a directory to hold temporary files
 mkdir -p "${TEMP_DIR}"
 
-# Download ubuntu cloud image questing if not already present
-if [ ! -f "${TEMP_DIR}/ubuntu.img" ]
+# Download cloud image if not already present
+OS_IMAGE=${OS_IMAGE:-ubuntu}
+if [ "${OS_IMAGE}" = "centos" ]; then
+  IMAGE_URL="https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2"
+  IMAGE_FILE="${TEMP_DIR}/centos.img"
+else
+  IMAGE_URL="https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img"
+  IMAGE_FILE="${TEMP_DIR}/ubuntu.img"
+fi
+
+if [ ! -f "${IMAGE_FILE}" ]
 then
-  wget https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img -O "${TEMP_DIR}/ubuntu.img"
+  echo "Downloading ${OS_IMAGE} cloud image..."
+  wget "${IMAGE_URL}" -O "${IMAGE_FILE}"
 fi
 
 # Copy the UEFI file

@@ -12,8 +12,9 @@ kubernetes_control_plane_ip: null
 #   registry: "docker.io"
 kubernetes_containerd_credentials: []
 
-# Apt repository to pulll containerd from
-kubernetes_containerd_mirror: https://download.docker.com/linux/{{ ansible_facts["distribution"] | lower }}
+# Apt/Yum repository to pull containerd from
+kubernetes_containerd_mirror: "{% if ansible_facts.os_family == 'Debian' %}https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}{% else %}https://download.docker.com/linux/centos/$releasever/$basearch/stable{% endif %}"
+kubernetes_containerd_mirror_gpgkey: "{% if ansible_facts.os_family == 'Debian' %}https://download.docker.com/linux/debian/gpg{% else %}https://download.docker.com/linux/centos/gpg{% endif %}"
 
 # CIS 1.1.12 - Ensure that the etcd data directory ownership is set to etcd:etcd
 kubernetes_etcd_init_container_image: alpine:latest
@@ -210,6 +211,11 @@ kubernetes_cluster_signing_duration: 8760h
 # The name of the cluster, usually can be whatever you want
 kubernetes_cluster_name: cluster
 
+# Configure SELinux on RPM-based systems (RHEL, Rocky, AlmaLinux, Fedora)
+# When true, SELinux will be configured on the proxy and if necessary, other Kubernetes nodes.
+# Set to false if you manage SELinux policy externally
+kubernetes_configure_selinux: true
+
 # The domain name for the cluster, this is used in-cluster to resolve things like services and pods
 kubernetes_dns_domain: cluster.local
 
@@ -296,8 +302,8 @@ kubernetes_kubeadm_join_extra_args: ""
 # Manage automatic renewal of Kubernetes node (KubeScheduler/APIServer/Etcd/etc) certificates by a systemd timer unit
 kubernetes_manage_cert_renewal: true
 
-# Apt mirror to pull the Kubernetes packages from
-kubernetes_mirror: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/
+# Apt/Yum mirror to pull the Kubernetes packages from
+kubernetes_mirror: "{% if ansible_facts.os_family == 'Debian' %}https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/{% else %}https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/{% endif %}"
 
 # The internal Kubernetes node cidr for pods
 kubernetes_node_cidr_mask_size: 24

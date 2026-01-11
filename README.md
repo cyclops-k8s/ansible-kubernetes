@@ -5,6 +5,7 @@
 ### Collections
 
 * community.dns `ansible-galaxy collection install community.dns`
+* ansible.posix `ansible-galaxy collection install ansible.posix` (required for RPM-based systems)
 
 ### Python packages
 
@@ -12,7 +13,18 @@
 
 ### Operating systems
 
-* Currently the only supported Linux distribution is Ubuntu. This has been tested on 22.04, 24.04, 24.10 and 25.04.
+This playbook supports both Debian-based and RPM-based Linux distributions:
+
+**Debian-based:**
+* Ubuntu 22.04, 24.04, 24.10, and 25.04 (tested)
+
+**RPM-based:**
+* Red Hat Enterprise Linux (RHEL) 8+
+* Rocky Linux 8+
+* AlmaLinux 8+
+* Fedora 38+
+
+The playbook automatically detects the OS family and uses the appropriate package manager (apt for Debian-based, dnf/yum for RPM-based distributions).
 
 ## Purpose
 
@@ -28,7 +40,9 @@ It also, by default, installs `Helm` and `Kustomize` on the control plane nodes 
 
 Execute the `install.yaml` playbook. There are a number of configurable options (see below). It is fully configurable and does not need to be copied and modified. If there additional extension points needed in this playbook/roles then please open an issue. We gladly accept pull requests.
 
-This playbook is currently tested on Ubuntu 24.04 LTS.
+This playbook is tested on:
+* Ubuntu 22.04 LTS and 24.04 LTS
+* CentOS Stream 9
 
 You will probably need to add some hooks to create a fully working cluster, at a minimum the CSI. There are example hooks for 2 different CSI's, Calico and Cilium that you can use to complete your cluster.
 
@@ -40,6 +54,10 @@ You will need to create 3 inventory groups.
 | `kubernetes` | This will contain all of your kubernetes worker and control plane nodes |
 | `control_planes` | This will contain all of your control plane nodes |
 | `worker_nodes` | This will contain all of your worker nodes |
+
+**Notes for RPM-based systems:**
+* The playbook automatically installs `python3-dnf-plugin-versionlock` to enable package version pinning, which is used to prevent accidental upgrades of Kubernetes and container runtime components.
+* SELinux is configured automatically on proxy nodes to allow HAProxy to connect to any port. Currently, no SELinux configuration is applied to Kubernetes nodes. You can disable this by setting `kubernetes_configure_selinux` to `false`.
 
 ## Hooks
 To install different pieces of the cluster, things like the CNI, CPI or CSI you can use the different hook entry points. There is a number of example hooks in the [example-hooks](example-hooks) directory.

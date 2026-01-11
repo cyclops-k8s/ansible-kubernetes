@@ -19,8 +19,16 @@ write_files:
 - path: /etc/ssh/sshd_config.d/00-nopassword.conf
   content: |
     PasswordAuthentication no
-packages:
-- systemd-timesyncd
+
+# Conditional package installation
+# systemd-timesyncd only exists on Debian/Ubuntu
+# CentOS/RHEL uses chrony which is already installed by default
+runcmd:
+- |
+  if [ -f /etc/debian_version ]; then
+    apt-get install -y systemd-timesyncd
+  fi
+
 package_reboot_if_required: true
 package_update: true
 package_upgrade: true
