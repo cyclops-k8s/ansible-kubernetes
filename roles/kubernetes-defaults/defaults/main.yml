@@ -2,18 +2,61 @@
 # This is the IP address of the Kubernetes control plane. This is the IP address that the proxies will bind to.
 kubernetes_control_plane_ip: null
 
-# Credentials to add to containerd for pulling images. This way you don't need to include the credentials in every namespace.
-# Expects an array of objects containing username, password and registry
-
-# Example:
+# This is deprecated starting in containerd 2.0.0
 # kubernetes_containerd_credentials:
 # - username: "username"
 #   password: "password"
-#   registry: "docker.io"
+#   registry: "https://index.docker.io/v1/"
 kubernetes_containerd_credentials: []
 
-# Apt repository to pulll containerd from
-kubernetes_containerd_mirror: https://download.docker.com/linux/{{ ansible_facts["distribution"] | lower }}
+# Apt/Yum repository to pull containerd from
+kubernetes_containerd_mirror: "{% if ansible_facts['os_family'] == 'Debian' %}https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}{% else %}https://download.docker.com/linux/centos/$releasever/$basearch/stable{% endif %}"
+kubernetes_containerd_mirror_gpgkey: "{% if ansible_facts['os_family'] == 'Debian' %}https://download.docker.com/linux/debian/gpg{% else %}https://download.docker.com/linux/centos/gpg{% endif %}"
+
+# This version of kubernetes_containerd_registry_mirrors is deprecated as of containerd version 2.0.0
+# This configuration works for versions below 2.2.0
+# Instructs containerd to use registry mirrors. Multiple enpoints can be defined in a list.
+# Reference:
+# https://github.com/containerd/containerd/blob/main/docs/cri/registry.md
+# kubernetes_containerd_registry_mirrors:
+# - registry: docker.io
+#   endpoints:
+#   - https://dockermirror.example.com:5001
+# - registry: quay.io
+#   endpoints:
+#   - https://quaymirror.example.com:5002
+# - registry: registry.k8s.io
+#   endpoints:
+#   - https://k8smirror.example.com:5003
+#
+# Used for containerd versions greater than or equal to 2.2.0
+# Refer to containerd's documentation for host and server options:
+# https://github.com/containerd/containerd/blob/main/docs/hosts.md
+# kubernetes_containerd_registry_mirrors:
+# - registry: docker.io
+#   extra_files:
+#   - name: ca.pem
+#     content: |
+#       file content
+#   - name: client.cert
+#     content: |
+#       file content
+#   - name: client.key
+#     content: |
+#       file content
+#   hosts:
+#   - host: "https://dockermirror.example.com:5001"
+#     ca: "ca.pem"
+#     capabilities: '["pull", "resolve"]'
+#     client: '[["client.cert", "client.key"]]'
+#     dial_timeout: "5s"
+#     override_path: false
+#     skip_verify: false
+#     headers:
+#     - name: Authorization
+#       value: "Basic <base64 encoded username:password>"
+#   server:
+kubernetes_containerd_registry_mirrors: []
 
 # CIS 1.1.12 - Ensure that the etcd data directory ownership is set to etcd:etcd
 kubernetes_etcd_init_container_image: alpine:latest
@@ -210,6 +253,11 @@ kubernetes_cluster_signing_duration: 8760h
 # The name of the cluster, usually can be whatever you want
 kubernetes_cluster_name: cluster
 
+# Configure SELinux on RPM-based systems (RHEL, Rocky, AlmaLinux, Fedora)
+# When true, SELinux will be configured on the proxy servers for HAProxy to be able to listen on all ports.
+# Set to false if you manage SELinux policy externally
+kubernetes_configure_selinux: true
+
 # The domain name for the cluster, this is used in-cluster to resolve things like services and pods
 kubernetes_dns_domain: cluster.local
 
@@ -296,8 +344,8 @@ kubernetes_kubeadm_join_extra_args: ""
 # Manage automatic renewal of Kubernetes node (KubeScheduler/APIServer/Etcd/etc) certificates by a systemd timer unit
 kubernetes_manage_cert_renewal: true
 
-# Apt mirror to pull the Kubernetes packages from
-kubernetes_mirror: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/
+# Apt/Yum mirror to pull the Kubernetes packages from
+kubernetes_mirror: "{% if ansible_facts.os_family == 'Debian' %}https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/{% else %}https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/{% endif %}"
 
 # The internal Kubernetes node cidr for pods
 kubernetes_node_cidr_mask_size: 24

@@ -1,44 +1,65 @@
 #!/usr/bin/bash -e
 
-SSH_PUBLIC_KEY_FILE=${SSH_PUBLIC_KEY_FILE:-~/.ssh/devcontainer.id_rsa.pub}
-TEMP_DIR=${TEMP_DIR:-.temp}
-DOMAIN=${DOMAIN:-k8s.local}
-IP_PREFIX=${IP_PREFIX:-10.255.254}
+usage()
+{
+  echo "Usage: $0 [options] [-- tfvar files]
+  -d | --domain               The domain to use for the VMs.
+                              Default is k8s.local
+                              Environment variable: DOMAIN
+  -o | --os-image             The OS image to use for the VMs.
+                              Default is 'ubuntu-24.04'.
+                              Valid values are:
+                                centos9
+                                centos10
+                                ubuntu-24.04
+                                ubuntu-25.10
+                              Environment variable: OS_IMAGE
+  -v | --ovmf-file            The OVMF file to use for UEFI booting.
+                              Default is /usr/share/OVMF/OVMF_CODE_4M.fd
+                              Environment variable: OVMF_FILE
+  -p | --ip-prefix            The IP prefix to use for the VMs.
+                              Default is 10.255.254
+                              Environment variable: IP_PREFIX
+  -s | --ssh-public-key-file  The SSH public key file to use for VM access.
+                              Default is ~/.ssh/devcontainer.id_rsa.pub
+                              Environment variable: SSH_PUBLIC_KEY_FILE
+  -t | --temp-dir             The temporary directory to store VM files.
+                              Default is ./.temp
+                              Environment variable: TEMP_DIR
+  -u | --url                  The URL to download the OS image from.
+                              Default is the official cloud image URL.
+                              Environment variable: URL
+  -h | --help                 Shows this same thing.
 
-# Check if running in a devcontainer
-if [ -z "${DEVCONTAINER}" ]
-then
-  echo "This script is intended to only be run inside a devcontainer."
-  exit 1
-fi
+Examples:
+  # Use default values
+  $0
 
-# Make sure the ssh key exists
-if [ ! -f "${SSH_PUBLIC_KEY_FILE}" ]
-then
-  echo "SSH key not found. Please wait for the devcontainer to fully start."
-  exit 1
-fi
+  # Specify all options
+  $0 -d somethingrandom.tld \\
+    -o centos9 \\
+    -p 10.251.251 \\
+    -s ~/.ssh/k8s.id.pub \\
+    -t /tmp/k8s-vms \\
+    -u https://example.com/custom-centos-image.qcow2 \\
+    -v ~/ovmf.fd \\
+    -- \\
+    ../example-hooks/registry-mirrors/post_proxies/test.tfvars
 
-# Make sure the necessary commands exist
-for cmd in cloud-localds pkill qemu-img qemu-system-x86_64 sudo wget yq
-do
-  if ! which "${cmd}" > /dev/null 2>&1
-  then
-    echo "Please install: ${cmd}"
-    exit 1
-  fi
-done
-
-# Make sure other files exist
-# shellcheck disable=SC2043
-for f in OVMF=/usr/share/OVMF/OVMF_CODE_4M.fd
-do
-  if [ ! -f "${f/*=/}" ]
-  then
-    echo "Please install: ${f/=*/}"
-    exit 1
-  fi
-done
+  # Using Environment Variables:
+    export DOMAIN=somethingrandom.tld
+    export OS_IMAGE=centos9
+    export IP_PREFIX=10.251.251
+    export SSH_PUBLIC_KEY_FILE=~/.ssh/k8s.id.pub
+    export TEMP_DIR=/tmp/k8s-vms
+    export URL=https://example.com/custom-centos-image.qcow2
+    export OVMF_FILE=~/ovmf.fd
+    $0 \\
+    -- \\
+    ../example-hooks/registry-mirrors/post_proxies/test.tfvars
+"
+  exit 2
+}
 
 # This creates a qemu virtual machine.
 # The create_vm function is called by passing several arguments.
@@ -79,47 +100,165 @@ function create_vm() {
 
   # Update cloud-init files
   SSH_PUBLIC_KEY=$(cat "${SSH_PUBLIC_KEY_FILE}")
-  cat cloud-init/user-data | yq --yaml-output ".hostname = \"${name}\" | .fqdn = \"${name}.${DOMAIN}\" | .users[0].ssh_authorized_keys = [\"${SSH_PUBLIC_KEY}\"]" >> "${TEMP_DIR}/${name}.user-data"
-  cat cloud-init/network | yq --yaml-output ".network.ethernets.enp0s3.addresses += [\"${IP_PREFIX}.${ip}/24\"] | .network.ethernets.enp0s2.nameservers.search = [ \"${DOMAIN}\" ]" >> "${TEMP_DIR}/${name}.network"
+  cat cloud-init/user-data | \
+    yq --yaml-output \
+      ".hostname = \"${name}\" | \
+       .fqdn = \"${name}.${DOMAIN}\" | \
+       .users[0].ssh_authorized_keys = [\"${SSH_PUBLIC_KEY}\"]" \
+    >> "${TEMP_DIR}/${name}.user-data"
+
+  # Set MAC addresses and IP configuration in network config
+  MAC0=$(printf "52:54:00:00:00:%02x" "${ip}")
+  MAC1=$(printf "52:54:00:00:01:%02x" "${ip}")
+  cat cloud-init/network | \
+    yq --yaml-output \
+      ".network.ethernets.eth0.match.macaddress = \"${MAC0}\" | \
+       .network.ethernets.eth0.nameservers.search = [ \"${DOMAIN}\" ] | \
+       .network.ethernets.eth1.match.macaddress = \"${MAC1}\" | \
+       .network.ethernets.eth1.addresses += [\"${IP_PREFIX}.${ip}/24\"]" \
+    >> "${TEMP_DIR}/${name}.network"
 
   # Create the cloud-init iso
   cloud-localds "${TEMP_DIR}/${name}.cloud-init.iso" "${TEMP_DIR}/${name}.user-data" -N "${TEMP_DIR}/${name}.network" > /dev/null
 
   # Create the virtual machine hard drive
   echo "Creating VM ${name} on port ${ssh_port}..."
-  qemu-img create -b ubuntu.img -F qcow2 -f qcow2 "${TEMP_DIR}/${name}.img" "${hdd_size}G"
+  BASE_IMAGE=$(basename "${IMAGE_FILE}")
+  qemu-img create -b "${BASE_IMAGE}" -F qcow2 -f qcow2 "${TEMP_DIR}/${name}.img" "${hdd_size}G"
 
-  # Each VM needs its own UEFI vars file
-  cp /usr/share/OVMF/OVMF_VARS_4M.fd "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
 
-  # Qemu needs permissons to write to the drive files
+  # Qemu needs permissions to write to the drive files
   chmod o+w "${TEMP_DIR}/${name}.img"
-  chmod o+w "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
+  QEMU_BOOT_ARGS=""
 
+  if [ "${USE_UEFI}" = "true" ]
+  then
+    # UEFI boot (Ubuntu)
+    OVMF_CODE_BASENAME=$(basename "${OVMF_FILE}")
+    QEMU_BOOT_ARGS="-drive if=pflash,format=raw,readonly=on,file=${TEMP_DIR}/${OVMF_CODE_BASENAME} \
+      -drive if=pflash,format=raw,file=${TEMP_DIR}/${name}.ovmf_vars_4m.fd \
+      -smbios type=0,uefi=on"
+    cp /usr/share/OVMF/OVMF_VARS_4M.fd "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
+    # Qemu needs permissions to write to the UEFI vars file
+    chmod o+w "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
+  fi
+
+  # shellcheck disable=SC2086
   # Create/start the virtual machine
   sudo -b qemu-system-x86_64 \
       -boot menu=off \
       -cdrom "${TEMP_DIR}/${name}.cloud-init.iso" \
       -cpu host \
-      -drive if=pflash,format=raw,readonly=on,file="${TEMP_DIR}/OVMF_CODE_4M.fd" \
-      -drive if=pflash,format=raw,file="${TEMP_DIR}/${name}.ovmf_vars_4m.fd" \
+      ${QEMU_BOOT_ARGS} \
       -drive file="${TEMP_DIR}/${name}.img" \
       -enable-kvm \
-      -device virtio-net-pci,netdev=net0,mac="52:54:00:00:00:${ip}" \
-      -device virtio-net-pci,netdev=net1,mac="52:54:00:00:01:${ip}" \
+      -device virtio-net-pci,netdev=net0,mac="${MAC0}" \
+      -device virtio-net-pci,netdev=net1,mac="${MAC1}" \
       -m "${mem_size}G" \
       -machine accel=kvm,type=q35 \
       -nographic \
       -netdev user,id=net0,hostfwd="tcp::${ssh_port}-:22${additional_forwarding}" \
       -netdev socket,id=net1,mcast=230.0.0.1:1234 \
-      -smbios type=0,uefi=on \
       -smp "${cpu_num}" 1>"${TEMP_DIR}/${name}.stdout.log" 2>"${TEMP_DIR}/${name}.stderr.log"
 
   # Allow the virtual machine some time to boot
   sleep 3
 }
 
-# SSH into a host and exits. Retries until successfull.
+# Gets the command line options and sets global variables
+#   get_options "$@"
+function get_options() {
+  # Store the command line arguments as a variable
+  PARSED_ARGUMENTS=$(getopt -a -n "$0" \
+                     -o o:s:t:d:p:u:v:h \
+                     --long os-image:,ssh-public-key-file:,temp-dir:,domain:,ip-prefix:,url:,ovmf-file:,help \
+                     -- "$@")
+  VALID_ARGUMENTS=$?
+
+  # Make sure some arguments were passed in
+  if [ "$VALID_ARGUMENTS" != "0" ]
+  then
+    usage
+  fi
+
+  eval set -- "$PARSED_ARGUMENTS"
+
+  # Parse the command line options
+  while :
+  do
+    case "$1" in
+      -d | --domain)              DOMAIN="$2"; shift 2 ;;
+      -p | --ip-prefix)           IP_PREFIX="$2"; shift 2 ;;
+      -o | --os-image)            OS_IMAGE="$2"; shift 2 ;;
+      -S | --ssh-public-key-file) SSH_PUBLIC_KEY_FILE="$2"; shift 2 ;;
+      -t | --temp-dir)            TEMP_DIR="$2"; shift 2 ;;
+      -u | --url)                 URL="$2"; shift 2 ;;
+      -v | --ovmf-file)           OVMF_FILE="$2"; shift 2 ;;
+      -h | --help)                usage;;
+      --)                         shift; break ;;
+      *)                          echo "Unexpected option: $1"; usage ;;
+    esac
+  done
+
+  SSH_PUBLIC_KEY_FILE=${SSH_PUBLIC_KEY_FILE:-~/.ssh/devcontainer.id_rsa.pub}
+  TEMP_DIR=${TEMP_DIR:-.temp}
+  DOMAIN=${DOMAIN:-k8s.local}
+  IP_PREFIX=${IP_PREFIX:-10.255.254}
+  OVMF_FILE=${OVMF_FILE:-/usr/share/OVMF/OVMF_CODE_4M.fd}
+
+  # Check if running in a devcontainer
+  if [ -z "${DEVCONTAINER}" ]
+  then
+    echo "This script is intended to only be run inside a devcontainer."
+    exit 1
+  fi
+
+  # Make sure the ssh key exists
+  if [ ! -f "${SSH_PUBLIC_KEY_FILE}" ]
+  then
+    echo "SSH key not found. Please wait for the devcontainer to fully start."
+    exit 1
+  fi
+
+  # Make sure the necessary commands exist
+  for cmd in cloud-localds pkill qemu-img qemu-system-x86_64 sudo wget yq
+  do
+    if ! which "${cmd}" > /dev/null 2>&1
+    then
+      echo "Please install: ${cmd}"
+      exit 1
+    fi
+  done
+
+  # Download cloud image if not already present
+  OS_IMAGE=${OS_IMAGE:-ubuntu-24.04}
+  if [ "${OS_IMAGE}" = "centos9" ]
+  then
+    IMAGE_URL="${URL:-https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2}"
+    IMAGE_FILE="${TEMP_DIR}/centos9.img"
+    USE_UEFI=false
+  elif [ "${OS_IMAGE}" = "centos10" ]
+  then
+    IMAGE_URL="${URL:-https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2}"
+    IMAGE_FILE="${TEMP_DIR}/centos10.img"
+    USE_UEFI=false
+  elif [ "${OS_IMAGE}" = "ubuntu-24.04" ]
+  then
+    IMAGE_URL="${URL:-https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img}"
+    IMAGE_FILE="${TEMP_DIR}/ubuntu-24.04.img"
+    USE_UEFI=true
+  elif [ "${OS_IMAGE}" = "ubuntu-25.10" ]
+  then
+    IMAGE_URL="${URL:-https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img}"
+    IMAGE_FILE="${TEMP_DIR}/ubuntu-25.10.img"
+    USE_UEFI=true
+  else
+    echo "Unsupported os-image: ${OS_IMAGE}"
+    exit 1
+  fi
+}
+
+# SSH into a host and exits. Retries until successful.
 # Host configuration should already be set up in your ~/.ssh/config file
 #   wait_for_ssh <hostname|fqdn>
 function wait_for_ssh() {
@@ -134,7 +273,7 @@ function wait_for_ssh() {
   echo "SSH is available on ${host}"
 
   echo "Waiting on cloud-init to finish on ${host}..."
-  while ! ssh "${host}" 'cloud-init status --wait' 2> /dev/null
+  while ! ssh "${host}" 'sudo cloud-init status --wait' 2> /dev/null
   do
     sleep 2
     echo -n "."
@@ -142,22 +281,33 @@ function wait_for_ssh() {
   echo "cloud-init has finished on ${host}"
 }
 
+get_options "$@"
+
 # Create a directory to hold temporary files
 mkdir -p "${TEMP_DIR}"
 
-# Download ubuntu cloud image questing if not already present
-if [ ! -f "${TEMP_DIR}/ubuntu.img" ]
+# Make sure other files exist
+# shellcheck disable=SC2043
+if [ ! -f "${OVMF_FILE}" ]
 then
-  wget https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img -O "${TEMP_DIR}/ubuntu.img"
+  echo "Please install: ovmf"
+  exit 1
+fi
+
+if [ ! -f "${IMAGE_FILE}" ]
+then
+  echo "Downloading ${OS_IMAGE} cloud image..."
+  wget "${IMAGE_URL}" -O "${IMAGE_FILE}"
 fi
 
 # Copy the UEFI file
-cp /usr/share/OVMF/OVMF_CODE_4M.fd "${TEMP_DIR}/"
+[ "${USE_UEFI}" = "true" ] && cp "${OVMF_FILE}" "${TEMP_DIR}/"
 
 # Stop any previous running virtual machines
 pkill ssh -x || true
 sudo pkill -f qemu-system-x86_64 || true
 
+# Create the virtual machines
 create_vm px  2021 11 2 2 10 ",hostfwd=tcp::6443-:6443"
 create_vm cp1 2022 12 2 4 20
 create_vm cp2 2023 13 2 4 20

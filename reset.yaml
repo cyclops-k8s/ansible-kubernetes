@@ -60,7 +60,6 @@
       - containerd
       - containerd.io
       - cri-tools
-      - helm
       - keepalived
       - kubeadm
       - kubectl
@@ -115,7 +114,8 @@
     - /opt/containerd
     - /opt/kubernetes
     - /root/.kube
-    - /usr/local/bin/kustomize
+    - /usr/bin/kustomize
+    - /usr/bin/helm
     - /var/lib/containerd
     - /var/lib/etcd
     - /var/log/apiserver
