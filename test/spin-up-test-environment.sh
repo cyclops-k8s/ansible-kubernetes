@@ -134,7 +134,10 @@ function create_vm() {
   if [ "${USE_UEFI}" = "true" ]
   then
     # UEFI boot (Ubuntu)
-    QEMU_BOOT_ARGS="-drive if=pflash,format=raw,readonly=on,file=${TEMP_DIR}/OVMF_CODE_4M.fd -drive if=pflash,format=raw,file=${TEMP_DIR}/${name}.ovmf_vars_4m.fd -smbios type=0,uefi=on"
+    OVMF_CODE_BASENAME=$(basename "${OVMF_FILE}")
+    QEMU_BOOT_ARGS="-drive if=pflash,format=raw,readonly=on,file=${TEMP_DIR}/${OVMF_CODE_BASENAME} \
+      -drive if=pflash,format=raw,file=${TEMP_DIR}/${name}.ovmf_vars_4m.fd \
+      -smbios type=0,uefi=on"
     cp /usr/share/OVMF/OVMF_VARS_4M.fd "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
     # Qemu needs permissions to write to the UEFI vars file
     chmod o+w "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"

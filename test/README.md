@@ -41,12 +41,11 @@ By default, the test environment uses Ubuntu 24.04. You can test with CentOS Str
 ./spin-up-test-environment.sh --os-image centos10
 ```
 
-**Note:** When testing with CentOS Stream, you may want to enable SELinux and firewall configuration:
+**Note:** When testing with CentOS Stream, you may want to enable SELinux configuration, by default this is enabled:
 
 ```bash
 # In test/vars.yaml, add:
 # kubernetes_configure_selinux: true
-# kubernetes_configure_firewall: true
 ```
 
 ## How it works
