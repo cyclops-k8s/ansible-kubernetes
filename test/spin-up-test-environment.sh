@@ -6,10 +6,11 @@ usage()
   -d | --domain               The domain to use for the VMs.
                               Default is k8s.local
                               Environment Variable: DOMAIN
-  -o | --os-image             The OS image to use for the VMs. Supported values are 'ubuntu-25.10', 'ubuntu-24.04', and 'centos'.
+  -o | --os-image             The OS image to use for the VMs. Supported values are 'ubuntu-25.10', 'ubuntu-24.04', 'centos9', and 'centos10'.
                               Default is 'ubuntu-25.10'.
                               Valid values are:
-                                centos
+                                centos9
+                                centos10
                                 ubuntu-25.10
                                 ubuntu-24.04
                               Environment Variable: OS_IMAGE
@@ -39,7 +40,7 @@ Examples:
 
   # Specify all options
   $0 -d somethingrandom.tld \\
-    -o centos \\
+    -o centos9 \
     -p 10.251.251 \\
     -s ~/.ssh/k8s.id \\
     -S ~/.ssh/k8s.id.pub \\
@@ -235,10 +236,15 @@ function get_options() {
 
   # Download cloud image if not already present
   OS_IMAGE=${OS_IMAGE:-ubuntu-24.04}
-  if [ "${OS_IMAGE}" = "centos" ]
+  if [ "${OS_IMAGE}" = "centos9" ]
   then
     IMAGE_URL="${URL:-https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2}"
-    IMAGE_FILE="${TEMP_DIR}/centos.img"
+    IMAGE_FILE="${TEMP_DIR}/centos9.img"
+    USE_UEFI=false
+  elif [ "${OS_IMAGE}" = "centos10" ]
+  then
+    IMAGE_URL="${URL:-https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2}"
+    IMAGE_FILE="${TEMP_DIR}/centos10.img"
     USE_UEFI=false
   elif [ "${OS_IMAGE}" = "ubuntu-24.04" ]
   then

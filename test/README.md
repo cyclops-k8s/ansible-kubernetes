@@ -28,11 +28,17 @@ Once that script exits, you will have the required VMs. Then run install.sh
 By default, the test environment uses Ubuntu. You can test with CentOS Stream instead by setting the `OS_IMAGE` environment variable:
 
 ```bash
-# Use Ubuntu (default)
+# Use Ubuntu 24.04 (default)
 ./spin-up-test-environment.sh
 
+# Use Ubuntu 25.10
+./sping-up-test-environment.sh --os-image ubuntu-25.10
+
 # Use CentOS Stream 9
-OS_IMAGE=centos ./spin-up-test-environment.sh
+./spin-up-test-environment.sh --os-image centos9
+
+# Use CentOS Stream 10
+./spin-up-test-environment.sh --os-image centos10
 ```
 
 **Note:** When testing with CentOS Stream, you may want to enable SELinux and firewall configuration:
@@ -46,7 +52,7 @@ OS_IMAGE=centos ./spin-up-test-environment.sh
 ## How it works
 ### `spin-up-test-environment.sh`
 
-The script will download the latest Ubuntu image (or CentOS Stream 9 if `OS_IMAGE=centos`) and build VMs from that.
+The script will download the latest Ubuntu image (or CentOS Stream if `OS_IMAGE=centos9` or `OS_IMAGE=centos10`) and build VMs from that.
 
 We use cloud-init to configure the VMs base operating system.
 
