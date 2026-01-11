@@ -19,7 +19,7 @@ It is tested on the following:
 
 **Debian-based:**
 * Ubuntu 24.04 LTS
-* Ubunto 25.10
+* Ubuntu 25.10
 
 **RPM-based:**
 * CentOS Stream 9
