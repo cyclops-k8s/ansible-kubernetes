@@ -1,4 +1,4 @@
-containerd_mirror: "{% if ansible_facts.os_family == 'Debian' %}https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}{% else %}https://download.docker.com/linux/centos/docker-ce.repo{% endif %}"
+containerd_mirror: "{% if ansible_facts['os_family'] == 'Debian' %}https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}{% else %}https://download.docker.com/linux/centos/$releasever/$basearch/stable{% endif %}"
 containerd_credentials: []
 
 # This is deprecated starting in containerd 2.0.0

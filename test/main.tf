@@ -46,7 +46,7 @@ resource "ansible_host" "proxy" {
     vrrp_priority          = 1
     vrrp_state             = "BACKUP" #count.index == 0 ? "MASTER" : "BACKUP"
     vrrp_password          = random_password.proxy_vrrp_password.result
-    vrrp_interface         = "ens4"
+    vrrp_interface         = "eth1"
     vrrp_virtual_router_id = 1
     control_plane_ip       = "10.255.254.11"
   }
@@ -101,7 +101,7 @@ locals {
     proxies = {
       vars = merge(var.extra_proxy_configuration, {
         kubernetes_proxy_enable_keepalived = false
-        kubernetes_proxy_bind_address      = "*"
+        kubernetes_proxy_bind_address      = "0.0.0.0"
       })
     }
   }
