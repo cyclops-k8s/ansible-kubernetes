@@ -280,6 +280,9 @@ function wait_for_ssh() {
 
 get_options "$@"
 
+# Create a directory to hold temporary files
+mkdir -p "${TEMP_DIR}"
+
 # Make sure other files exist
 # shellcheck disable=SC2043
 if [ ! -f "${OVMF_FILE}" ]
@@ -293,9 +296,6 @@ then
   echo "Downloading ${OS_IMAGE} cloud image..."
   wget "${IMAGE_URL}" -O "${IMAGE_FILE}"
 fi
-
-# Create a directory to hold temporary files
-mkdir -p "${TEMP_DIR}"
 
 # Copy the UEFI file
 [ "${USE_UEFI}" = "true" ] && cp "${OVMF_FILE}" "${TEMP_DIR}/"
