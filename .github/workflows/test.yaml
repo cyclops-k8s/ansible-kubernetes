@@ -13,6 +13,8 @@ jobs:
   test:
     name: "Test ${{ matrix.os }} - K8s ${{ matrix.scenario.name }}"
     runs-on: ubuntu-24.04
+    env:
+      DEVCONTAINER: "1"
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -46,78 +48,55 @@ jobs:
       - name: Pull devcontainer image
         run: docker pull quay.io/cyclops-k8s/ansible-kubernetes-devcontainer:latest
 
-      # - name: Enable KVM
-      #   run: |
-      #     echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-      #     sudo udevadm control --reload-rules
-      #     sudo udevadm trigger --name-match=kvm
-      #     sudo apt-get update
-      #     sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo apt-get update
+          sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
 
-      # - name: Check KVM availability
-      #   run: |
-      #     ls -la /dev/kvm
-      #     groups
-      #     sudo usermod -a -G kvm $USER
+      - name: Check KVM availability
+        run: |
+          ls -la /dev/kvm
+          groups
+          sudo usermod -a -G kvm $USER
 
       - name: Run test installation - K8s ${{ matrix.scenario.install }}
         if: toJSON(matrix.scenario.upgrades) == '[]'
         run: |
-          docker run --rm \
-            --privileged \
-            --device /dev/kvm \
-            -v ${{ github.workspace }}:/workspace \
-            -w /workspace/test \
-            -e OS_IMAGE=${{ matrix.os }} \
-            -e KUBERNETES_VERSION=${{ matrix.scenario.install }} \
-            quay.io/cyclops-k8s/ansible-kubernetes-devcontainer:latest \
-            bash -c "
-              set -e
-              ./spin-up-test-environment.sh --os-image ${{ matrix.os }}
-              ./install.sh -v ${{ matrix.scenario.install }}
-            "
+          set -euxo pipefail
+          cd test
+          ./spin-up-test-environment.sh --os-image ${{ matrix.os }}
+          ./install.sh -v ${{ matrix.scenario.install }}
 
       - name: Run upgrade tests
         if: toJSON(matrix.scenario.upgrades) != '[]'
         run: |
+          set -euxo pipefail
           UPGRADES='${{ toJson(matrix.scenario.upgrades) }}'
           echo "Upgrades: ${UPGRADES}"
 
-          docker run --rm \
-            --privileged \
-            --device /dev/kvm \
-            -v ${{ github.workspace }}:/workspace \
-            -w /workspace/test \
-            -e OS_IMAGE=${{ matrix.os }} \
-            quay.io/cyclops-k8s/ansible-kubernetes-devcontainer:latest \
-            bash -c "
-              set -e
-              ./spin-up-test-environment.sh --os-image ${{ matrix.os }}
-              ./install.sh -v ${{ matrix.scenario.install }}
-              echo '${UPGRADES}' | jq -r '.[]' | while read version; do
-                echo \"Upgrading to Kubernetes \$version\"
-                ./upgrade.sh -v \$version
-              done
-            "
+          cd test
+          ./spin-up-test-environment.sh --os-image ${{ matrix.os }}
+          ./install.sh -v ${{ matrix.scenario.install }}
+          ./spin-up-test-environment.sh --os-image ${{ matrix.os }}
+          ./install.sh -v ${{ matrix.scenario.install }}
+          echo "Will install ${{ matrix.scenario.install }} and upgrade through: ${UPGRADES}"
+          echo '${UPGRADES}' | jq -r '.[]' | while read version; do
+            echo \"Upgrading to Kubernetes \$version\"
+            ./upgrade.sh -v \$version
+            kubectl get nodes
+          done
 
       - name: Collect logs on failure
-        if: failure()
         run: |
-          docker run --rm \
-            --privileged \
-            --device /dev/kvm \
-            -v ${{ github.workspace }}:/workspace \
-            -w /workspace/test \
-            quay.io/cyclops-k8s/ansible-kubernetes-devcontainer:latest \
-            bash -c "
-              mkdir -p /workspace/logs/${{ matrix.os }}-${{ matrix.scenario.name }}
-              cp -r .temp/*.log /workspace/logs/${{ matrix.os }}-${{ matrix.scenario.name }}/ || true
-            "
+            mkdir -p /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}
 
       - name: Upload logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: logs-${{ matrix.os }}-${{ matrix.scenario.name }}
-          path: logs/
+          path: /tmp/logs/
           retention-days: 7
