@@ -136,6 +136,8 @@ jobs:
       - name: Install Ansible Collections
         run: |
           set -euxo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+
           cat <<<EOF > /tmp/ansible-galaxy-requirements.yaml
           collections:
           - name: ansible.posix
@@ -149,6 +151,8 @@ jobs:
         if: toJSON(matrix.scenario.upgrades) == '[]'
         run: |
           set -euxo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+
           cd test
           mkdir -p .temp
 
@@ -160,6 +164,8 @@ jobs:
         if: toJSON(matrix.scenario.upgrades) != '[]'
         run: |
           set -euxo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+
           UPGRADES='${{ toJson(matrix.scenario.upgrades) }}'
           echo "Upgrades: ${UPGRADES}"
 
