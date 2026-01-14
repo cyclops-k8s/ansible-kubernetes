@@ -265,7 +265,7 @@ function wait_for_ssh() {
   local host=$1
 
   echo "Waiting for SSH on ${host}..."
-  while ! ssh "${host}" -o ConnectTimeout=1s -- exit 0
+  while ! ssh "${host}" -o ConnectTimeout=1s -- exit 0 2> /dev/null
   do
     sleep 2
     echo -n "."

@@ -122,8 +122,17 @@ jobs:
         if: toJSON(matrix.scenario.upgrades) == '[]'
         run: |
           set -euxo pipefail
+          printenv
+          echo "******************************"
+          echo "******************************"
+          echo "******************************"
+          echo "******************************"
+          echo "******************************"
+          echo "******************************"
           cd test
+          mkdir -p .temp
           ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | tee .temp/spin-up.log
+          echo "Finished spinning up test environment, now installing Kubernetes ${{ matrix.scenario.install }}"
           ./install.sh -v ${{ matrix.scenario.install }} | tee .temp/install.log
 
       - name: Run upgrade tests
@@ -134,7 +143,9 @@ jobs:
           echo "Upgrades: ${UPGRADES}"
 
           cd test
+          mkdir -p .temp
           ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | tee .temp/spin-up.log
+          echo "Finished spinning up test environment, now installing Kubernetes ${{ matrix.scenario.install }}"
           ./install.sh -v ${{ matrix.scenario.install }} | tee .temp/install.log
           echo "Will install ${{ matrix.scenario.install }} and upgrade through: ${UPGRADES}"
           echo '${UPGRADES}' | jq -r '.[]' | while read version; do
@@ -144,6 +155,7 @@ jobs:
           done
 
       - name: Collect logs on failure
+        if: failure()
         run: |
             set -euxo pipefail
             mkdir -p /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}
