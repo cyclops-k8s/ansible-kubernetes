@@ -129,18 +129,26 @@ jobs:
         if: toJSON(matrix.scenario.upgrades) == '[]'
         run: |
           set -euxo pipefail
-          printenv
-          echo "******************************"
-          echo "******************************"
-          echo "******************************"
-          echo "******************************"
-          echo "******************************"
-          echo "******************************"
           cd test
           mkdir -p .temp
-          ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | cat - | tee .temp/spin-up.log | cat -
+
+          cat << EOF > /tmp/set-blocking.py
+          import os
+          import sys
+
+          for handle in (sys.stdin, sys.stdout, sys.stderr):
+              try:
+                  fd = handle.fileno()
+              except Exception:
+                  continue
+
+              os.set_blocking(fd, True)
+          EOF
+          python3 /tmp/set-blocking.py
+
+          ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | tee .temp/spin-up.log
           echo "Finished spinning up test environment, now installing Kubernetes ${{ matrix.scenario.install }}"
-          ./install.sh -v ${{ matrix.scenario.install }} | cat - | tee .temp/install.log | cat -
+          ./install.sh -v ${{ matrix.scenario.install }} | tee .temp/install.log
 
       - name: Run upgrade tests
         if: toJSON(matrix.scenario.upgrades) != '[]'
@@ -149,15 +157,29 @@ jobs:
           UPGRADES='${{ toJson(matrix.scenario.upgrades) }}'
           echo "Upgrades: ${UPGRADES}"
 
+          cat << EOF > /tmp/set-blocking.py
+          import os
+          import sys
+
+          for handle in (sys.stdin, sys.stdout, sys.stderr):
+              try:
+                  fd = handle.fileno()
+              except Exception:
+                  continue
+
+              os.set_blocking(fd, True)
+          EOF
+          python3 /tmp/set-blocking.py
+
           cd test
           mkdir -p .temp
-          ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | cat - | tee .temp/spin-up.log | cat -
+          ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | tee .temp/spin-up.log
           echo "Finished spinning up test environment, now installing Kubernetes ${{ matrix.scenario.install }}"
-          ./install.sh -v ${{ matrix.scenario.install }} | cat - | tee .temp/install.log | cat -
+          ./install.sh -v ${{ matrix.scenario.install }} | tee .temp/install.log
           echo "Will install ${{ matrix.scenario.install }} and upgrade through: ${UPGRADES}"
           echo '${UPGRADES}' | jq -r '.[]' | while read version; do
             echo "Upgrading to Kubernetes $version"
-            ./upgrade.sh -v \$version | tee .temp/upgrade-$version.log | cat - | tee .temp/upgrade-${version}.log | cat -
+            ./upgrade.sh -v \$version | tee .temp/upgrade-$version.log
             kubectl get nodes
           done
 
