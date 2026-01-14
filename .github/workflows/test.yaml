@@ -60,12 +60,12 @@ jobs:
           sudo rm -f $(which yq) || echo "No old yq found by 'which' to remove"
           sudo apt install -y yq
 
-      - name: Check KVM availability
-        run: |
-          set -euxo pipefail
-          ls -la /dev/kvm
-          groups
-          sudo usermod -a -G kvm $USER
+      # - name: Check KVM availability
+      #   run: |
+      #     set -euxo pipefail
+      #     ls -la /dev/kvm
+      #     groups
+      #     sudo usermod -a -G kvm $USER
 
       - name: Install OpenTofu
         run: |
