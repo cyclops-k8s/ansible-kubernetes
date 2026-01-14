@@ -124,6 +124,26 @@ jobs:
           Host w2.k8s.local
               Port 2026
           EOF
+      
+      - name: Install Ansible and dependencies
+        run: |
+          set -euxo pipefail
+          apt-get install --no-install-recommends --yes pipx
+          pipx install --include-deps ansible-core
+          pipx inject --include-apps --include-deps ansible-core ansible-dev-tools ansible-lint
+          pipx inject ansible-core dnspython
+
+      - name: Install Ansible Collections
+        run: |
+          set -euxo pipefail
+          cat <<<EOF > /tmp/ansible-galaxy-requirements.yaml
+          collections:
+          - name: ansible.posix
+          - name: cloud.terraform
+          - name: community.dns
+          - name: community.general
+          EOF
+          ansible-galaxy collection install -r /tmp/ansible-galaxy-requirements.yaml
 
       - name: Run test installation - K8s ${{ matrix.scenario.install }}
         if: toJSON(matrix.scenario.upgrades) == '[]'
