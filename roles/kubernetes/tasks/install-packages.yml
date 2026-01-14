@@ -133,8 +133,6 @@
       - kubectl
       ansible.builtin.command:
         cmd: dnf versionlock add {{ item }}
-      changed_when: false
-      failed_when: false
 
   - name: Set crictl.yaml options
     ansible.builtin.command:
