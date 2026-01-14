@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       DEVCONTAINER: "1"
+      CURL_PROGRESS_METER: "off"
     timeout-minutes: 90
     strategy:
       fail-fast: false
