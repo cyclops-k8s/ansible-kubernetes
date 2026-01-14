@@ -81,9 +81,9 @@ jobs:
           sudo apt-get install -y bind9 dnsutils
 
           # Configure BIND to listen on all interfaces
-          sudo rm -rf /etc/bind/
+          sudo rm /etc/bind/*
           sudo cp .devcontainer/bind/* /etc/bind/
-          
+
           # get first physical network interface
           IFACE=$(ip -o link show | awk -F': ' '/state UP/ {print $2; exit}')
           echo "First physical network interface: ${IFACE}"
