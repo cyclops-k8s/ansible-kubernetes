@@ -75,11 +75,60 @@ jobs:
           groups
           sudo usermod -a -G kvm $USER
 
+      - name: Configure BIND and add entries for devcontainer
+        run: |
+          set -euxo pipefail
+          sudo apt-get install -y bind9 dnsutils
+
+          # Configure BIND to listen on all interfaces
+          sudo rm -rf /etc/bind/
+          sudo cp .devcontainer/bind/* /etc/bind/
+          
+          # get first physical network interface
+          IFACE=$(ip -o link show | awk -F': ' '/state UP/ {print $2; exit}')
+          echo "First physical network interface: ${IFACE}"
+
+          sudo ip a add 172.20.0.10/24 dev ${IFACE}
+          
+          sudo systemctl restart named
+
+          exit 1
+
       - name: Create ~/.ssh/devcontainer.id_rsa ssh key
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
-          ssh-keygen -t rsa -b 4096 -f ~/.ssh/devcontainer.id_rsa -N ""
+
+          # Generate a new SSH key for the devcontainer
+          ssh-keygen -t rsa -b 4096 -f ~/.ssh/devcontainer.id_rsa -N '' -C 'devcontainer'
+
+          # Add SSH config entries
+          cat << EOF >> ~/.ssh/config
+          Host *.k8s.local
+              HostName localhost
+              IdentityFile ~/.ssh/devcontainer.id_rsa
+              StrictHostKeyChecking no
+              User ansible
+              UserKnownHostsFile /dev/null
+
+          Host px.k8s.local
+              Port 2021
+
+          Host cp1.k8s.local
+              Port 2022
+
+          Host cp2.k8s.local
+              Port 2023
+
+          Host cp3.k8s.local
+              Port 2024
+
+          Host w1.k8s.local
+              Port 2025
+
+          Host w2.k8s.local
+              Port 2026
+          EOF
 
       - name: Run test installation - K8s ${{ matrix.scenario.install }}
         if: toJSON(matrix.scenario.upgrades) == '[]'
