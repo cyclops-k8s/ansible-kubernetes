@@ -53,6 +53,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils cloud-image-utils
 
+          yq --version
+          yq --help
+
+          echo "******************************"
+          echo "******************************"
+          echo "******************************"
+          echo "******************************"
+          echo "******************************"
+          echo "******************************"
+          sudo apt install -y yq
+
+          yq --version
+          yq --help
+
       - name: Check KVM availability
         run: |
           ls -la /dev/kvm
@@ -69,8 +83,8 @@ jobs:
         run: |
           set -euxo pipefail
           cd test
-          ./spin-up-test-environment.sh --os-image ${{ matrix.os }}
-          ./install.sh -v ${{ matrix.scenario.install }}
+          ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | tee .test/spin-up.log
+          ./install.sh -v ${{ matrix.scenario.install }} | tee .test/install.log
 
       - name: Run upgrade tests
         if: toJSON(matrix.scenario.upgrades) != '[]'
@@ -80,20 +94,20 @@ jobs:
           echo "Upgrades: ${UPGRADES}"
 
           cd test
-          ./spin-up-test-environment.sh --os-image ${{ matrix.os }}
-          ./install.sh -v ${{ matrix.scenario.install }}
-          ./spin-up-test-environment.sh --os-image ${{ matrix.os }}
-          ./install.sh -v ${{ matrix.scenario.install }}
+          ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | tee .test/spin-up.log
+          ./install.sh -v ${{ matrix.scenario.install }} | tee .test/install.log
           echo "Will install ${{ matrix.scenario.install }} and upgrade through: ${UPGRADES}"
           echo '${UPGRADES}' | jq -r '.[]' | while read version; do
-            echo \"Upgrading to Kubernetes \$version\"
-            ./upgrade.sh -v \$version
+            echo "Upgrading to Kubernetes $version"
+            ./upgrade.sh -v \$version | tee .test/upgrade-$version.log
             kubectl get nodes
           done
 
       - name: Collect logs on failure
         run: |
             mkdir -p /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}
+            cp test/.test/*.std* /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}/ || true
+            cp test/.test/*.log /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}/ || true
 
       - name: Upload logs
         if: failure()
