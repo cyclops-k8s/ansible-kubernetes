@@ -47,21 +47,22 @@ jobs:
 
       - name: Enable KVM and cloud-tools
         run: |
+          set -euxo pipefail
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
           sudo apt-get update
           sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils cloud-image-utils
 
-          yq --version
-          yq --help
-
           echo "******************************"
           echo "******************************"
           echo "******************************"
           echo "******************************"
           echo "******************************"
           echo "******************************"
+          
+          echo "Removing old YQ"
+          sudo rm -f $(which yq) || echo "No old yq found by 'which' to remove"
           sudo apt install -y yq
 
           yq --version
@@ -69,12 +70,14 @@ jobs:
 
       - name: Check KVM availability
         run: |
+          set -euxo pipefail
           ls -la /dev/kvm
           groups
           sudo usermod -a -G kvm $USER
 
       - name: Create ~/.ssh/devcontainer.id_rsa ssh key
         run: |
+          set -euxo pipefail
           mkdir -p ~/.ssh
           ssh-keygen -t rsa -b 4096 -f ~/.ssh/devcontainer.id_rsa -N ""
 
@@ -83,8 +86,8 @@ jobs:
         run: |
           set -euxo pipefail
           cd test
-          ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | tee .test/spin-up.log
-          ./install.sh -v ${{ matrix.scenario.install }} | tee .test/install.log
+          ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | tee .temp/spin-up.log
+          ./install.sh -v ${{ matrix.scenario.install }} | tee .temp/install.log
 
       - name: Run upgrade tests
         if: toJSON(matrix.scenario.upgrades) != '[]'
@@ -94,20 +97,21 @@ jobs:
           echo "Upgrades: ${UPGRADES}"
 
           cd test
-          ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | tee .test/spin-up.log
-          ./install.sh -v ${{ matrix.scenario.install }} | tee .test/install.log
+          ./spin-up-test-environment.sh --os-image ${{ matrix.os }} | tee .temp/spin-up.log
+          ./install.sh -v ${{ matrix.scenario.install }} | tee .temp/install.log
           echo "Will install ${{ matrix.scenario.install }} and upgrade through: ${UPGRADES}"
           echo '${UPGRADES}' | jq -r '.[]' | while read version; do
             echo "Upgrading to Kubernetes $version"
-            ./upgrade.sh -v \$version | tee .test/upgrade-$version.log
+            ./upgrade.sh -v \$version | tee .temp/upgrade-$version.log
             kubectl get nodes
           done
 
       - name: Collect logs on failure
         run: |
+            set -euxo pipefail
             mkdir -p /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}
-            cp test/.test/*.std* /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}/ || true
-            cp test/.test/*.log /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}/ || true
+            cp test/.temp/*.std* /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}/ || true
+            cp test/.temp/*.log /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}/ || true
 
       - name: Upload logs
         if: failure()
