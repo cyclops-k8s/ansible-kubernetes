@@ -38,7 +38,7 @@
       replace: "SystemdCgroup = true"
 
   - name: Add containerd default credentials for containerd lt 2.0.0
-    loop: "{{ containerd_credentials }}"
+    loop: "{{ kubernetes_containerd_credentials }}"
     loop_control:
       label: "{{ containerd_credential.registry }}"
       loop_var: containerd_credential
@@ -57,7 +57,7 @@
       validate: containerd --config "%s" config dump
 
   - name: Add containerd default credentials for containerd ge 2.0.0 and le 2.2.0
-    loop: "{{ containerd_credentials }}"
+    loop: "{{ kubernetes_containerd_credentials }}"
     loop_control:
       label: "{{ containerd_credential.registry }}"
       loop_var: containerd_credential
@@ -80,12 +80,12 @@
   # Adds the mirror configurations for containerd version lt 2.2.0
   # https://github.com/containerd/containerd/blob/main/docs/cri/registry.md
   - name: Add registry mirrors for containerd < 2.0.0
-    loop: "{{ containerd_registry_mirrors }}"
+    loop: "{{ kubernetes_containerd_registry_mirrors }}"
     loop_control:
       label: "{{ registry_mirror.registry | default('') }}"
       loop_var: registry_mirror
     when:
-    - containerd_registry_mirrors is defined
+    - (kubernetes_containerd_registry_mirrors | default([])) | length > 0
     - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.2.0", "lt")) or
       ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.2.0", "lt"))
     ansible.builtin.blockinfile:
@@ -99,12 +99,12 @@
 
   # https://github.com/containerd/containerd/blob/main/docs/hosts.md
   - name: Add registry mirrors for containerd gt 2.2.0
-    loop: "{{ containerd_registry_mirrors }}"
+    loop: "{{ kubernetes_containerd_registry_mirrors }}"
     loop_control:
       label: "{{ registry_mirror.registry | default('') }}"
       loop_var: registry_mirror
     when:
-    - containerd_registry_mirrors is defined
+    - (kubernetes_containerd_registry_mirrors | default([])) | length > 0
     - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.2.0", "ge")) or
       ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.2.0", "ge"))
     ansible.builtin.include_tasks:
