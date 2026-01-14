@@ -142,7 +142,7 @@ function create_vm() {
     # Qemu needs permissions to write to the UEFI vars file
     chmod o+w "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
   fi
-
+  ENABLE_KVM="$([ -e /dev/kvm ] && echo "-enable-kvm" || echo "no-kvm")"
   # shellcheck disable=SC2086
   # Create/start the virtual machine
   sudo -b qemu-system-x86_64 \
@@ -151,7 +151,7 @@ function create_vm() {
       -cpu host \
       ${QEMU_BOOT_ARGS} \
       -drive file="${TEMP_DIR}/${name}.img" \
-      -enable-kvm \
+      ${ENABLE_KVM} \
       -device virtio-net-pci,netdev=net0,mac="${MAC0}" \
       -device virtio-net-pci,netdev=net1,mac="${MAC1}" \
       -m "${mem_size}G" \
