@@ -89,7 +89,7 @@ jobs:
 
           sudo ip a add 172.20.0.10/24 dev lo #${IFACE}
           
-          nohup named -u bind -4
+          nohup sudo named -4
           echo "nameserver 172.20.0.10" | sudo tee /etc/resolv.conf
 
       - name: Test BIND resolution
