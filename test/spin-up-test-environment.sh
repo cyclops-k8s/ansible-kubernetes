@@ -142,7 +142,7 @@ function create_vm() {
     # Qemu needs permissions to write to the UEFI vars file
     chmod o+w "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
   fi
-  ENABLE_KVM="$([ -e /dev/kvm ] && echo "-enable-kvm" || echo "no-kvm")"
+  ENABLE_KVM="$([ -e /dev/kvm ] && echo "-enable-kvm" || echo "")"
   # shellcheck disable=SC2086
   # Create/start the virtual machine
   sudo -b qemu-system-x86_64 \
