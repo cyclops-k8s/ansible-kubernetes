@@ -51,13 +51,13 @@
 
 - name: Install Helm
   changed_when: true
+  environment:
+    HELM_INSTALL_DIR: /usr/bin
   when: kubernetes_install_helm
   ansible.builtin.shell:
     cmd: /tmp/install_helm.sh
     creates: /usr/bin/helm
     executable: /bin/bash
-  environment:
-    HELM_INSTALL_DIR: /usr/bin
 
 - name: Remove Helm install script
   when: kubernetes_install_helm
