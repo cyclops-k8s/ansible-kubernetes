@@ -46,22 +46,22 @@ jobs:
       - name: Pull devcontainer image
         run: docker pull quay.io/cyclops-k8s/ansible-kubernetes-devcontainer:latest
 
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-          sudo apt-get update
-          sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
+      # - name: Enable KVM
+      #   run: |
+      #     echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+      #     sudo udevadm control --reload-rules
+      #     sudo udevadm trigger --name-match=kvm
+      #     sudo apt-get update
+      #     sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
 
-      - name: Check KVM availability
-        run: |
-          ls -la /dev/kvm
-          groups
-          sudo usermod -a -G kvm $USER
+      # - name: Check KVM availability
+      #   run: |
+      #     ls -la /dev/kvm
+      #     groups
+      #     sudo usermod -a -G kvm $USER
 
       - name: Run test installation - K8s ${{ matrix.scenario.install }}
-        if: matrix.scenario.upgrades == '[]'
+        if: toJSON(matrix.scenario.upgrades) == '[]'
         run: |
           docker run --rm \
             --privileged \
@@ -78,10 +78,10 @@ jobs:
             "
 
       - name: Run upgrade tests
-        if: matrix.scenario.upgrades != '[]'
+        if: toJSON(matrix.scenario.upgrades) != '[]'
         run: |
           UPGRADES='${{ toJson(matrix.scenario.upgrades) }}'
-          echo "Upgrades: \$UPGRADES"
+          echo "Upgrades: ${UPGRADES}"
 
           docker run --rm \
             --privileged \
@@ -92,10 +92,10 @@ jobs:
             quay.io/cyclops-k8s/ansible-kubernetes-devcontainer:latest \
             bash -c "
               set -e
-              echo '\$UPGRADES' | jq -r '.[]' | while read version; do
+              ./spin-up-test-environment.sh --os-image ${{ matrix.os }}
+              ./install.sh -v ${{ matrix.scenario.install }}
+              echo '${UPGRADES}' | jq -r '.[]' | while read version; do
                 echo \"Upgrading to Kubernetes \$version\"
-                ./spin-up-test-environment.sh --os-image ${{ matrix.os }}
-                ./install.sh -v ${{ matrix.scenario.install }}
                 ./upgrade.sh -v \$version
               done
             "
@@ -108,7 +108,7 @@ jobs:
             --device /dev/kvm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace/test \
-            devcontainer \
+            quay.io/cyclops-k8s/ansible-kubernetes-devcontainer:latest \
             bash -c "
               mkdir -p /workspace/logs/${{ matrix.os }}-${{ matrix.scenario.name }}
               cp -r .temp/*.log /workspace/logs/${{ matrix.os }}-${{ matrix.scenario.name }}/ || true
