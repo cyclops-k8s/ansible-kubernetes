@@ -87,7 +87,7 @@ jobs:
           IFACE=$(ip -o link show | awk -F': ' '/state UP/ {print $2; exit}')
           echo "First physical network interface: ${IFACE}"
 
-          sudo ip a add 172.20.0.10/24 dev ${IFACE}
+          sudo ip a add 172.20.0.10/24 dev lo #${IFACE}
           
           sudo systemctl restart named
           echo "nameserver 172.20.0.10" | sudo tee /etc/resolv.conf
