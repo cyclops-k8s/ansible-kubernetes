@@ -54,19 +54,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils cloud-image-utils
 
-          echo "******************************"
-          echo "******************************"
-          echo "******************************"
-          echo "******************************"
-          echo "******************************"
-          echo "******************************"
-          
           echo "Removing old YQ"
           sudo rm -f $(which yq) || echo "No old yq found by 'which' to remove"
           sudo apt install -y yq
-
-          yq --version
-          yq --help
 
       - name: Check KVM availability
         run: |
@@ -91,8 +81,6 @@ jobs:
           sudo ip a add 172.20.0.10/24 dev ${IFACE}
           
           sudo systemctl restart named
-
-          exit 1
 
       - name: Create ~/.ssh/devcontainer.id_rsa ssh key
         run: |
