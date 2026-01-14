@@ -89,8 +89,14 @@ jobs:
 
           sudo ip a add 172.20.0.10/24 dev lo #${IFACE}
           
-          sudo systemctl restart named
+          nohup named -u bind -4
           echo "nameserver 172.20.0.10" | sudo tee /etc/resolv.conf
+
+      - name: Test BIND resolution
+        run: |
+          set -euxo pipefail
+          dig px.k8s.local @172.20.0.10
+          exit 1
 
       - name: Create ~/.ssh/devcontainer.id_rsa ssh key
         run: |
