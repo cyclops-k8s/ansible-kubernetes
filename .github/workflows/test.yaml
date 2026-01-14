@@ -12,7 +12,8 @@ on:
 jobs:
   test:
     name: "Test ${{ matrix.os }} - K8s ${{ matrix.scenario.name }}"
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: wc-cyclops-k8s-amd64
     env:
       DEVCONTAINER: "1"
       CURL_PROGRESS_METER: "off"
