@@ -142,20 +142,31 @@ function create_vm() {
     # Qemu needs permissions to write to the UEFI vars file
     chmod o+w "${TEMP_DIR}/${name}.ovmf_vars_4m.fd"
   fi
-
+  if [ -e /dev/kvm ]
+  then
+    echo "KVM acceleration is available."
+    ACCELERATOR="accel=kvm"
+    CPU='host'
+    ENABLE_KVM="-enable-kvm"
+  else
+    echo "KVM acceleration is NOT available. Performance may be slow."
+    ACCELERATOR="accel=tcg"
+    CPU='max'
+    ENABLE_KVM=""
+  fi
   # shellcheck disable=SC2086
   # Create/start the virtual machine
   sudo -b qemu-system-x86_64 \
       -boot menu=off \
       -cdrom "${TEMP_DIR}/${name}.cloud-init.iso" \
-      -cpu host \
+      -cpu "${CPU}" \
       ${QEMU_BOOT_ARGS} \
       -drive file="${TEMP_DIR}/${name}.img" \
-      -enable-kvm \
+      ${ENABLE_KVM} \
       -device virtio-net-pci,netdev=net0,mac="${MAC0}" \
       -device virtio-net-pci,netdev=net1,mac="${MAC1}" \
       -m "${mem_size}G" \
-      -machine accel=kvm,type=q35 \
+      -machine ${ACCELERATOR},type=q35 \
       -nographic \
       -netdev user,id=net0,hostfwd="tcp::${ssh_port}-:22${additional_forwarding}" \
       -netdev socket,id=net1,mcast=230.0.0.1:1234 \
