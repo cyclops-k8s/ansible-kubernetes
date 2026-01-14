@@ -128,7 +128,7 @@ jobs:
       - name: Install Ansible and dependencies
         run: |
           set -euxo pipefail
-          apt-get install --no-install-recommends --yes pipx
+          sudo apt-get install --no-install-recommends --yes pipx
           pipx install --include-deps ansible-core
           pipx inject --include-apps --include-deps ansible-core ansible-dev-tools ansible-lint
           pipx inject ansible-core dnspython
