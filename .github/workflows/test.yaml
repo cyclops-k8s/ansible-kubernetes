@@ -45,32 +45,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # - name: Enable KVM and cloud-tools
-      #   run: |
-      #     set -euxo pipefail
-      #     echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-      #     sudo udevadm control --reload-rules
-      #     sudo udevadm trigger --name-match=kvm
-      #     sudo apt-get update
-      #     sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils cloud-image-utils
+      - name: Enable KVM and cloud-tools
+        run: |
+          set -euxo pipefail
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo apt-get update
+          sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils cloud-image-utils
 
-      #     echo "Removing old YQ"
-      #     sudo rm -f $(which yq) || echo "No old yq found by 'which' to remove"
-      #     sudo apt install -y yq
+          echo "Removing old YQ"
+          sudo rm -f $(which yq) || echo "No old yq found by 'which' to remove"
+          sudo apt install -y yq
 
-      # - name: Check KVM availability
-      #   run: |
-      #     set -euxo pipefail
-      #     ls -la /dev/kvm
-      #     groups
-      #     sudo usermod -a -G kvm $USER
+      - name: Check KVM availability
+        run: |
+          set -euxo pipefail
+          ls -la /dev/kvm
+          groups
+          sudo usermod -a -G kvm $USER
 
-      # - name: Install OpenTofu
-      #   run: |
-      #     set -euxo pipefail
-      #     curl -fsSL https://get.opentofu.org/install-opentofu.sh -o /tmp/install-opentofu.sh
-      #     chmod +x /tmp/install-opentofu.sh
-      #     /tmp/install-opentofu.sh --install-method deb
+      - name: Install OpenTofu
+        run: |
+          set -euxo pipefail
+          curl -fsSL https://get.opentofu.org/install-opentofu.sh -o /tmp/install-opentofu.sh
+          chmod +x /tmp/install-opentofu.sh
+          /tmp/install-opentofu.sh --install-method deb
 
       - name: Configure BIND and IP's for VM's
         run: |
