@@ -65,6 +65,13 @@ jobs:
           groups
           sudo usermod -a -G kvm $USER
 
+      - name: Install OpenTofu
+        run: |
+          set -euxo pipefail
+          curl -fsSL https://get.opentofu.org/install-opentofu.sh -o /tmp/install-opentofu.sh
+          chmod +x /tmp/install-opentofu.sh
+          /tmp/install-opentofu.sh --install-method deb
+
       - name: Configure BIND and add entries for devcontainer
         run: |
           set -euxo pipefail
@@ -159,8 +166,8 @@ jobs:
         run: |
             set -euxo pipefail
             mkdir -p /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}
-            cp test/.temp/*.std* /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}/ || true
-            cp test/.temp/*.log /tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}/ || true
+            cp test/.temp/*.std* "/tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}"/ || true
+            cp test/.temp/*.log "/tmp/logs/${{ matrix.os }}-${{ matrix.scenario.name }}"/ || true
 
       - name: Upload logs
         if: failure()
