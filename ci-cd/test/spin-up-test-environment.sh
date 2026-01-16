@@ -121,6 +121,6 @@ for HOSTNAME in ${WORKER_NODE_HOSTNAMES}; do
 done
 
 # execute the post-init-playbook
-ansible-playbook -i inventory.yaml -v tofu/vars.yaml post-init-playbook/playbook.yaml
+ansible-playbook -i inventory.yaml -i tofu/vars.yaml post-init-playbook/playbook.yaml
 
 echo "VM Password is '${PASSWORD}'"
