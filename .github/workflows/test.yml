@@ -35,6 +35,8 @@ jobs:
     runs-on:
       group: Default
     timeout-minutes: 90
+    env:
+      PATH: ~/.local/bin:$PATH
     # env:
     #   PIPX_HOME: /opt/pipx
     #   PIPX_BIN_DIR: /usr/local/bin
@@ -55,6 +57,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Install dependencies
         run: |
           # Update package list
@@ -69,7 +74,6 @@ jobs:
 
           # Inject dnspython into Ansible virtual environment
           pipx inject ansible dnspython
-          export PATH="~/.local/bin:$PATH"
 
           # Install Ansible collections from requirements.yaml
           ansible-galaxy collection install -r requirements.yaml
