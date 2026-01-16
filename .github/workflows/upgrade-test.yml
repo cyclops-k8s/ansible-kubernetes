@@ -236,15 +236,16 @@ jobs:
 
           cd tofu
           TOFU_OUTPUT=$(tofu output -json) || true
+          echo "${TOFU_OUTPUT}" > /tmp/upgrade-logs-${{ github.run_number }}/tofu-output.json 2>&1 || true
 
           if [ -n "${TOFU_OUTPUT}" ]; then
             ALL_HOSTS=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value | (.proxy.hostname, .control_planes[].hostname, .workers[].hostname)' 2>/dev/null)
 
             for host in ${ALL_HOSTS}; do
               echo "Collecting logs from ${host}..."
-              ssh ubuntu@${host} "sudo journalctl -u kubelet -n 1000" > /tmp/upgrade-logs-${{ github.run_number }}/${host}-kubelet.log 2>&1 || true
-              ssh ubuntu@${host} "sudo journalctl -u containerd -n 500" > /tmp/upgrade-logs-${{ github.run_number }}/${host}-containerd.log 2>&1 || true
-              ssh ubuntu@${host} "sudo kubeadm version" > /tmp/upgrade-logs-${{ github.run_number }}/${host}-kubeadm-version.log 2>&1 || true
+              ssh ansible@${host} -i "~/.ssh/gh-${GITHUB_RUN_NUMBER:--vm}.pem" "sudo journalctl -u kubelet -n 1000" > /tmp/upgrade-logs-${{ github.run_number }}/${host}-kubelet.log 2>&1 || true
+              ssh ansible@${host} -i "~/.ssh/gh-${GITHUB_RUN_NUMBER:--vm}.pem" "sudo journalctl -u containerd -n 500" > /tmp/upgrade-logs-${{ github.run_number }}/${host}-containerd.log 2>&1 || true
+              ssh ansible@${host} -i "~/.ssh/gh-${GITHUB_RUN_NUMBER:--vm}.pem" "sudo kubeadm version" > /tmp/upgrade-logs-${{ github.run_number }}/${host}-kubeadm-version.log 2>&1 || true
             done
           fi
 

@@ -185,6 +185,14 @@ jobs:
           # Get VM information
           cd tofu
           TOFU_OUTPUT=$(tofu output -json) || true
+          echo "${TOFU_OUTPUT}" > /tmp/test-logs-${{ github.run_number }}/tofu-output.json 2>&1 || true
+          machine_names_file="/tmp/test-logs-${{ github.run_number }}/machine-names.txt"
+          echo "${TOFU_OUTPUT}" |
+            jq -r ".information.value | \
+                    \"Proxy: \" + .proxy.hostname, \
+                    \"Control Planes: \" + (.control_planes | map(.hostname) | join(\", \")), \
+                    \"Workers: \" + (.workers | map(.hostname) | join(\", \")), \
+                    \"VM_Password: \" + .vm_password" || true | tee "${machine_names_file}"
 
           if [ -n "${TOFU_OUTPUT}" ]; then
             # Collect logs from all VMs
@@ -192,8 +200,9 @@ jobs:
 
             for host in ${ALL_HOSTS}; do
               echo "Collecting logs from ${host}..."
-              ssh ubuntu@${host} "sudo journalctl -u kubelet -n 500" > /tmp/test-logs-${{ github.run_number }}/${host}-kubelet.log 2>&1 || true
-              ssh ubuntu@${host} "sudo journalctl -u containerd -n 500" > /tmp/test-logs-${{ github.run_number }}/${host}-containerd.log 2>&1 || true
+              ssh ansible@${host} -i "~/.ssh/gh-${{ github.run_number }}.pem" "sudo journalctl -u kubelet -n 1000" > /tmp/test-logs-${{ github.run_number }}/${host}-kubelet.log 2>&1 || true
+              ssh ansible@${host} -i "~/.ssh/gh-${{ github.run_number }}.pem" "sudo journalctl -u containerd -n 500" > /tmp/test-logs-${{ github.run_number }}/${host}-containerd.log 2>&1 || true
+              ssh ansible@${host} -i "~/.ssh/gh-${{ github.run_number }}.pem" "sudo kubeadm version" > /tmp/test-logs-${{ github.run_number }}/${host}-kubeadm-version.log 2>&1 || true
             done
           fi
 
