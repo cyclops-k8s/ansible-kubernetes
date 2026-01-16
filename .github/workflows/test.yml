@@ -1,0 +1,232 @@
+name: Kubernetes Cluster Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      kubernetes_version:
+        description: 'Kubernetes version to test (e.g., 1.35)'
+        required: false
+        type: string
+      os_image:
+        description: 'OS image to test'
+        required: false
+        type: choice
+        options:
+          - ubuntu-24.04
+          - ubuntu-25.10
+          - centos9
+          - centos10
+
+env:
+  # Set the working directory for all scripts
+  WORKING_DIR: ci-cd/test
+
+jobs:
+  test-cluster:
+    name: Test K8s ${{ matrix.kubernetes_version }} on ${{ matrix.os_image }}
+    runs-on: self-hosted
+    timeout-minutes: 90
+    env:
+      PIPX_HOME: /opt/pipx
+      PIPX_BIN_DIR: /usr/local/bin
+    strategy:
+      fail-fast: false
+      matrix:
+        kubernetes_version:
+          - "1.33"
+          - "1.34"
+          - "1.35"
+        os_image:
+          - ubuntu-24.04
+          - ubuntu-25.10
+          - centos9
+          - centos10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          # Update package list
+          sudo apt-get update
+
+          # Install pipx for Ansible installation
+          sudo apt-get install -y pipx python3-pip python3-venv
+
+          # Install Ansible using pipx
+          pipx install --include-deps ansible
+          pipx ensurepath
+
+          # Inject dnspython into Ansible virtual environment
+          pipx inject ansible dnspython
+
+          # Install Ansible collections from requirements.yaml
+          ansible-galaxy collection install -r requirements.yaml
+
+          # Install OpenTofu
+          if ! command -v tofu &> /dev/null; then
+            echo "Installing OpenTofu..."
+            curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh | sudo bash
+          fi
+
+          # Install kubectl
+          if ! command -v kubectl &> /dev/null; then
+            echo "Installing kubectl..."
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+            rm kubectl
+          fi
+
+          # Install jq for JSON parsing
+          sudo apt-get install -y jq
+
+          # Verify installations
+          echo "Verifying installations..."
+          ansible --version
+          tofu --version
+          kubectl version --client
+          jq --version
+          python3 -c "import dns.resolver; print('dnspython OK')"
+
+      - name: Spin up test environment
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+
+      - name: Install Kubernetes cluster
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          ./install.sh -v ${{ matrix.kubernetes_version }}
+
+      - name: Verify cluster health
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          # # Get kubeconfig from the first control plane
+          # cd tofu
+          # TOFU_OUTPUT=$(tofu output -json)
+          # CP1_HOST=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.control_planes[0].hostname')
+
+          # # Copy kubeconfig
+          # ssh ubuntu@${CP1_HOST} "sudo cat /etc/kubernetes/admin.conf" > /tmp/kubeconfig-${{ github.run_number }}
+          # export KUBECONFIG=/tmp/kubeconfig-${{ github.run_number }}
+
+          # # Wait for all nodes to be ready
+          echo "Waiting for all nodes to be ready..."
+          kubectl wait --for=condition=Ready nodes --all --timeout=600s
+
+          # Verify node count
+          EXPECTED_NODES=6  # 3 control planes + 3 workers
+          ACTUAL_NODES=$(kubectl get nodes --no-headers | wc -l)
+
+          if [ "${ACTUAL_NODES}" -lt 6 ]; then  # At minimum 6 nodes (excluding proxy if not joined)
+            echo "ERROR: Expected at least 6 nodes, found ${ACTUAL_NODES}"
+            kubectl get nodes
+            exit 1
+          fi
+
+          # Verify all system pods are running
+          echo "Checking system pods..."
+          kubectl get pods -A
+
+          # Check for any pods in error state
+          ERROR_PODS=$(kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded --no-headers 2>/dev/null | wc -l)
+          if [ "${ERROR_PODS}" -gt 0 ]; then
+            echo "WARNING: Found ${ERROR_PODS} pods not in Running/Succeeded state"
+            kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded
+          fi
+
+          echo "Cluster verification complete!"
+          kubectl get nodes -o wide
+
+      - name: Run smoke tests
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          export KUBECONFIG=/tmp/kubeconfig-${{ github.run_number }}
+
+          # Create a test deployment
+          kubectl create deployment nginx --image=quay.io/prometheus/busybox:latest --replicas=2 -- sh -c "while true; do sleep 3600; done"
+          kubectl rollout status deployment/nginx --timeout=300s
+
+          # Verify deployment
+          READY_REPLICAS=$(kubectl get deployment nginx -o jsonpath='{.status.readyReplicas}')
+          if [ "${READY_REPLICAS}" != "2" ]; then
+            echo "ERROR: Expected 2 ready replicas, found ${READY_REPLICAS}"
+            kubectl describe deployment nginx
+            exit 1
+          fi
+
+          # Clean up test deployment
+          kubectl delete deployment nginx
+
+          echo "Smoke tests passed!"
+
+      - name: Collect logs on failure
+        if: failure()
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          mkdir -p /tmp/test-logs-${{ github.run_number }}
+
+          # Get VM information
+          cd tofu
+          TOFU_OUTPUT=$(tofu output -json) || true
+
+          if [ -n "${TOFU_OUTPUT}" ]; then
+            # Collect logs from all VMs
+            ALL_HOSTS=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value | (.proxy.hostname, .control_planes[].hostname, .workers[].hostname)' 2>/dev/null)
+
+            for host in ${ALL_HOSTS}; do
+              echo "Collecting logs from ${host}..."
+              ssh ubuntu@${host} "sudo journalctl -u kubelet -n 500" > /tmp/test-logs-${{ github.run_number }}/${host}-kubelet.log 2>&1 || true
+              ssh ubuntu@${host} "sudo journalctl -u containerd -n 500" > /tmp/test-logs-${{ github.run_number }}/${host}-containerd.log 2>&1 || true
+            done
+          fi
+
+          # Collect Kubernetes state
+          if [ -f "/tmp/kubeconfig-${{ github.run_number }}" ]; then
+            export KUBECONFIG=/tmp/kubeconfig-${{ github.run_number }}
+            kubectl get all -A > /tmp/test-logs-${{ github.run_number }}/kubectl-get-all.log 2>&1 || true
+            kubectl get nodes -o wide > /tmp/test-logs-${{ github.run_number }}/kubectl-nodes.log 2>&1 || true
+            kubectl get events -A --sort-by='.lastTimestamp' > /tmp/test-logs-${{ github.run_number }}/kubectl-events.log 2>&1 || true
+          fi
+
+      - name: Upload logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-k8s-${{ matrix.kubernetes_version }}-${{ matrix.os_image }}-${{ github.run_number }}
+          path: /tmp/test-logs-${{ github.run_number }}/
+          retention-days: 7
+
+      - name: Cleanup test environment
+        if: always()
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          ./shutdown-test-environment.sh || true
+          rm -f /tmp/kubeconfig-${{ github.run_number }} || true
+          rm -rf /tmp/test-logs-${{ github.run_number }} || true
+
+  # Summary job that depends on all test jobs
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: test-cluster
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.test-cluster.result }}" != "success" ]; then
+            echo "::error::Some tests failed. Check the test-cluster job for details."
+            exit 1
+          fi
+          echo "All tests passed successfully!"

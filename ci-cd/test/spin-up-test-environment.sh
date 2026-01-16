@@ -127,4 +127,7 @@ for HOSTNAME in ${WORKER_NODE_HOSTNAMES}; do
   echo "Worker Node VM: ssh ubuntu@${HOSTNAME}"
 done
 
-echo "VM Password is '
+# execute the post-init-playbook
+ansible-playbook -i inventory.yaml -v tofu/vars.yaml post-init-playbook/playbook.yaml
+
+echo "VM Password is '${PASSWORD}'"
