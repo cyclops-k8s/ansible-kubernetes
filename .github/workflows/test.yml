@@ -33,7 +33,7 @@ jobs:
   test-cluster:
     name: Test K8s ${{ matrix.kubernetes_version }} on ${{ matrix.os_image }}
     runs-on:
-      group: cyclops-k8s-runners
+      group: Default
     timeout-minutes: 90
     env:
       PIPX_HOME: /opt/pipx
