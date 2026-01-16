@@ -4,15 +4,16 @@ resource "kubernetes_secret_v1" "cloud-init" {
     namespace = var.namespace_name
   }
   data = {
-    "networkdata" = templatefile(var.networkdata_filename, {
+    networkdata = templatefile(var.networkdata_filename, {
       hostname       = var.hostname
       authorized_key = var.authorized_key
       password       = var.password
     })
-    "userdata" = templatefile(var.userdata_filename, {
+    userdata = templatefile(var.userdata_filename, {
       hostname       = var.hostname
       authorized_key = var.authorized_key
       password       = var.password
     })
+    vm_password = var.password_plain
   }
 }

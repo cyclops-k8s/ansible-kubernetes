@@ -61,6 +61,11 @@ variable "password" {
   sensitive = true
 }
 
+variable "password_plain" {
+  type        = string
+  description = "The plain text password for the virtual machine"
+}
+
 variable "userdata_filename" {
   type        = string
   description = "Absolute path to the userdata file"
