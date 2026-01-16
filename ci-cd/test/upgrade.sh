@@ -64,7 +64,10 @@ fi
 
 cd tofu
 tofu init
-tofu apply -auto-approve "${TFVAR_FILES[@]}"
+tofu apply \
+  -auto-approve \
+  -var-file="vars.tfvars" \
+  "${TFVAR_FILES[@]}"
 
 echo "Running the ansible playbook to upgrade kubernetes"
 ansible-playbook -i "inventory.yaml" -i tofu/vars.yaml ../../upgrade.yaml

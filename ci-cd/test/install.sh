@@ -61,7 +61,10 @@ else
 fi
 
 cd tofu
-tofu apply -auto-approve "${TFVAR_FILES[@]}"
+tofu apply -auto-approve \
+  -var-file="vars.tfvars" \
+  "${TFVAR_FILES[@]}"
+
 cd ..
 
 echo "Running the ansible playbook to install kubernetes"
