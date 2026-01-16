@@ -67,33 +67,26 @@ function get_options() {
   done
 
   # Make sure the necessary commands exist
-  for cmd in tofu
-  do
-    if ! which "${cmd}" > /dev/null 2>&1
-    then
-      echo "Please install: ${cmd}"
-      exit 1
-    fi
-  done
+  if ! which "tofu" > /dev/null 2>&1
+  then
+    echo "Please install: tofu"
+    exit 1
+  fi
 
   # Download cloud image if not already present
   OS_IMAGE=${OS_IMAGE:-ubuntu-24.04}
   if [ "${OS_IMAGE}" = "centos9" ]
   then
     IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2}"
-    USE_UEFI=false
   elif [ "${OS_IMAGE}" = "centos10" ]
   then
     IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2}"
-    USE_UEFI=false
   elif [ "${OS_IMAGE}" = "ubuntu-24.04" ]
   then
     IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/noble-server-cloudimg-amd64.img}"
-    USE_UEFI=true
   elif [ "${OS_IMAGE}" = "ubuntu-25.10" ]
   then
     IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/questing-server-cloudimg-amd64.img}"
-    USE_UEFI=true
   else
     echo "Unsupported os-image: ${OS_IMAGE}"
     exit 1
