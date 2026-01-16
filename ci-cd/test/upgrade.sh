@@ -51,27 +51,6 @@ do
   TFVAR_FILES+=("-var-file=${arg}")
 done
 
-if [ -z "${DEVCONTAINER}" ]
-then
-    echo "This script is intended to only be run inside a devcontainer."
-    exit 1
-fi
-
-if ! pgrep -f "^qemu-system-x86_64" > /dev/null
-then
-  echo "VMs are not running, please run spin-up-test-environment.sh first."
-  exit 1
-fi
-
-which terraform && CMD=terraform
-which tofu && CMD=tofu
-
-if [ "${CMD}" == "" ]
-then
-  echo "terraform or tofu needs to be installed"
-  exit 1
-fi
-
 echo "VMs are running."
 
 echo "Running Terraform to generate inventory and configuration"
@@ -83,8 +62,9 @@ else
   export TF_VAR_kubernetes_version=${KUBERNETES_VERSION}
 fi
 
-${CMD} init
-${CMD} apply -auto-approve "${TFVAR_FILES[@]}"
+cd tofu
+tofu init
+tofu apply -auto-approve "${TFVAR_FILES[@]}"
 
 echo "Running the ansible playbook to upgrade kubernetes"
 ansible-playbook -i "inventory.yaml" -i tofu/vars.yaml ../../upgrade.yaml
