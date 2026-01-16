@@ -330,7 +330,8 @@ jobs:
           # Install OpenTofu
           if ! command -v tofu &> /dev/null; then
             echo "Installing OpenTofu..."
-            curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh | sudo bash
+            curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh > /tmp/install-opentofu.sh
+            sudo bash /tmp/install-opentofu.sh --install-method deb
           fi
 
           # Install kubectl
@@ -351,37 +352,12 @@ jobs:
           kubectl version --client
           jq --version
 
-      - name: Clean up any existing VMs
-        working-directory: ${{ env.WORKING_DIR }}
-        continue-on-error: true
-        run: |
-          if [ -f "./shutdown-test-environment.sh" ]; then
-            ./shutdown-test-environment.sh || true
-          fi
-
       - name: Spin up test environment
         working-directory: ${{ env.WORKING_DIR }}
         run: |
           ./spin-up-test-environment.sh --os-image ubuntu-24.04
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
-
-      - name: Wait for VMs to be ready
-        working-directory: ${{ env.WORKING_DIR }}
-        run: |
-          echo "Waiting for VMs to be accessible..."
-          sleep 30
-
-          cd tofu
-          TOFU_OUTPUT=$(tofu output -json)
-
-          PROXY_HOST=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.proxy.hostname')
-          CONTROL_PLANE_HOSTS=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.control_planes[].hostname')
-          WORKER_HOSTS=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.workers[].hostname')
-
-          for host in ${PROXY_HOST} ${CONTROL_PLANE_HOSTS} ${WORKER_HOSTS}; do
-            timeout 300 bash -c "until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ubuntu@${host} 'echo SSH ready'; do sleep 5; done"
-          done
 
       - name: Install Kubernetes 1.33
         working-directory: ${{ env.WORKING_DIR }}
@@ -393,10 +369,6 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: |
           cd tofu
-          CP1_HOST=$(tofu output -json | jq -r '.information.value.control_planes[0].hostname')
-          ssh ubuntu@${CP1_HOST} "sudo cat /etc/kubernetes/admin.conf" > /tmp/kubeconfig-skip-${{ github.run_number }}
-          export KUBECONFIG=/tmp/kubeconfig-skip-${{ github.run_number }}
-
           kubectl wait --for=condition=Ready nodes --all --timeout=600s
           kubectl create deployment skip-version-test --image=quay.io/prometheus/busybox:latest --replicas=2 -- sh -c "while true; do sleep 3600; done"
           kubectl rollout status deployment/skip-version-test --timeout=300s
@@ -412,12 +384,8 @@ jobs:
             exit 0
           }
 
-          # If it succeeds, verify the cluster
-          export KUBECONFIG=/tmp/kubeconfig-skip-${{ github.run_number }}
-          kubectl wait --for=condition=Ready nodes --all --timeout=600s
-          kubectl rollout status deployment/skip-version-test --timeout=300s
-
-          echo "Direct upgrade succeeded (unexpected but acceptable)"
+          echo "Direct upgrade was allowed this should not have happened"
+          exit 1
 
       - name: Cleanup test environment
         if: always()
