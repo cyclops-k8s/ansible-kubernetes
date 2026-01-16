@@ -307,6 +307,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Install dependencies
         run: |
           # Update package list
@@ -348,7 +351,6 @@ jobs:
           tofu --version
           kubectl version --client
           jq --version
-          python3 -c "import dns.resolver; print('dnspython OK')"
 
       - name: Clean up any existing VMs
         working-directory: ${{ env.WORKING_DIR }}
