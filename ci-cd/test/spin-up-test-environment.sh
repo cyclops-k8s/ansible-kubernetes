@@ -120,6 +120,7 @@ for HOSTNAME in ${WORKER_NODE_HOSTNAMES}; do
   echo "Worker Node VM: ssh ubuntu@${HOSTNAME}"
 done
 
+cd ..
 # execute the post-init-playbook
 ansible-playbook -i inventory.yaml -i tofu/vars.yaml post-init-playbook/playbook.yaml
 
