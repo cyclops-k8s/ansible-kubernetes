@@ -77,7 +77,8 @@ jobs:
           # Install OpenTofu
           if ! command -v tofu &> /dev/null; then
             echo "Installing OpenTofu..."
-            curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh | sudo bash
+            curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh > /tmp/install-opentofu.sh
+            sudo bash /tmp/install-opentofu.sh --install-method deb
           fi
 
           # Install kubectl
@@ -97,7 +98,6 @@ jobs:
           tofu --version
           kubectl version --client
           jq --version
-          python3 -c "import dns.resolver; print('dnspython OK')"
 
       - name: Spin up test environment
         working-directory: ${{ env.WORKING_DIR }}
