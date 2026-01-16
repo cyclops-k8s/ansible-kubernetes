@@ -41,7 +41,7 @@ resource "ansible_host" "proxy" {
   name   = module.vm-proxy.hostname
   groups = ["proxies"]
   variables = {
-    ansible_host           = module.vm-proxy.hostname
+    ansible_host           = "${module.vm-proxy.hostname}.${var.namespace_name}"
     vrrp_priority          = 1
     vrrp_state             = "BACKUP" #count.index == 0 ? "MASTER" : "BACKUP"
     vrrp_password          = random_password.proxy_vrrp_password.result
