@@ -97,14 +97,6 @@ jobs:
           kubectl version --client
           jq --version
 
-      - name: Clean up any existing VMs
-        working-directory: ${{ env.WORKING_DIR }}
-        continue-on-error: true
-        run: |
-          if [ -f "./shutdown-test-environment.sh" ]; then
-            ./shutdown-test-environment.sh || true
-          fi
-
       - name: Spin up test environment
         working-directory: ${{ env.WORKING_DIR }}
         run: |
