@@ -93,14 +93,13 @@ function get_options() {
   fi
 }
 
+get_options "$@"
+
 # set tfvars file for future use
 cat << EOF > tofu/vars.tfvars
-os_image = "${OS_IMAGE}"
 image_url = "${IMAGE_URL}"
 hostname_prefix = "gh-${GITHUB_RUN_NUMBER:--vm}"
 EOF
-
-get_options "$@"
 
 cd tofu
 
