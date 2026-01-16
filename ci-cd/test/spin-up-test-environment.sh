@@ -93,6 +93,13 @@ function get_options() {
   fi
 }
 
+# set tfvars file for future use
+cat << EOF > tofu/vars.tfvars
+os_image = "${OS_IMAGE}"
+image_url = "${IMAGE_URL}"
+hostname_prefix = "gh-${GITHUB_RUN_NUMBER:--vm}"
+EOF
+
 get_options "$@"
 
 cd tofu
@@ -100,8 +107,7 @@ cd tofu
 tofu init
 tofu apply \
   -auto-approve \
-  -var="image_url=${IMAGE_URL}" \
-  -var="hostname_prefix=gh-${GITHUB_RUN_NUMBER:--vm}"
+  -var-file "vars.tfvars"
 
 echo "The VMs are up and running. You can SSH into them using the following command:"
 
@@ -112,16 +118,16 @@ CONTROL_PLANE_HOSTNAMES=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.cont
 WORKER_NODE_HOSTNAMES=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.workers[].hostname')
 PASSWORD=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.vm_password')
 
-echo "Proxy VM: ssh ubuntu@${PROXY_HOSTNAME}"
+echo "Proxy VM: ssh ansible@${PROXY_HOSTNAME}"
 for HOSTNAME in ${CONTROL_PLANE_HOSTNAMES}; do
-  echo "Control Plane VM: ssh ubuntu@${HOSTNAME}"
+  echo "Control Plane VM: ssh ansible@${HOSTNAME}"
 done
 for HOSTNAME in ${WORKER_NODE_HOSTNAMES}; do
-  echo "Worker Node VM: ssh ubuntu@${HOSTNAME}"
+  echo "Worker Node VM: ssh ansible@${HOSTNAME}"
 done
+
+echo "VM Password is '${PASSWORD}'"
 
 cd ..
 # execute the post-init-playbook
 ansible-playbook -i inventory.yaml -i tofu/vars.yaml post-init-playbook/playbook.yaml
-
-echo "VM Password is '${PASSWORD}'"

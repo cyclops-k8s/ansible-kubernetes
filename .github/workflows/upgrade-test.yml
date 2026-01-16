@@ -107,29 +107,6 @@ jobs:
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
-      - name: Wait for VMs to be ready
-        working-directory: ${{ env.WORKING_DIR }}
-        run: |
-          echo "Waiting for VMs to be accessible..."
-          sleep 30
-
-          cd tofu
-          TOFU_OUTPUT=$(tofu output -json)
-
-          PROXY_HOST=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.proxy.hostname')
-          CONTROL_PLANE_HOSTS=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.control_planes[].hostname')
-          WORKER_HOSTS=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.workers[].hostname')
-
-          for host in ${PROXY_HOST} ${CONTROL_PLANE_HOSTS} ${WORKER_HOSTS}; do
-            echo "Waiting for SSH on ${host}..."
-            timeout 300 bash -c "until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ubuntu@${host} 'echo SSH ready'; do sleep 5; done" || {
-              echo "Failed to connect to ${host}"
-              exit 1
-            }
-          done
-
-          echo "All VMs are accessible"
-
       - name: Install initial Kubernetes version
         working-directory: ${{ env.WORKING_DIR }}
         run: |
