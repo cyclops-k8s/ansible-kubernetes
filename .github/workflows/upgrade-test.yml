@@ -34,7 +34,7 @@ jobs:
   test-upgrade:
     name: Upgrade Test ${{ matrix.start_version }} → 1.35 on ${{ matrix.os_image }}
     runs-on:
-      group: cyclops-k8s-runners
+      group: Default
     timeout-minutes: 120
     env:
       PIPX_HOME: /opt/pipx
