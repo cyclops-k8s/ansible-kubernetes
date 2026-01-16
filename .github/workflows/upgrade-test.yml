@@ -75,7 +75,8 @@ jobs:
           # Install OpenTofu
           if ! command -v tofu &> /dev/null; then
             echo "Installing OpenTofu..."
-            curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh | sudo bash
+            curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh > /tmp/install-opentofu.sh
+            sudo bash /tmp/install-opentofu.sh --install-method deb
           fi
 
           # Install kubectl
