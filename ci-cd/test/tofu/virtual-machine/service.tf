@@ -4,7 +4,6 @@ resource "kubernetes_service_v1" "ssh_service" {
     namespace = var.namespace_name
   }
   spec {
-    cluster_ip = "None"
     selector = {
       "vm.kubevirt.io/name" = kubernetes_manifest.virtual-machine.object.metadata.name
     }
