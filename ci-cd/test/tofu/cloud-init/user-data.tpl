@@ -16,6 +16,10 @@ users:
   - ${ authorized_key }
 timezone: Etc/UTC
 
+ssh_pwauth: true
+chpasswd:
+  expire: false
+
 package_reboot_if_required: true
 package_update: true
 package_upgrade: true
