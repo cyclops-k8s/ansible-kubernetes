@@ -64,7 +64,7 @@ resource "kubernetes_manifest" "virtual-machine" {
               ]
               interfaces = [
                 {
-                  masquerade = {}
+                  bridge = {}
                   name   = "default"
                 }
               ]
