@@ -25,9 +25,9 @@ resource "ansible_host" "control-planes" {
     ansible_ssh_private_key_file       = "~/.ssh/${var.hostname_prefix}.pem"
     ansible_user                       = "ansible"
     ip_address                         = data.kubernetes_resource.control_planes[count.index].object.status.interfaces[0].ipAddress
-    kubernetes_api_server_bind_address = "10.0.2.2"
+    kubernetes_api_server_bind_address = data.kubernetes_resource.control_planes[count.index].object.status.interfaces[0].ipAddress
     kubernetes_api_server_public_ip    = data.kubernetes_resource.control_planes[count.index].object.status.interfaces[0].ipAddress
-    kubernetes_kubelet_node_ip         = "10.0.2.2" #data.kubernetes_resource.control_planes[count.index].object.status.interfaces[0].ipAddress
+    kubernetes_kubelet_node_ip         = data.kubernetes_resource.control_planes[count.index].object.status.interfaces[0].ipAddress
   }
 }
 
@@ -41,9 +41,9 @@ resource "ansible_host" "worker-nodes" {
     ansible_ssh_private_key_file       = "~/.ssh/${var.hostname_prefix}.pem"
     ansible_user                       = "ansible"
     ip_address                         = data.kubernetes_resource.workers[count.index].object.status.interfaces[0].ipAddress
-    kubernetes_api_server_bind_address = "10.0.2.2"
+    kubernetes_api_server_bind_address = data.kubernetes_resource.workers[count.index].object.status.interfaces[0].ipAddress
     kubernetes_api_server_public_ip    = data.kubernetes_resource.workers[count.index].object.status.interfaces[0].ipAddress
-    kubernetes_kubelet_node_ip         = "10.0.2.2" #data.kubernetes_resource.workers[count.index].object.status.interfaces[0].ipAddress
+    kubernetes_kubelet_node_ip         = data.kubernetes_resource.workers[count.index].object.status.interfaces[0].ipAddress
   }
 }
 
@@ -56,7 +56,7 @@ resource "ansible_host" "proxy" {
     ansible_ssh_private_key_file  = "~/.ssh/${var.hostname_prefix}.pem"
     ansible_user                  = "ansible"
     control_plane_ip              = data.kubernetes_resource.proxy.object.status.interfaces[0].ipAddress
-    kubernetes_proxy_bind_address = "10.0.2.2"
+    kubernetes_proxy_bind_address = data.kubernetes_resource.proxy.object.status.interfaces[0].ipAddress
     vrrp_priority                 = 1
     vrrp_state                    = "BACKUP" #count.index == 0 ? "MASTER" : "BACKUP"
     vrrp_password                 = random_password.proxy_vrrp_password.result
