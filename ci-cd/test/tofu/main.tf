@@ -37,8 +37,8 @@ locals {
       vars = merge(var.extra_kubernetes_configuration, {
         kubernetes_hookfiles = {
           post_cluster_init = [
-            "{{ inventory_dir }}/../../../example-hooks/install-calico/post-cluster-init/install-calico.yaml",
-            "{{ inventory_dir }}/../../../example-hooks/copy-admin-config/post-cluster-init/copy-admin-config.yaml"
+            "{{ inventory_dir }}/../../example-hooks/install-calico/post-cluster-init/install-calico.yaml",
+            "{{ inventory_dir }}/../../example-hooks/copy-admin-config/post-cluster-init/copy-admin-config.yaml"
           ]
         }
       })

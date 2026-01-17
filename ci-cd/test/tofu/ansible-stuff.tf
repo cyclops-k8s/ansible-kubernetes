@@ -26,7 +26,6 @@ resource "ansible_host" "control-planes" {
     ansible_user                       = "ansible"
     ip_address                         = data.kubernetes_resource.control_planes[count.index].object.status.interfaces[0].ipAddress
     kubernetes_api_server_bind_address = data.kubernetes_resource.control_planes[count.index].object.status.interfaces[0].ipAddress
-    kubernetes_api_server_public_ip    = data.kubernetes_resource.control_planes[count.index].object.status.interfaces[0].ipAddress
     kubernetes_kubelet_node_ip         = data.kubernetes_resource.control_planes[count.index].object.status.interfaces[0].ipAddress
   }
 }
@@ -42,7 +41,6 @@ resource "ansible_host" "worker-nodes" {
     ansible_user                       = "ansible"
     ip_address                         = data.kubernetes_resource.workers[count.index].object.status.interfaces[0].ipAddress
     kubernetes_api_server_bind_address = data.kubernetes_resource.workers[count.index].object.status.interfaces[0].ipAddress
-    kubernetes_api_server_public_ip    = data.kubernetes_resource.workers[count.index].object.status.interfaces[0].ipAddress
     kubernetes_kubelet_node_ip         = data.kubernetes_resource.workers[count.index].object.status.interfaces[0].ipAddress
   }
 }
