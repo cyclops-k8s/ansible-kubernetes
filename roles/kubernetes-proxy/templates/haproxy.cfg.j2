@@ -45,7 +45,15 @@ defaults
     timeout connect 5000
     timeout server  5000
 {% for host in groups['control_planes'] %}
-    server {{ hostvars[host]['ansible_host'] }} {{ hostvars[host]['kubernetes_api_server_bind_address'] | default(query('community.dns.lookup', hostvars[host]['ansible_host'])[0]) }}:{{ hostvars[host]['kubernetes_api_server_port'] }} check check-ssl inter {{ kubernetes_control_plane_check_interval | default('250ms') }} verify none
+    server {{ hostvars[host]['ansible_host'] }} {{
+        hostvars[host]['kubernetes_api_server_public_ip'] |
+        default(
+            hostvars[host]['kubernetes_api_server_bind_address'] |
+            default(
+                query('community.dns.lookup', hostvars[host]['ansible_host'])[0]
+                )
+        )
+    }}:{{ hostvars[host]['kubernetes_api_server_port'] }} check check-ssl inter {{ kubernetes_control_plane_check_interval | default('250ms') }} verify none
 {% endfor %}
 
 frontend controlplane-in
