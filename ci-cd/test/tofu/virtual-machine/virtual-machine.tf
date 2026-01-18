@@ -64,8 +64,8 @@ resource "kubernetes_manifest" "virtual-machine" {
               ]
               interfaces = [
                 {
-                  masquerade = {}
-                  name       = "default"
+                  passt = {}
+                  name  = "default"
                 }
               ]
             }
