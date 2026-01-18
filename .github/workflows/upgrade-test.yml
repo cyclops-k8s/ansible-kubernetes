@@ -36,9 +36,6 @@ jobs:
     runs-on:
       group: Default
     timeout-minutes: 120
-    # env:
-      # PIPX_HOME: /opt/pipx
-      # PIPX_BIN_DIR: /usr/local/bin
     strategy:
       fail-fast: false
       max-parallel: 2
