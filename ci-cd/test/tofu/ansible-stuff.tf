@@ -32,7 +32,7 @@ resource "ansible_host" "control-planes" {
 }
 
 resource "ansible_host" "worker-nodes" {
-  count  = 2
+  count  = 3
   name   = "${kubernetes_manifest.base_data_volume.object.metadata.name}-w${count.index + 1}.${var.namespace_name}"
   groups = ["worker_nodes", "kubernetes"]
   variables = {
