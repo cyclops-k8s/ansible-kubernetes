@@ -37,6 +37,9 @@ resource "kubernetes_manifest" "virtual-machine" {
       template = {
         metadata = {
           creationTimestamp = null
+          annotations = {
+            "io.cilium.no-track-port" = "all"
+          }
         }
         spec = {
           architecture = "amd64"
@@ -64,8 +67,8 @@ resource "kubernetes_manifest" "virtual-machine" {
               ]
               interfaces = [
                 {
-                  passt = {}
-                  name  = "default"
+                  bridge = {}
+                  name   = "default"
                 }
               ]
             }
