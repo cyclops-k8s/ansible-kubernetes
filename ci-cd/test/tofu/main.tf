@@ -31,6 +31,8 @@ locals {
     kubernetes_kubelet_csr_approver_regex             = ".*"
     kubernetes_kubelet_csr_approver_ips               = "0.0.0.0/0"
     kubernetes_kubelet_csr_approver_bypass_dns_checks = "true"
+    kubernetes_pod_subnet                             = "10.200.0.0/16"
+    kubernetes_service_subnet                         = "10.201.0.0/16"
   }
   special_config = {
     kubernetes = {
