@@ -21,9 +21,9 @@ resource "kubernetes_manifest" "base_data_volume" {
         }
       }
       pvc = {
-        annotations = {
-          "cdi.kubevirt.io/storage.bind.immediate.requested" = "true"
-        }
+        # annotations = {
+        #   "cdi.kubevirt.io/storage.bind.immediate.requested" = "true"
+        # }
         accessModes = ["ReadWriteMany"]
         resources = {
           requests = {
