@@ -53,6 +53,7 @@ module "vm-workers" {
 
 data "kubernetes_resource" "control_planes" {
   count       = 3
+  depends_on = [ module.vm-controlplanes ]
   kind        = "VirtualMachineInstance"
   api_version = "kubevirt.io/v1"
   metadata {
@@ -63,6 +64,7 @@ data "kubernetes_resource" "control_planes" {
 
 data "kubernetes_resource" "workers" {
   count       = 3
+  depends_on = [ module.vm-workers ]
   kind        = "VirtualMachineInstance"
   api_version = "kubevirt.io/v1"
   metadata {
@@ -72,6 +74,7 @@ data "kubernetes_resource" "workers" {
 }
 
 data "kubernetes_resource" "proxy" {
+  depends_on = [ module.vm-proxy ]
   kind        = "VirtualMachineInstance"
   api_version = "kubevirt.io/v1"
   metadata {

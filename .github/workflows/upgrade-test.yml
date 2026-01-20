@@ -126,7 +126,7 @@ jobs:
           kubectl -n upgrade-test rollout status deployment/nginx-upgrade-test --timeout=300s
 
           echo "Initial cluster version:"
-          kubectl version --short
+          kubectl version
           kubectl get nodes -o wide
 
       - name: Upgrade to 1.34 (if starting from 1.33)
@@ -140,7 +140,7 @@ jobs:
           kubectl wait --for=condition=Ready nodes --all --timeout=600s
 
           # Verify test workload is still running
-          kubectl rollout status deployment/nginx-upgrade-test -n upgrade-test --timeout=300s
+          kubectl -n upgrade-test rollout status deployment/nginx-upgrade-test --timeout=300s
 
           echo "Cluster after 1.34 upgrade:"
           kubectl version --short
@@ -156,10 +156,10 @@ jobs:
           kubectl wait --for=condition=Ready nodes --all --timeout=600s
 
           # Verify test workload is still running
-          kubectl rollout status deployment/nginx-upgrade-test -n upgrade-test --timeout=300s
+          kubectl -n upgrade-test rollout status deployment/nginx-upgrade-test --timeout=300s
 
           echo "Cluster after 1.35 upgrade:"
-          kubectl version --short
+          kubectl version
           kubectl get nodes -o wide
 
       - name: Verify final cluster state
@@ -178,7 +178,7 @@ jobs:
           fi
 
           # Verify test workload is healthy
-          READY_REPLICAS=$(kubectl get deployment nginx-upgrade-test -n upgrade-test -o jsonpath='{.status.readyReplicas}')
+          READY_REPLICAS=$(kubectl -n upgrade-test get deployment nginx-upgrade-test -o jsonpath='{.status.readyReplicas}')
           if [ "${READY_REPLICAS}" != "3" ]; then
             echo "ERROR: Expected 3 ready replicas, found ${READY_REPLICAS}"
             kubectl describe deployment nginx-upgrade-test -n upgrade-test
