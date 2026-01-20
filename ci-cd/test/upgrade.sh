@@ -70,4 +70,4 @@ tofu apply \
   "${TFVAR_FILES[@]}"
 
 echo "Running the ansible playbook to upgrade kubernetes"
-ansible-playbook -i "inventory.yaml" -i tofu/vars.yaml ../../upgrade.yaml
+ansible-playbook -i "inventory.yaml" -i tofu/vars.yaml ../upgrade.yaml
