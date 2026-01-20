@@ -11,8 +11,11 @@ resource "kubernetes_manifest" "base_data_volume" {
     apiVersion = "cdi.kubevirt.io/v1beta1"
     kind       = "DataVolume"
     metadata = {
-      name = "${var.hostname_prefix}-${random_string.base_image_suffix.result}"
+      name      = "${var.hostname_prefix}-${random_string.base_image_suffix.result}"
       namespace = var.namespace_name
+      annotations = {
+        "cdi.kubevirt.io/storage.bind.immediate.requested" = "true"
+      }
     }
     spec = {
       source = {
@@ -21,9 +24,6 @@ resource "kubernetes_manifest" "base_data_volume" {
         }
       }
       pvc = {
-        # annotations = {
-        #   "cdi.kubevirt.io/storage.bind.immediate.requested" = "true"
-        # }
         accessModes = ["ReadWriteMany"]
         resources = {
           requests = {
@@ -31,7 +31,7 @@ resource "kubernetes_manifest" "base_data_volume" {
           }
         }
         storageClassName = "ceph-block"
-        volumeMode = "Block"
+        volumeMode       = "Block"
       }
     }
   }
