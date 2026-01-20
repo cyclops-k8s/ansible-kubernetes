@@ -118,15 +118,12 @@ jobs:
           TOFU_OUTPUT=$(tofu output -json)
           CP1_HOST=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.control_planes[0].hostname')
 
-          ssh ubuntu@${CP1_HOST} "sudo cat /etc/kubernetes/admin.conf" > /tmp/kubeconfig-${{ github.run_number }}
-          export KUBECONFIG=/tmp/kubeconfig-${{ github.run_number }}
-
           kubectl wait --for=condition=Ready nodes --all --timeout=600s
 
           # Deploy a test workload to verify it persists through upgrades
           kubectl create namespace upgrade-test || true
-          kubectl create deployment nginx-upgrade-test --image=quay.io/prometheus/busybox:latest --replicas=3 -n upgrade-test -- sh -c "while true; do sleep 3600; done"
-          kubectl rollout status deployment/nginx-upgrade-test -n upgrade-test --timeout=300s
+          kubectl -n upgrade-test create deployment nginx-upgrade-test --image=quay.io/prometheus/busybox:latest --replicas=3 -- sh -c "while true; do sleep 3600; done"
+          kubectl -n upgrade-test rollout status deployment/nginx-upgrade-test --timeout=300s
 
           echo "Initial cluster version:"
           kubectl version --short
@@ -138,9 +135,6 @@ jobs:
         run: |
           echo "Upgrading to Kubernetes 1.34..."
           ./upgrade.sh -v 1.34
-
-          # Verify upgrade
-          export KUBECONFIG=/tmp/kubeconfig-${{ github.run_number }}
 
           # Wait for nodes to be ready after upgrade
           kubectl wait --for=condition=Ready nodes --all --timeout=600s
@@ -159,8 +153,6 @@ jobs:
           ./upgrade.sh -v 1.35
 
           # Verify final upgrade
-          export KUBECONFIG=/tmp/kubeconfig-${{ github.run_number }}
-
           kubectl wait --for=condition=Ready nodes --all --timeout=600s
 
           # Verify test workload is still running
@@ -173,8 +165,6 @@ jobs:
       - name: Verify final cluster state
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          export KUBECONFIG=/tmp/kubeconfig-${{ github.run_number }}
-
           # Verify all nodes are running Kubernetes 1.35
           echo "Verifying all nodes are on version 1.35..."
           kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.nodeInfo.kubeletVersion}{"\n"}{end}'
@@ -208,14 +198,12 @@ jobs:
       - name: Run post-upgrade smoke tests
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          export KUBECONFIG=/tmp/kubeconfig-${{ github.run_number }}
-
           # Create a new deployment to test cluster functionality
-          kubectl create deployment post-upgrade-test --image=quay.io/prometheus/busybox:latest --replicas=2 -n upgrade-test -- sh -c "while true; do sleep 3600; done"
-          kubectl rollout status deployment/post-upgrade-test -n upgrade-test --timeout=300s
+          kubectl -n upgrade-test create deployment post-upgrade-test --image=quay.io/prometheus/busybox:latest --replicas=2 -- sh -c "while true; do sleep 3600; done"
+          kubectl -n upgrade-test rollout status deployment/post-upgrade-test --timeout=300s
 
           # Verify deployment
-          READY_REPLICAS=$(kubectl get deployment post-upgrade-test -n upgrade-test -o jsonpath='{.status.readyReplicas}')
+          READY_REPLICAS=$(kubectl -n upgrade-test get deployment post-upgrade-test -o jsonpath='{.status.readyReplicas}')
           if [ "${READY_REPLICAS}" != "2" ]; then
             echo "ERROR: Expected 2 ready replicas, found ${READY_REPLICAS}"
             exit 1
@@ -247,13 +235,10 @@ jobs:
             done
           fi
 
-          if [ -f "/tmp/kubeconfig-${{ github.run_number }}" ]; then
-            export KUBECONFIG=/tmp/kubeconfig-${{ github.run_number }}
-            kubectl get all -A > /tmp/upgrade-logs-${{ github.run_number }}/kubectl-get-all.log 2>&1 || true
-            kubectl get nodes -o wide > /tmp/upgrade-logs-${{ github.run_number }}/kubectl-nodes.log 2>&1 || true
-            kubectl get events -A --sort-by='.lastTimestamp' > /tmp/upgrade-logs-${{ github.run_number }}/kubectl-events.log 2>&1 || true
-            kubectl version --output=yaml > /tmp/upgrade-logs-${{ github.run_number }}/kubectl-version.log 2>&1 || true
-          fi
+          kubectl get all -A > /tmp/upgrade-logs-${{ github.run_number }}/kubectl-get-all.log 2>&1 || true
+          kubectl get nodes -o wide > /tmp/upgrade-logs-${{ github.run_number }}/kubectl-nodes.log 2>&1 || true
+          kubectl get events -A --sort-by='.lastTimestamp' > /tmp/upgrade-logs-${{ github.run_number }}/kubectl-events.log 2>&1 || true
+          kubectl version --output=yaml > /tmp/upgrade-logs-${{ github.run_number }}/kubectl-version.log 2>&1 || true
 
       - name: Upload logs artifact
         if: failure()
@@ -267,6 +252,7 @@ jobs:
         if: always()
         working-directory: ${{ env.WORKING_DIR }}
         run: |
+          rm ~/.kube/config || true
           ./shutdown-test-environment.sh || true
           rm -f /tmp/kubeconfig-${{ github.run_number }} || true
           rm -rf /tmp/upgrade-logs-${{ github.run_number }} || true
@@ -346,8 +332,8 @@ jobs:
         run: |
           cd tofu
           kubectl wait --for=condition=Ready nodes --all --timeout=600s
-          kubectl create deployment skip-version-test --image=quay.io/prometheus/busybox:latest --replicas=2 -- sh -c "while true; do sleep 3600; done"
-          kubectl rollout status deployment/skip-version-test --timeout=300s
+          kubectl -n default create deployment skip-version-test --image=quay.io/prometheus/busybox:latest --replicas=2 -- sh -c "while true; do sleep 3600; done"
+          kubectl -n default rollout status deployment/skip-version-test --timeout=300s
 
       - name: Attempt direct upgrade to 1.35
         working-directory: ${{ env.WORKING_DIR }}
@@ -367,6 +353,7 @@ jobs:
         if: always()
         working-directory: ${{ env.WORKING_DIR }}
         run: |
+          rm ~/.kube/config || true
           ./shutdown-test-environment.sh || true
           rm -f /tmp/kubeconfig-skip-${{ github.run_number }} || true
 
