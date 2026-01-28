@@ -1,4 +1,4 @@
-name: Kubernetes Cluster Tests
+name: Cluster Install Tests
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
           # - "1.35"
         os_image:
           - ubuntu-24.04
-          # - ubuntu-25.10
+          - ubuntu-25.10
           # - centos9
           # - centos10
 
@@ -95,8 +95,7 @@ jobs:
           # Install jq for JSON parsing
           sudo apt-get install -y jq
 
-          # Verify installations
-          echo "Verifying installations..."
+          echo "Verifying installations and versions..."
           ansible --version
           tofu --version
           kubectl version --client
@@ -200,7 +199,7 @@ jobs:
 
           # Collect Kubernetes state
           if [ -f "~/kube.config" ]; then
-            kubectl get all -A > /tmp/test-logs-${{ github.run_number }}/kubectl-get-all.log 2>&1 || true
+            kubectl get all -A -o wide > /tmp/test-logs-${{ github.run_number }}/kubectl-get-all.log 2>&1 || true
             kubectl get nodes -o wide > /tmp/test-logs-${{ github.run_number }}/kubectl-nodes.log 2>&1 || true
             kubectl get events -A --sort-by='.lastTimestamp' > /tmp/test-logs-${{ github.run_number }}/kubectl-events.log 2>&1 || true
           fi
