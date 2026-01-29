@@ -44,23 +44,6 @@ resource "kubernetes_manifest" "virtual-machine" {
         spec = {
           architecture = "amd64"
           domain = {
-            clock = {
-              utc = {}
-              timer = {
-                hpet = {
-                  present = false
-                }
-                kvm = {
-                  present = true
-                }
-                pit = {
-                  tickPolicy = "delay"
-                }
-                rtc = {
-                  tickPolicy = "catchup"
-                }
-              }
-            }
             cpu = {
               cores   = 2
               sockets = 1
