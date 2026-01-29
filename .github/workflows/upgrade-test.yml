@@ -126,9 +126,14 @@ jobs:
           kubectl -n upgrade-test rollout status deployment/nginx-upgrade-test --timeout=300s
 
           echo "Initial cluster version:"
-          kubectl version
+          VERSION=$(kubectl version --output yaml)
+          echo "${VERSION}"
           kubectl get nodes -o wide
 
+          if ! echo "${VERSION}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v1.33") | not )) | length == 0)'; then
+            echo "ERROR: Not all nodes upgraded to version 1.33"
+            exit 1
+          fi
       - name: Upgrade to 1.34 (if starting from 1.33)
         if: matrix.start_version == '1.33'
         working-directory: ${{ env.WORKING_DIR }}
@@ -143,8 +148,14 @@ jobs:
           kubectl -n upgrade-test rollout status deployment/nginx-upgrade-test --timeout=300s
 
           echo "Cluster after 1.34 upgrade:"
-          kubectl version --short
+          VERSION=$(kubectl version --output yaml)
+          echo "${VERSION}"
           kubectl get nodes -o wide
+
+          if ! echo "${VERSION}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v1.34") | not )) | length == 0)'; then
+            echo "ERROR: Not all nodes upgraded to version 1.34"
+            exit 1
+          fi
 
       - name: Upgrade to 1.35
         working-directory: ${{ env.WORKING_DIR }}
@@ -159,9 +170,14 @@ jobs:
           kubectl -n upgrade-test rollout status deployment/nginx-upgrade-test --timeout=300s
 
           echo "Cluster after 1.35 upgrade:"
-          kubectl version
+          VERSION=$(kubectl version --output yaml)
+          echo "${VERSION}"
           kubectl get nodes -o wide
 
+          if ! echo "${VERSION}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v1.35") | not )) | length == 0)'; then
+            echo "ERROR: Not all nodes upgraded to version 1.35"
+            exit 1
+          fi
       - name: Verify final cluster state
         working-directory: ${{ env.WORKING_DIR }}
         run: |
@@ -334,6 +350,14 @@ jobs:
           kubectl wait --for=condition=Ready nodes --all --timeout=600s
           kubectl -n default create deployment skip-version-test --image=quay.io/prometheus/busybox:latest --replicas=2 -- sh -c "while true; do sleep 3600; done"
           kubectl -n default rollout status deployment/skip-version-test --timeout=300s
+          VERSION=$(kubectl version --output yaml)
+          echo "${VERSION}"
+          kubectl get nodes -o wide
+
+          if ! echo "${VERSION}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v1.33") | not )) | length == 0)'; then
+            echo "ERROR: Not all nodes upgraded to version 1.33"
+            exit 1
+          fi
 
       - name: Attempt direct upgrade to 1.35
         working-directory: ${{ env.WORKING_DIR }}
