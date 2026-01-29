@@ -3,7 +3,8 @@ inventory
 .ansible
 .terraform
 .terraform.lock.hcl
-test/vars.yaml
+vars.yaml
+vars.tfvars
 *.img
 .temp
 
