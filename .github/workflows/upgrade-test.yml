@@ -1,4 +1,4 @@
-name: Kubernetes Cluster Upgrade Tests
+name: Cluster Upgrade Tests
 
 on:
   push:
