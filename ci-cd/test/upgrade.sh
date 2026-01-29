@@ -9,7 +9,7 @@ usage()
 
     Examples:
         $0 -v 1.35
-        $0 -- ../example-hooks/registry-mirrors/post_proxies/test.tfvars
+        $0 -- ../../example-hooks/registry-mirrors/post_proxies/test.tfvars
 "
   exit 2
 }
@@ -70,4 +70,4 @@ tofu apply \
   "${TFVAR_FILES[@]}"
 
 echo "Running the ansible playbook to upgrade kubernetes"
-ansible-playbook -i "inventory.yaml" -i tofu/vars.yaml ../upgrade.yaml
+ansible-playbook -i "inventory.yaml" -i tofu/vars.yaml ../../upgrade.yaml
