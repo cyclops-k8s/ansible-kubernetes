@@ -140,10 +140,20 @@ jobs:
           if [ "${ERROR_PODS}" -gt 0 ]; then
             echo "WARNING: Found ${ERROR_PODS} pods not in Running/Succeeded state"
             kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded
+            exit 1
+          fi
+
+          # Check cluster version
+          VERSION=$(kubectl version --output yaml)
+          echo "${VERSION}"
+          NODES=$(kubectl get nodes -o yaml)
+
+          if ! echo "${NODES}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ matrix.kubernetes_version }}") | not )) | length == 0)'; then
+            echo "ERROR: Not all nodes installed with version ${{ matrix.kubernetes_version }}"
+            exit 1
           fi
 
           echo "Cluster verification complete!"
-          kubectl get nodes -o wide
 
       - name: Run smoke tests
         working-directory: ${{ env.WORKING_DIR }}
