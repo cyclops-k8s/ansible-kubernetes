@@ -20,6 +20,6 @@ ssh_pwauth: true
 chpasswd:
   expire: false
 
-package_reboot_if_required: true
+package_reboot_if_required: false
 package_update: true
 package_upgrade: true
