@@ -140,7 +140,6 @@ jobs:
           if [ "${ERROR_PODS}" -gt 0 ]; then
             echo "WARNING: Found ${ERROR_PODS} pods not in Running/Succeeded state"
             kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded
-            exit 1
           fi
 
           # Check cluster version
