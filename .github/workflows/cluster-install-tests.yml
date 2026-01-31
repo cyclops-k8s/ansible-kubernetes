@@ -148,7 +148,7 @@ jobs:
           echo "${VERSION}"
           NODES=$(kubectl get nodes -o yaml)
 
-          if ! echo "${NODES}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ matrix.kubernetes_version }}") | not )) | length == 0)'; then
+          if echo "${NODES}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ matrix.kubernetes_version }}") | not )) | length == 0)'; then
             echo "ERROR: Not all nodes installed with version ${{ matrix.kubernetes_version }}"
             exit 1
           fi
