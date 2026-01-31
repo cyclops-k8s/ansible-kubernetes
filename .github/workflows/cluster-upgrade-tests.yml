@@ -110,7 +110,7 @@ jobs:
         run: |
           echo "Installing Kubernetes ${{ matrix.start_version }}"
           ./install.sh -v ${{ matrix.start_version }}
-          kubectl --namespace kube-system wait --for=condition=Ready pod -l k8s-app=cilium --timeout=30s
+          kubectl --namespace kube-system wait --for=condition=Ready pod -l k8s-app=calico-node --timeout=30s
 
       - name: Verify initial cluster
         working-directory: ${{ env.WORKING_DIR }}
