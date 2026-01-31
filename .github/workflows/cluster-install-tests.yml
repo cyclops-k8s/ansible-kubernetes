@@ -113,7 +113,7 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: |
           ./install.sh -v ${{ matrix.kubernetes_version }}
-          kubectl --namespace kube-system wait --for=condition=Ready pod -l k8s-app=cilium --timeout=30s
+          kubectl --namespace kube-system wait --for=condition=Ready pod -l k8s-app=k8s-app=calico-node --timeout=30s
 
       - name: Verify cluster health
         working-directory: ${{ env.WORKING_DIR }}
