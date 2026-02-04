@@ -117,7 +117,7 @@
 - name: Fail if Kubernetes node name could not be determined
   when:
   - kubernetes_node_name is not defined or
-    kubernetes_node_name | length == 0
+    kubernetes_node_name | default('') | length == 0
   ansible.builtin.fail:
     msg: >-
       Could not determine Kubernetes node name for host {{ inventory_hostname }}.

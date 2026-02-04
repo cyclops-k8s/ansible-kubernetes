@@ -139,12 +139,12 @@ jobs:
             echo "ERROR: Not all nodes installed version ${{ matrix.start_version }}"
             exit 1
           fi
-      - name: Upgrade to ${{ github.env.VERSION_MID }} (if starting from ${{ github.env.VERSION_LOW }})
-        if: matrix.start_version == github.env.VERSION_LOW
+      - name: Upgrade to ${{ env.VERSION_MID }} (if starting from ${{ env.VERSION_LOW }})
+        if: matrix.start_version == env.VERSION_LOW
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          echo "Upgrading to Kubernetes ${{ github.env.VERSION_MID }}..."
-          ./upgrade.sh -v ${{ github.env.VERSION_MID }}
+          echo "Upgrading to Kubernetes ${{ env.VERSION_MID }}..."
+          ./upgrade.sh -v ${{ env.VERSION_MID }}
 
           # Wait for nodes to be ready after upgrade
           kubectl wait --for=condition=Ready nodes --all --timeout=600s
