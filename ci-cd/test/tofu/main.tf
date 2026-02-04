@@ -43,6 +43,18 @@ locals {
             "{{ inventory_dir }}/../../example-hooks/copy-admin-config/post-cluster-init/copy-admin-config.yaml"
           ]
         }
+        kubernetes_containerd_registry_mirrors = [{
+          registry = "_default"
+          hosts = [
+            {
+              capabilities = [
+                "pull",
+                "resolve"
+              ]
+              host = "http://registry-mirrors.cyclops-assets.svc.cluster.local"
+            }
+          ]
+        }]
       })
     }
     proxies = {
