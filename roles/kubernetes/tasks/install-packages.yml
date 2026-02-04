@@ -127,6 +127,7 @@
         state: present
 
     - name: Hold kubeadm, kubelet and kubectl
+      changed_when: true
       with_items:
       - kubeadm
       - kubelet
