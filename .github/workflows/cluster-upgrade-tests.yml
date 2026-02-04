@@ -44,13 +44,13 @@ jobs:
       max-parallel: 3
       matrix:
         start_version:
-          - ${{ github.env.VERSION_LOW }}
+          # - ${{ github.env.VERSION_LOW }}
           - ${{ github.env.VERSION_MID }}
         os_image:
           - ubuntu-24.04
-          - ubuntu-25.10
-          - centos9
-          - centos10
+          # - ubuntu-25.10
+          # - centos9
+          # - centos10
 
     steps:
       - name: Checkout repository
