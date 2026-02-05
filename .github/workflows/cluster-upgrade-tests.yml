@@ -134,7 +134,7 @@ jobs:
 
           if [ \
            "$(echo "$NODES" | \
-           yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ matrix.kubernetes_version }}") | not )) | length != 0)')" == 'true' \
+           yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ matrix.start_version }}") | not )) | length != 0)')" == 'true' \
           ]
           then
             echo "ERROR: Not all nodes installed version ${{ matrix.start_version }}"
@@ -260,6 +260,7 @@ jobs:
               ssh ansible@${host} -i "~/.ssh/gh-${GITHUB_RUN_NUMBER:--vm}.pem" "sudo journalctl -u kubelet -n 1000" > /tmp/upgrade-logs-${{ github.run_number }}/${host}-kubelet.log 2>&1 || true
               ssh ansible@${host} -i "~/.ssh/gh-${GITHUB_RUN_NUMBER:--vm}.pem" "sudo journalctl -u containerd -n 500" > /tmp/upgrade-logs-${{ github.run_number }}/${host}-containerd.log 2>&1 || true
               ssh ansible@${host} -i "~/.ssh/gh-${GITHUB_RUN_NUMBER:--vm}.pem" "sudo kubeadm version" > /tmp/upgrade-logs-${{ github.run_number }}/${host}-kubeadm-version.log 2>&1 || true
+              ssh ansible@${host} -i "~/.ssh/gh-${GITHUB_RUN_NUMBER:--vm}.pem" "sudo tar -cv /var/log/containers" > /tmp/upgrade-logs-${{ github.run_number }}/${host}-containers.tar 2>&1 || true
             done
           fi
 
