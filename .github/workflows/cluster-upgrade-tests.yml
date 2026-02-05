@@ -152,46 +152,46 @@ jobs:
           # Verify test workload is still running
           kubectl -n upgrade-test rollout status deployment/nginx-upgrade-test --timeout=300s
 
-          echo "Cluster after ${{ github.env.VERSION_MID }} upgrade:"
+          echo "Cluster after ${{ env.VERSION_MID }} upgrade:"
           NODES=$(kubectl get nodes -o yaml)
           echo "${NODES}"
 
-          if echo "${NODES}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ github.env.VERSION_MID }}") | not )) | length == 0)'; then
-            echo "ERROR: Not all nodes upgraded to version ${{ github.env.VERSION_MID }}"
+          if echo "${NODES}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ env.VERSION_MID }}") | not )) | length == 0)'; then
+            echo "ERROR: Not all nodes upgraded to version ${{ env.VERSION_MID }}"
             exit 1
           fi
 
-      - name: Upgrade to ${{ github.env.VERSION_HIGH }}
+      - name: Upgrade to ${{ env.VERSION_HIGH }}
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          echo "Upgrading to Kubernetes ${{ github.env.VERSION_HIGH }}..."
-          ./upgrade.sh -v ${{ github.env.VERSION_HIGH }}
+          echo "Upgrading to Kubernetes ${{ env.VERSION_HIGH }}..."
+          ./upgrade.sh -v ${{ env.VERSION_HIGH }}
           # Verify final upgrade
           kubectl wait --for=condition=Ready nodes --all --timeout=600s
 
           # Verify test workload is still running
           kubectl -n upgrade-test rollout status deployment/nginx-upgrade-test --timeout=300s
 
-          echo "Cluster after ${{ github.env.VERSION_HIGH }} upgrade:"
+          echo "Cluster after ${{ env.VERSION_HIGH }} upgrade:"
           VERSION=$(kubectl version --output yaml)
           echo "${VERSION}"
           NODES=$(kubectl get nodes -o yaml)
 
-          if echo "${NODES}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ github.env.VERSION_HIGH }}") | not )) | length == 0)'; then
-            echo "ERROR: Not all nodes upgraded to version ${{ github.env.VERSION_HIGH }}"
+          if echo "${NODES}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ env.VERSION_HIGH }}") | not )) | length == 0)'; then
+            echo "ERROR: Not all nodes upgraded to version ${{ env.VERSION_HIGH }}"
             exit 1
           fi
       - name: Verify final cluster state
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          # Verify all nodes are running Kubernetes ${{ github.env.VERSION_HIGH }}
-          echo "Verifying all nodes are on version ${{ github.env.VERSION_HIGH }}..."
+          # Verify all nodes are running Kubernetes ${{ env.VERSION_HIGH }}
+          echo "Verifying all nodes are on version ${{ env.VERSION_HIGH }}..."
           kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.nodeInfo.kubeletVersion}{"\n"}{end}'
 
-          # Check if any node is not on ${{ github.env.VERSION_HIGH }}
-          NON_135_NODES=$(kubectl get nodes -o json | jq -r '.items[] | select(.status.nodeInfo.kubeletVersion | startswith("v${{ github.env.VERSION_HIGH }}") | not) | .metadata.name')
+          # Check if any node is not on ${{ env.VERSION_HIGH }}
+          NON_135_NODES=$(kubectl get nodes -o json | jq -r '.items[] | select(.status.nodeInfo.kubeletVersion | startswith("v${{ env.VERSION_HIGH }}") | not) | .metadata.name')
           if [ -n "${NON_135_NODES}" ]; then
-            echo "ERROR: The following nodes are not on version ${{ github.env.VERSION_HIGH }}:"
+            echo "ERROR: The following nodes are not on version ${{ env.VERSION_HIGH }}:"
             echo "${NON_135_NODES}"
             exit 1
           fi
@@ -212,7 +212,7 @@ jobs:
           fi
 
           echo "Upgrade verification complete!"
-          echo "Successfully upgraded from ${{ matrix.start_version }} to ${{ github.env.VERSION_HIGH }}"
+          echo "Successfully upgraded from ${{ matrix.start_version }} to ${{ env.VERSION_HIGH }}"
 
       - name: Run post-upgrade smoke tests
         working-directory: ${{ env.WORKING_DIR }}
@@ -263,7 +263,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: upgrade-logs-${{ matrix.start_version }}-to-${{ github.env.VERSION_HIGH }}-${{ matrix.os_image }}-${{ github.run_number }}
+          name: upgrade-logs-${{ matrix.start_version }}-to-${{ env.VERSION_HIGH }}-${{ matrix.os_image }}-${{ github.run_number }}
           path: /tmp/upgrade-logs-${{ github.run_number }}/
           retention-days: 7
 
@@ -277,7 +277,7 @@ jobs:
           rm -rf /tmp/upgrade-logs-${{ github.run_number }} || true
 
   test-skip-version-upgrade:
-    name: Skip Version Upgrade Test (${{ github.env.VERSION_LOW }} → ${{ github.env.VERSION_HIGH }})
+    name: Skip Version Upgrade Test (1.33 → 1.35)
     runs-on:
       group: Default
     timeout-minutes: 120
@@ -339,11 +339,11 @@ jobs:
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
-      - name: Install Kubernetes ${{ github.env.VERSION_LOW }}
+      - name: Install Kubernetes ${{ env.VERSION_LOW }}
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          echo "Installing Kubernetes ${{ github.env.VERSION_LOW }}"
-          ./install.sh -v ${{ github.env.VERSION_LOW }}
+          echo "Installing Kubernetes ${{ env.VERSION_LOW }}"
+          ./install.sh -v ${{ env.VERSION_LOW }}
       - name: Verify initial cluster
         working-directory: ${{ env.WORKING_DIR }}
         run: |
@@ -355,18 +355,18 @@ jobs:
           echo "${VERSION}"
           NODES=$(kubectl get nodes -o yaml)
 
-          if echo "${NODES}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ github.env.VERSION_LOW }}") | not )) | length == 0)'; then
-            echo "ERROR: Not all nodes version ${{ github.env.VERSION_LOW }}"
+          if echo "${NODES}" | yq '(.items | map(select(.status.nodeInfo.kubeletVersion | startswith("v${{ env.VERSION_LOW }}") | not )) | length == 0)'; then
+            echo "ERROR: Not all nodes version ${{ env.VERSION_LOW }}"
             exit 1
           fi
 
-      - name: Attempt direct upgrade to ${{ github.env.VERSION_HIGH }}
+      - name: Attempt direct upgrade to ${{ env.VERSION_HIGH }}
         working-directory: ${{ env.WORKING_DIR }}
         continue-on-error: true
         run: |
-          echo "Attempting to upgrade directly from ${{ github.env.VERSION_LOW }} to ${{ github.env.VERSION_HIGH }} (may fail - this is expected)"
-          ./upgrade.sh -v ${{ github.env.VERSION_HIGH }} || {
-            echo "Direct upgrade from ${{ github.env.VERSION_LOW }} to ${{ github.env.VERSION_HIGH }} failed as expected"
+          echo "Attempting to upgrade directly from ${{ env.VERSION_LOW }} to ${{ env.VERSION_HIGH }} (may fail - this is expected)"
+          ./upgrade.sh -v ${{ env.VERSION_HIGH }} || {
+            echo "Direct upgrade from ${{ env.VERSION_LOW }} to ${{ env.VERSION_HIGH }} failed as expected"
             echo "Kubernetes upgrade policy typically requires upgrading through intermediate versions"
             exit 0
           }
