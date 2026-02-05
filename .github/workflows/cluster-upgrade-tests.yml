@@ -92,8 +92,7 @@ jobs:
             rm kubectl
           fi
 
-          # Install jq for JSON parsing
-          sudo apt-get install -y jq
+          sudo apt-get install -y jq yq
 
           # Verify installations
           echo "Verifying installations..."
@@ -101,6 +100,7 @@ jobs:
           tofu --version
           kubectl version --client
           jq --version
+          yq --version
 
       - name: Spin up test environment
         working-directory: ${{ env.WORKING_DIR }}
@@ -322,8 +322,7 @@ jobs:
             rm kubectl
           fi
 
-          # Install jq for JSON parsing
-          sudo apt-get install -y jq
+          sudo apt-get install -y jq yq
 
           # Verify installations
           echo "Verifying installations..."
@@ -331,6 +330,7 @@ jobs:
           tofu --version
           kubectl version --client
           jq --version
+          yq --version
 
       - name: Spin up test environment
         working-directory: ${{ env.WORKING_DIR }}
