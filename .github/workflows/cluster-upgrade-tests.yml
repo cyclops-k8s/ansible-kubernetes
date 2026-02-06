@@ -9,6 +9,8 @@ on:
     branches:
       - main
       - develop
+  workflow_dispatch:
+
 
 env:
   WORKING_DIR: ci-cd/test
@@ -28,7 +30,7 @@ jobs:
             intermediate: "1.34"
             end: "1.35"
           - start: "1.34"
-            intermediate: "None"
+            intermediate: "Skip"
             end: "1.35"
         os_image:
           - ubuntu-24.04
@@ -66,17 +68,17 @@ jobs:
         run: ./run-smoke-tests.sh
 
       - name: Upgrade to ${{ matrix.start_version.intermediate }} (if starting from ${{ matrix.start_version.start }})
-        if: matrix.start_version.intermediate != 'None'
+        if: matrix.start_version.intermediate != 'Skip'
         working-directory: ${{ env.WORKING_DIR }}
         run: ./upgrade.sh -v ${{ matrix.start_version.intermediate }}
 
       - name: Verify cluster after ${{ matrix.start_version.intermediate }} upgrade
-        if: matrix.start_version.intermediate != 'None'
+        if: matrix.start_version.intermediate != 'Skip'
         working-directory: ${{ env.WORKING_DIR }}
         run: ./verify-cluster-health.sh ${{ matrix.start_version.intermediate }}
 
       - name: Run smoke tests post upgrade
-        if: matrix.start_version.intermediate != 'None'
+        if: matrix.start_version.intermediate != 'Skip'
         working-directory: ${{ env.WORKING_DIR }}
         run: ./run-smoke-tests.sh
 
