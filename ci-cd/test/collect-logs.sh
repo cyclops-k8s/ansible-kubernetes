@@ -15,7 +15,7 @@ for host in ${ALL_HOSTS}; do
     ssh "ansible@${host}.cyclops-vms" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo journalctl -u kubelet -n 1000" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-kubelet.log" 2>&1 || true
     ssh "ansible@${host}.cyclops-vms" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo journalctl -u containerd -n 500" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-containerd.log" 2>&1 || true
     ssh "ansible@${host}.cyclops-vms" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo kubeadm version" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-kubeadm-version.log" 2>&1 || true
-    ssh "ansible@${host}.cyclops-vms" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo tar -cv /var/log/containers" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-containers.tar" 2>&1 || true
+    ssh "ansible@${host}.cyclops-vms" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo tar -cv /var/log" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-log.tar" 2>/dev/null || true
 done
 fi
 
