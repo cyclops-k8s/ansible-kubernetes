@@ -35,6 +35,9 @@ env:
 
 jobs:
   install-cluster:
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
     name: Test K8s ${{ matrix.kubernetes_version }} on ${{ matrix.os_image }}
     runs-on:
       group: Default
@@ -61,30 +64,24 @@ jobs:
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./install-dependencies.sh
 
       - name: Spin up test environment
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
       - name: Install Kubernetes cluster
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./install.sh -v ${{ matrix.kubernetes_version }}
 
       - name: Verify cluster health
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./verify-cluster-health.sh ${{ matrix.kubernetes_version }}
 
       - name: Run smoke tests
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./run-smoke-tests.sh
 
       - name: Collect logs on failure
         if: failure()
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./collect-logs.sh
 
       - name: Upload logs artifact
@@ -97,7 +94,6 @@ jobs:
 
       - name: Cleanup test environment
         if: always()
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./shutdown-test-environment.sh || true
 
   # Summary job that depends on all test jobs

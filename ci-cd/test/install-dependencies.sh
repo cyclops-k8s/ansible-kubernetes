@@ -14,7 +14,7 @@ pipx ensurepath
 pipx inject ansible dnspython
 
 # Install Ansible collections from requirements.yaml
-ansible-galaxy collection install -r requirements.yaml
+ansible-galaxy collection install -r ../../requirements.yaml
 
 # Install OpenTofu
 if ! command -v tofu &> /dev/null; then

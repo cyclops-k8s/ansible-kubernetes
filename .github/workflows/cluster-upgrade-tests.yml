@@ -17,6 +17,9 @@ env:
 
 jobs:
   test-upgrade:
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
     name: Upgrade Test ${{ matrix.start_version.start }} → ${{ matrix.start_version.end }} on ${{ matrix.os_image }}
     runs-on:
       group: Default
@@ -46,57 +49,45 @@ jobs:
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./install-dependencies.sh
 
       - name: Spin up test environment
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
       - name: Install initial Kubernetes version
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./install.sh -v ${{ matrix.start_version }}
 
       - name: Verify initial cluster
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./verify-cluster-health.sh ${{ matrix.start_version }}
 
       - name: Run smoke tests
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./run-smoke-tests.sh
 
       - name: Upgrade to ${{ matrix.start_version.intermediate }} (if starting from ${{ matrix.start_version.start }})
         if: matrix.start_version.intermediate != 'Skip'
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./upgrade.sh -v ${{ matrix.start_version.intermediate }}
 
       - name: Verify cluster after ${{ matrix.start_version.intermediate }} upgrade
         if: matrix.start_version.intermediate != 'Skip'
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./verify-cluster-health.sh ${{ matrix.start_version.intermediate }}
 
       - name: Run smoke tests post upgrade
         if: matrix.start_version.intermediate != 'Skip'
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./run-smoke-tests.sh
 
       - name: Upgrade to ${{ matrix.start_version.end }}
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./upgrade.sh -v ${{ matrix.start_version.end }}
 
       - name: Verify final cluster state
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./verify-cluster-health.sh ${{ matrix.start_version.end }}
 
       - name: Run post-upgrade smoke tests
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./run-smoke-tests.sh
 
       - name: Collect logs on failure
         if: failure()
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./collect-logs.sh
 
       - name: Upload logs artifact
@@ -109,10 +100,12 @@ jobs:
 
       - name: Cleanup test environment
         if: always()
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./shutdown-test-environment.sh || true
 
   test-skip-version-upgrade:
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
     name: Skip Version Upgrade Test (1.33 → 1.35)
     runs-on:
       group: Default
@@ -129,21 +122,17 @@ jobs:
         run: ./install-dependencies.sh
 
       - name: Spin up test environment
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./spin-up-test-environment.sh --os-image ubuntu-24.04
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
       - name: Install Kubernetes 1.33
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./install.sh -v 1.33
 
       - name: Verify initial cluster
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./verify-cluster-health.sh 1.33
 
       - name: Attempt direct upgrade to 1.35
-        working-directory: ${{ env.WORKING_DIR }}
         continue-on-error: true
         run: |
           ./upgrade.sh -v 1.35 || {
@@ -154,7 +143,6 @@ jobs:
 
       - name: Cleanup test environment
         if: always()
-        working-directory: ${{ env.WORKING_DIR }}
         run: ./shutdown-test-environment.sh || true
 
   upgrade-summary:
