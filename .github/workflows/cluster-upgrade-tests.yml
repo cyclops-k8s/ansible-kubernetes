@@ -94,8 +94,8 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: upgrade-logs-${{ matrix.start_version.start }}-to-${{ matrix.start_version.end }}-${{ matrix.os_image }}-${{ github.run_number }}
-          path: /tmp/upgrade-logs-${{ github.run_number }}/
+          name: logs-${{ matrix.start_version.start }}-to-${{ matrix.start_version.end }}-${{ matrix.os_image }}-${{ github.run_number }}
+          path: /tmp/logs/${{ github.run_number }}/
           retention-days: 7
 
       - name: Cleanup test environment
@@ -140,6 +140,18 @@ jobs:
             echo "Kubernetes upgrade policy typically requires upgrading through intermediate versions"
             exit 0
           }
+
+      - name: Collect logs on failure
+        if: failure()
+        run: ./collect-logs.sh
+
+      - name: Upload logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.start_version.start }}-to-${{ matrix.start_version.end }}-${{ matrix.os_image }}-${{ github.run_number }}
+          path: /tmp/logs/${{ github.run_number }}/
+          retention-days: 7
 
       - name: Cleanup test environment
         if: always()
