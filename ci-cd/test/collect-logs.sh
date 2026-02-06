@@ -12,10 +12,10 @@ ALL_HOSTS=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value | (.proxy.hostname
 
 for host in ${ALL_HOSTS}; do
     echo "Collecting logs from ${host}..."
-    ssh "ansible@${host}" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo journalctl -u kubelet -n 1000" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-kubelet.log" 2>&1 || true
-    ssh "ansible@${host}" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo journalctl -u containerd -n 500" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-containerd.log" 2>&1 || true
-    ssh "ansible@${host}" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo kubeadm version" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-kubeadm-version.log" 2>&1 || true
-    ssh "ansible@${host}" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo tar -cv /var/log/containers" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-containers.tar" 2>&1 || true
+    ssh "ansible@${host}.cyclops-vms" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo journalctl -u kubelet -n 1000" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-kubelet.log" 2>&1 || true
+    ssh "ansible@${host}.cyclops-vms" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo journalctl -u containerd -n 500" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-containerd.log" 2>&1 || true
+    ssh "ansible@${host}.cyclops-vms" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo kubeadm version" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-kubeadm-version.log" 2>&1 || true
+    ssh "ansible@${host}.cyclops-vms" -i "${HOME}/.ssh/gh-${GITHUB_RUN_NUMBER}.pem" "sudo tar -cv /var/log/containers" > "/tmp/upgrade-logs-${GITHUB_RUN_NUMBER}/${host}-containers.tar" 2>&1 || true
 done
 fi
 
