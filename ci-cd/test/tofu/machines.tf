@@ -24,7 +24,7 @@ module "vm-controlplanes" {
   password_plain        = random_password.vm-password.result
   authorized_key        = tls_private_key.vm-ssh-key.public_key_openssh
   cpu_limit             = "4"
-  cpu_request           = "4"
+  cpu_request           = "1"
   disk_size             = "30Gi"
   memory_size           = "8Gi"
   memory_size_request   = "8Gi"
@@ -42,7 +42,7 @@ module "vm-workers" {
   password_plain        = random_password.vm-password.result
   authorized_key        = tls_private_key.vm-ssh-key.public_key_openssh
   cpu_limit             = "4"
-  cpu_request           = "4"
+  cpu_request           = "1"
   disk_size             = "30Gi"
   memory_size           = "4Gi"
   memory_size_request   = "4Gi"
