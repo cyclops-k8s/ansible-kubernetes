@@ -38,3 +38,7 @@ ansible --version
 tofu --version
 kubectl version --client
 jq --version
+yq --version
+
+echo "os-release"
+cat /etc/os-release
