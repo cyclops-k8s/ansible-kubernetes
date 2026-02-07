@@ -101,12 +101,12 @@ cp -f tofu/cloud-init/* /tmp/cloud-init/
 if [ -n "${CERT}" ]; then
   echo "Injecting CA certificate into cloud-init configuration..."
   cat tofu/cloud-init/user-data.tpl | \
-    yq "
+    yq --yaml-output "
     .ca_certs = {
       trusted: [
         \"$CERT\"
       ]
-    }" -o yaml > /tmp/cloud-init/user-data.tpl.tmp
+    }" > /tmp/cloud-init/user-data.tpl.tmp
 
   echo "# cloud-config" > /tmp/cloud-init/user-data.tpl
   cat /tmp/cloud-init/user-data.tpl.tmp >> /tmp/cloud-init/user-data.tpl
