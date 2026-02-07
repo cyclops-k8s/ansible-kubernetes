@@ -23,11 +23,11 @@ module "vm-controlplanes" {
   password              = bcrypt(random_password.vm-password.result)
   password_plain        = random_password.vm-password.result
   authorized_key        = tls_private_key.vm-ssh-key.public_key_openssh
-  cpu_limit             = "2"
-  cpu_request           = "100m"
+  cpu_limit             = "4"
+  cpu_request           = "2000m"
   disk_size             = "30Gi"
-  memory_size           = "4Gi"
-  memory_size_request   = "4Gi"
+  memory_size           = "8Gi"
+  memory_size_request   = "8Gi"
   namespace_name        = var.namespace_name
   networkdata_filename  = "./cloud-init/network.tpl"
   userdata_filename     = "./cloud-init/user-data.tpl"
@@ -41,8 +41,8 @@ module "vm-workers" {
   password              = bcrypt(random_password.vm-password.result)
   password_plain        = random_password.vm-password.result
   authorized_key        = tls_private_key.vm-ssh-key.public_key_openssh
-  cpu_limit             = "2"
-  cpu_request           = "100m"
+  cpu_limit             = "4"
+  cpu_request           = "1000m"
   disk_size             = "30Gi"
   memory_size           = "4Gi"
   memory_size_request   = "4Gi"
