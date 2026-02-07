@@ -11,8 +11,8 @@ module "vm-proxy" {
   memory_size           = "4Gi"
   memory_size_request   = "4Gi"
   namespace_name        = var.namespace_name
-  networkdata_filename  = "./cloud-init/network.tpl"
-  userdata_filename     = "./cloud-init/user-data.tpl"
+  networkdata_filename  = "/tmp/cloud-init/network.tpl"
+  userdata_filename     = "/tmp/cloud-init/user-data.tpl"
 }
 
 module "vm-controlplanes" {
@@ -29,8 +29,8 @@ module "vm-controlplanes" {
   memory_size           = "8Gi"
   memory_size_request   = "8Gi"
   namespace_name        = var.namespace_name
-  networkdata_filename  = "./cloud-init/network.tpl"
-  userdata_filename     = "./cloud-init/user-data.tpl"
+  networkdata_filename  = "/tmp/cloud-init/network.tpl"
+  userdata_filename     = "/tmp/cloud-init/user-data.tpl"
 }
 
 module "vm-workers" {
@@ -47,8 +47,8 @@ module "vm-workers" {
   memory_size           = "4Gi"
   memory_size_request   = "4Gi"
   namespace_name        = var.namespace_name
-  networkdata_filename  = "./cloud-init/network.tpl"
-  userdata_filename     = "./cloud-init/user-data.tpl"
+  networkdata_filename  = "/tmp/cloud-init/network.tpl"
+  userdata_filename     = "/tmp/cloud-init/user-data.tpl"
 }
 
 data "kubernetes_resource" "control_planes" {

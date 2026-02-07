@@ -52,7 +52,7 @@ locals {
                 "pull",
                 "resolve"
               ]
-              host = "http://registry-mirrors.cyclops-assets.svc.cluster.local"
+              host = "https://registry-mirrors.cyclops-assets"
             }
           ]
         }]

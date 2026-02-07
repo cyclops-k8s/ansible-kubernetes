@@ -94,6 +94,21 @@ function get_options() {
 }
 
 get_options "$@"
+CERT=$(curl http://assets.cyclops-assets/ssl-ca/ca.crt || true)
+mkdir -p /tmp/cloud-init
+cp -f tofu/cloud-init/* /tmp/cloud-init/
+
+if [ -n "${CERT}" ]; then
+  echo "Injecting CA certificate into cloud-init configuration..."
+  cat tofu/cloud-init/user-data.tpl | \
+    yq "
+    .ca_certs = {
+      trusted: [
+        \"$CERT\"
+      ]
+    }" > /tmp/cloud-init/user-data.tpl
+    echo "${CERT}" >> /tmp/cloud-init/ca.crt
+fi
 
 # set tfvars file for future use
 cat << EOF > tofu/vars.tfvars
