@@ -108,7 +108,8 @@ if [ -n "${CERT}" ]; then
       ]
     }" > /tmp/cloud-init/user-data.tpl.tmp
 
-  echo "# cloud-config" > /tmp/cloud-init/user-data.tpl
+  echo "#cloud-config" > /tmp/cloud-init/user-data.tpl
+  echo >> /tmp/cloud-init/user-data.tpl
   cat /tmp/cloud-init/user-data.tpl.tmp >> /tmp/cloud-init/user-data.tpl
 fi
 
