@@ -77,14 +77,17 @@ jobs:
         if: matrix.start_version.intermediate != 'Skip'
         run: ./run-smoke-tests.sh
 
-      # - name: Upgrade to ${{ matrix.start_version.end }}
-      #   run: ./upgrade.sh -v ${{ matrix.start_version.end }}
+      - name: Sleep 2 minutes
+        run: sleep 120
 
-      # - name: Verify final cluster state
-      #   run: ./verify-cluster-health.sh ${{ matrix.start_version.end }}
+      - name: Upgrade to ${{ matrix.start_version.end }}
+        run: ./upgrade.sh -v ${{ matrix.start_version.end }}
 
-      # - name: Run post-upgrade smoke tests
-      #   run: ./run-smoke-tests.sh
+      - name: Verify final cluster state
+        run: ./verify-cluster-health.sh ${{ matrix.start_version.end }}
+
+      - name: Run post-upgrade smoke tests
+        run: ./run-smoke-tests.sh
 
       - name: Collect logs on failure
         if: failure()
