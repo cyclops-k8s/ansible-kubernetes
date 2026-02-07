@@ -106,7 +106,7 @@ if [ -n "${CERT}" ]; then
       trusted: [
         \"$CERT\"
       ]
-    }" --output-yaml > /tmp/cloud-init/user-data.tpl.tmp
+    }" -o yaml > /tmp/cloud-init/user-data.tpl.tmp
 
   echo "# cloud-config" > /tmp/cloud-init/user-data.tpl
   cat /tmp/cloud-init/user-data.tpl.tmp >> /tmp/cloud-init/user-data.tpl
