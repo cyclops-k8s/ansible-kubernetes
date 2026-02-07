@@ -45,7 +45,7 @@ resource "kubernetes_manifest" "virtual-machine" {
           architecture = "amd64"
           domain = {
             cpu = {
-              cores   = 2
+              cores   = tonumber(var.cpu_limit)
               sockets = 1
               threads = 1
             }
