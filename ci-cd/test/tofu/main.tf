@@ -27,7 +27,7 @@ locals {
     # TODO: Replace with your own OIDC client ID for testing
     kubernetes_oidc_client_id = "test-client-id"
     # TODO: Replace with your own OIDC issuer URL for testing
-    kubernetes_oidc_issuer_url                        = "https://github.com/login/oauth/"
+    kubernetes_oidc_issuer_url                        = "http://assets.cyclops-assets/oidc"
     # Testing values only - do not use in production
     kubernetes_kubelet_csr_approver_regex             = ".*"
     kubernetes_kubelet_csr_approver_ips               = "0.0.0.0/0"
