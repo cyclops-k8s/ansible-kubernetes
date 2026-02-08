@@ -21,8 +21,8 @@ resource "kubernetes_manifest" "virtual-machine" {
                   storage = var.disk_size
                 }
               }
-              storageClassName = "ceph-filesystem"
-              volumeMode       = "Filesystem"
+              storageClassName = "ceph-block"
+              volumeMode       = "Block"
             }
             source = {
               pvc = {
