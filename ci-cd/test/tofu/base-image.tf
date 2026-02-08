@@ -30,8 +30,8 @@ resource "kubernetes_manifest" "base_data_volume" {
             storage = var.disk_size
           }
         }
-        storageClassName = "ceph-filesystem"
-        volumeMode       = "Filesystem"
+        storageClassName = "ceph-block"
+        volumeMode       = "Block"
       }
     }
   }
