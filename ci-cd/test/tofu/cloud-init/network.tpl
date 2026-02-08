@@ -4,6 +4,7 @@ network:
     enp1s0:
       dhcp4: true
       dhcp6: false
+      mtu: 1400
       nameservers:
         search:
         - cyclops-vms
