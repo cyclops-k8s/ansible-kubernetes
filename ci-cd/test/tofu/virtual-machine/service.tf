@@ -29,6 +29,24 @@ resource "kubernetes_service_v1" "ssh_service" {
       target_port = 443
     }
     port {
+      name        = "etcd-insecure"
+      port        = 2379
+      protocol    = "TCP"
+      target_port = 2379
+    }
+    port {
+      name        = "etcd-secure"
+      port        = 2380
+      protocol    = "TCP"
+      target_port = 2380
+    }
+    port {
+      name        = "etcd-metrics"
+      port        = 2381
+      protocol    = "TCP"
+      target_port = 2381
+    }
+    port {
       name        = "kube-apiserver"
       port        = 6443
       protocol    = "TCP"
