@@ -91,7 +91,7 @@
   when: first_kube_control_plane == inventory_hostname
   ansible.builtin.command: kubeadm upgrade apply {{ kubeadm_version.stdout }} --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml --yes
 
-- name: Wait for etcd to stabilize after primary upgrade
+- name: Wait for etcd to stabilize after primary control plane upgrade
   changed_when: false
   when: first_kube_control_plane == inventory_hostname
   ansible.builtin.shell:
@@ -101,7 +101,7 @@
         --cacert=/etc/kubernetes/pki/etcd/ca.crt \
         --cert=/etc/kubernetes/pki/etcd/server.crt \
         --key=/etc/kubernetes/pki/etcd/server.key \
-        endpoint health 2>/dev/null | grep -q "is healthy"; do sleep 2; done'
+        endpoint health 2>&1 | grep -q "is healthy"; do sleep 2; done'
     executable: /bin/bash
 
 - name: Wait for API server to be responsive after primary upgrade
@@ -113,15 +113,6 @@
       timeout 600 bash -c 'while ! kubectl get --raw /healthz --kubeconfig /etc/kubernetes/admin.conf &>/dev/null; do sleep 2; done'
     executable: /bin/bash
 
-- name: Verify control plane pods are running after primary upgrade
-  changed_when: false
-  when: first_kube_control_plane == inventory_hostname
-  ansible.builtin.shell:
-    cmd: |
-      set -eo pipefail
-      timeout 600 bash -c 'while ! kubectl get pods -n kube-system -l tier=control-plane --kubeconfig /etc/kubernetes/admin.conf -o jsonpath="{.items[*].status.phase}" | grep -v Running &>/dev/null; do sleep 2; done'
-    executable: /bin/bash
-
 - name: Upgrade Kubernetes non-primary control plane node
   changed_when: true
   when:
@@ -129,9 +120,11 @@
   - inventory_hostname in groups['control_planes']
   ansible.builtin.command: kubeadm upgrade node --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml
 
-- name: Wait for etcd to stabilize after upgrade
+- name: Wait for etcd to stabilize after secondary control plane upgrade
   changed_when: false
-  when: first_kube_control_plane == inventory_hostname
+  when:
+  - first_kube_control_plane != inventory_hostname
+  - inventory_hostname in groups['control_planes']
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
@@ -139,7 +132,7 @@
         --cacert=/etc/kubernetes/pki/etcd/ca.crt \
         --cert=/etc/kubernetes/pki/etcd/server.crt \
         --key=/etc/kubernetes/pki/etcd/server.key \
-        endpoint health 2>/dev/null | grep -q "is healthy"; do sleep 2; done'
+        endpoint health 2>&1 | grep -q "is healthy"; do sleep 2; done'
     executable: /bin/bash
 
 - name: Wait for API server to be responsive after secondary upgrade
@@ -150,6 +143,15 @@
   - inventory_hostname in groups['control_planes']
   ansible.builtin.shell:
     cmd: timeout 300 bash -c 'while ! kubectl get nodes --kubeconfig /etc/kubernetes/admin.conf &>/dev/null; do sleep 2; done'
+
+- name: Verify control plane pods are running after upgrade
+  changed_when: false
+  when: inventory_hostname in groups['control_planes']
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      timeout 600 bash -c 'while kubectl get pods -n kube-system -l tier=control-plane --kubeconfig /etc/kubernetes/admin.conf --no-headers | grep -v Running &>/dev/null; do sleep 2; done'
+    executable: /bin/bash
 
 - name: Pause to allow etcd cluster to stabilize
   when:
