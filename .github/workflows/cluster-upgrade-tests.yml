@@ -23,6 +23,7 @@ jobs:
     name: Upgrade Test ${{ matrix.start_version.start }} → ${{ matrix.start_version.end }} on ${{ matrix.os_image }}
     runs-on:
       group: Default
+      labels: cyclops-k8s-runners
     timeout-minutes: 120
     strategy:
       fail-fast: false
