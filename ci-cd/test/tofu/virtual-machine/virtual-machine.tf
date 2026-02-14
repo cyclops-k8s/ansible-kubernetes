@@ -42,7 +42,7 @@ resource "kubernetes_manifest" "virtual-machine" {
           }
         }
         spec = {
-          architecture = "amd64"
+          # architecture = "amd64" # Latest version of kubevirt doesn't support this field
           domain = {
             cpu = {
               cores   = tonumber(var.cpu_limit)

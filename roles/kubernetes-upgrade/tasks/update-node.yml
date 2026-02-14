@@ -102,50 +102,87 @@
     src: "/etc/kubernetes/manifests/etcd.yaml"
 
 - name: Determine etcd snapshot-count from manifest
-  when: first_kube_control_plane == inventory_hostname
   vars:
     etcd_manifest: "{{ etcd_manifest_raw.content | b64decode | from_yaml }}"
     etcd_command: "{{ etcd_manifest.spec.containers[0].command }}"
     snapshot_args: "{{ etcd_command | select('match', '^--snapshot-count=') | list }}"
+  when: first_kube_control_plane == inventory_hostname
   ansible.builtin.set_fact:
     etcd_snapshot_count: "{{ (snapshot_args | first | split('='))[1] if snapshot_args | length > 0 else '10000' }}"
 
-- name: Force etcd raft snapshot to prevent WAL conf change replay issues
+- name: Find running etcd container
+  changed_when: false
+  failed_when: etcd_container_result.stdout_lines | length == 0
+  register: etcd_container_result
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.command:
+    cmd: crictl ps --name etcd -q
+
+- name: Set etcd connection facts
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.set_fact:
+    etcd_container: "{{ etcd_container_result.stdout_lines[0] }}"
+    etcd_ctl: >-
+      crictl exec {{ etcd_container_result.stdout_lines[0] }} etcdctl
+      --endpoints=https://127.0.0.1:2379
+      --cacert=/etc/kubernetes/pki/etcd/ca.crt
+      --cert=/etc/kubernetes/pki/etcd/server.crt
+      --key=/etc/kubernetes/pki/etcd/server.key
+
+- name: Write entries to force etcd raft snapshot
   changed_when: true
   when: first_kube_control_plane == inventory_hostname
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
-      export ETCDCTL_API=3
-
-      ETCD_ARGS="--endpoints=https://127.0.0.1:2379 \
-        --cacert={{ kubernetes_pki_directory }}/etcd/ca.crt \
-        --cert={{ kubernetes_pki_directory }}/etcd/server.crt \
-        --key={{ kubernetes_pki_directory }}/etcd/server.key"
-
       WRITE_COUNT=$(( {{ etcd_snapshot_count }} + 1 ))
-      echo "Forcing etcd raft snapshot before upgrade (snapshot-count={{ etcd_snapshot_count }}, writing ${WRITE_COUNT} entries)..."
+      echo "Writing ${WRITE_COUNT} entries to force raft snapshot (snapshot-count={{ etcd_snapshot_count }})..."
+      for i in $(seq 1 "${WRITE_COUNT}"); do
+        {{ etcd_ctl }} put "/pre-upgrade-snapshot/${i}" x >/dev/null 2>&1 &
+        if (( i % 20 == 0 )); then wait; fi
+      done
+      wait
+    executable: /bin/bash
 
-      # Write enough entries to cross the snapshot-count boundary.
-      # This triggers etcd to create a new raft snapshot, truncating old WAL entries.
-      seq 1 "${WRITE_COUNT}" | xargs -P 20 -I {} sh -c \
-        "etcdctl ${ETCD_ARGS} put /pre-upgrade-snapshot/{} x >/dev/null 2>&1"
+- name: Wait for raft snapshot to be written to disk
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.pause:
+    seconds: 5
 
-      # Allow time for raft snapshot to be written to disk
-      sleep 5
+- name: Clean up snapshot trigger keys
+  changed_when: true
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.shell:
+    cmd: "{{ etcd_ctl }} del /pre-upgrade-snapshot/ --prefix"
+    executable: /bin/bash
 
-      # Clean up trigger keys
-      etcdctl ${ETCD_ARGS} del "/pre-upgrade-snapshot/" --prefix >/dev/null 2>&1
+- name: Get current etcd revision
+  changed_when: false
+  register: etcd_status_result
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.shell:
+    cmd: "{{ etcd_ctl }} endpoint status -w json"
+    executable: /bin/bash
 
-      # Compact to latest revision to reclaim storage
-      REVISION=$(etcdctl ${ETCD_ARGS} endpoint status -w json | \
-        python3 -c "import sys,json; print(json.load(sys.stdin)[0]['Status']['header']['revision'])")
-      etcdctl ${ETCD_ARGS} compact "${REVISION}" >/dev/null 2>&1 || true
+- name: Set etcd revision fact
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.set_fact:
+    etcd_revision: "{{ (etcd_status_result.stdout | from_json)[0].Status.header.revision }}"
 
-      # Defragment to reclaim disk space
-      etcdctl ${ETCD_ARGS} defrag >/dev/null 2>&1 || true
+- name: Compact etcd to current revision
+  changed_when: true
+  failed_when: false
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.shell:
+    cmd: "{{ etcd_ctl }} compact {{ etcd_revision }}"
+    executable: /bin/bash
 
-      echo "Raft snapshot forced successfully at revision ${REVISION}"
+- name: Defragment etcd storage
+  changed_when: true
+  failed_when: false
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.shell:
+    cmd: "{{ etcd_ctl }} defrag"
     executable: /bin/bash
 # End of workaround for etcd membership store inconsistency
 
@@ -156,24 +193,22 @@
 
 - name: Wait for etcd to stabilize after primary control plane upgrade
   changed_when: false
+  delay: 2
+  register: etcd_health_primary
+  retries: 300
+  until: etcd_health_primary.rc == 0
   when: first_kube_control_plane == inventory_hostname
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
-      timeout 600 bash -c 'while ! ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+      ETCD_CONTAINER=$(crictl ps --name etcd -q | head -1)
+      [ -z "${ETCD_CONTAINER}" ] && exit 1
+      crictl exec "${ETCD_CONTAINER}" etcdctl \
+        --endpoints=https://127.0.0.1:2379 \
         --cacert=/etc/kubernetes/pki/etcd/ca.crt \
         --cert=/etc/kubernetes/pki/etcd/server.crt \
         --key=/etc/kubernetes/pki/etcd/server.key \
-        endpoint health 2>&1 | grep -q "is healthy"; do sleep 2; done'
-    executable: /bin/bash
-
-- name: Wait for API server to be responsive after primary upgrade
-  changed_when: false
-  when: first_kube_control_plane == inventory_hostname
-  ansible.builtin.shell:
-    cmd: |
-      set -eo pipefail
-      timeout 600 bash -c 'while ! kubectl get --raw /healthz --kubeconfig /etc/kubernetes/admin.conf &>/dev/null; do sleep 2; done'
+        endpoint health 2>&1 | grep -q "is healthy"
     executable: /bin/bash
 
 - name: Upgrade Kubernetes non-primary control plane node
@@ -185,35 +220,49 @@
 
 - name: Wait for etcd to stabilize after secondary control plane upgrade
   changed_when: false
+  delay: 2
+  register: etcd_health_secondary
+  retries: 150
+  until: etcd_health_secondary.rc == 0
   when:
   - first_kube_control_plane != inventory_hostname
   - inventory_hostname in groups['control_planes']
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
-      timeout 300 bash -c 'while ! ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+      ETCD_CONTAINER=$(crictl ps --name etcd -q | head -1)
+      [ -z "${ETCD_CONTAINER}" ] && exit 1
+      crictl exec "${ETCD_CONTAINER}" etcdctl \
+        --endpoints=https://127.0.0.1:2379 \
         --cacert=/etc/kubernetes/pki/etcd/ca.crt \
         --cert=/etc/kubernetes/pki/etcd/server.crt \
         --key=/etc/kubernetes/pki/etcd/server.key \
-        endpoint health 2>&1 | grep -q "is healthy"; do sleep 2; done'
+        endpoint health 2>&1 | grep -q "is healthy"
     executable: /bin/bash
 
-- name: Wait for API server to be responsive after secondary upgrade
+- name: Wait for API server to be healthy after control plane upgrade
   changed_when: false
-  delegate_to: "{{ first_kube_control_plane }}"
+  delay: 2
+  register: api_health_secondary
+  retries: 150
+  until: api_health_secondary.rc == 0
   when:
   - first_kube_control_plane != inventory_hostname
   - inventory_hostname in groups['control_planes']
-  ansible.builtin.shell:
-    cmd: timeout 300 bash -c 'while ! kubectl get nodes --kubeconfig /etc/kubernetes/admin.conf &>/dev/null; do sleep 2; done'
+  ansible.builtin.command:
+    cmd: kubectl get --raw /healthz --server=https://{{ ansible_default_ipv4.address }}:6443 --kubeconfig /etc/kubernetes/admin.conf
 
 - name: Verify control plane pods are running after upgrade
   changed_when: false
+  delay: 2
+  register: cp_pods_check
+  retries: 300
+  until: cp_pods_check.rc == 0
   when: inventory_hostname in groups['control_planes']
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
-      timeout 600 bash -c 'while kubectl get pods -n kube-system -l tier=control-plane --kubeconfig /etc/kubernetes/admin.conf --no-headers | grep -v Running &>/dev/null; do sleep 2; done'
+      ! kubectl get pods -n kube-system -l tier=control-plane --kubeconfig /etc/kubernetes/admin.conf --no-headers | grep -qv Running
     executable: /bin/bash
 
 - name: Pause to allow etcd cluster to stabilize
@@ -316,12 +365,20 @@
 
 - name: Uncordon kubernetes node
   changed_when: true
+  delay: 5
   delegate_to: "{{ first_kube_control_plane }}"
-  ansible.builtin.shell:
-    cmd: timeout 300 bash -c 'while [[ ! `sudo kubectl uncordon {{ inventory_hostname_short }} --kubeconfig /etc/kubernetes/admin.conf` ]]; do sleep 5; done'
+  register: uncordon_result
+  retries: 60
+  until: uncordon_result.rc == 0
+  ansible.builtin.command:
+    cmd: kubectl uncordon {{ inventory_hostname_short }} --kubeconfig /etc/kubernetes/admin.conf
 
 - name: Wait for kubernetes node to be ready
   changed_when: false
+  delay: 5
   delegate_to: "{{ first_kube_control_plane }}"
-  ansible.builtin.shell:
-    cmd: timeout 300 bash -c 'while [[ ! `kubectl wait --for=condition=Ready node/{{ inventory_hostname_short }} --timeout=5m --kubeconfig /etc/kubernetes/admin.conf` ]]; do sleep 5; done'
+  register: node_ready
+  retries: 60
+  until: node_ready.rc == 0
+  ansible.builtin.command:
+    cmd: kubectl wait --for=condition=Ready node/{{ inventory_hostname_short }} --timeout=30s --kubeconfig /etc/kubernetes/admin.conf
