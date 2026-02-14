@@ -41,9 +41,6 @@ jobs:
       - name: Set up PATH
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Install dependencies
-        run: ./install-dependencies.sh
-
       - name: Spin up test environment
         run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
         env:
@@ -104,9 +101,6 @@ jobs:
 
       - name: Set up PATH
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Install dependencies
-        run: ./install-dependencies.sh
 
       - name: Spin up test environment
         run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
@@ -174,9 +168,6 @@ jobs:
 
       - name: Set up PATH
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Install dependencies
-        run: ./install-dependencies.sh
 
       - name: Spin up test environment
         run: ./spin-up-test-environment.sh --os-image ubuntu-24.04
