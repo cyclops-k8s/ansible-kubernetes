@@ -41,10 +41,10 @@
 
   - name: Set first control plane for upgrade (first etcd follower)
     ansible.builtin.set_fact:
-      first_kube_control_plane: "{{ groups['control_planes'] | reject('equalto', etcd_leader_host) | first | default(groups['control_planes'] | first) }}"
+      first_kube_control_plane: "{{ groups['control_planes'] | reject('equalto', etcd_leader_host) | first if etcd_leader_host else groups['control_planes'] | first }}"
 
   - name: Display upgrade order information
-    run_once: true
+    run_once: true  # noqa: run-once[task]
     ansible.builtin.debug:
       msg: >-
         Etcd leader: {{ etcd_leader_host | default('unknown', true) }}.
@@ -53,7 +53,7 @@
 
   - name: Add etcd followers to ordered upgrade group
     loop: "{{ groups['control_planes'] }}"
-    run_once: true
+    run_once: true  # noqa: run-once[task]
     when: not (hostvars[item].is_etcd_leader | default(false) | bool)
     ansible.builtin.add_host:
       groups: upgrade_ordered
@@ -61,7 +61,7 @@
 
   - name: Add etcd leader to ordered upgrade group
     loop: "{{ groups['control_planes'] }}"
-    run_once: true
+    run_once: true  # noqa: run-once[task]
     when: hostvars[item].is_etcd_leader | default(false) | bool
     ansible.builtin.add_host:
       groups: upgrade_ordered
@@ -69,7 +69,7 @@
 
   - name: Add worker nodes to ordered upgrade group
     loop: "{{ groups['worker_nodes'] | default([]) | difference(groups['control_planes']) }}"
-    run_once: true
+    run_once: true  # noqa: run-once[task]
     ansible.builtin.add_host:
       groups: upgrade_ordered
       name: "{{ item }}"

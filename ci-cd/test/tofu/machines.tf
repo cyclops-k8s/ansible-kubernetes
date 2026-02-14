@@ -53,7 +53,7 @@ module "vm-workers" {
 
 data "kubernetes_resource" "control_planes" {
   count       = 3
-  depends_on = [ module.vm-controlplanes ]
+  depends_on = [module.vm-controlplanes]
   kind        = "VirtualMachineInstance"
   api_version = "kubevirt.io/v1"
   metadata {
