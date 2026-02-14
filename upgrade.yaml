@@ -1,7 +1,79 @@
+- name: Detect etcd leader for upgrade ordering
+  any_errors_fatal: true
+  become: true
+  gather_facts: false
+  hosts: control_planes
+  tasks:
+  - name: Get etcd member status on each control plane
+    changed_when: false
+    failed_when: false
+    register: etcd_endpoint_status
+    ansible.builtin.shell:
+      cmd: |
+        set -eo pipefail
+        ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+          --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+          --cert=/etc/kubernetes/pki/etcd/server.crt \
+          --key=/etc/kubernetes/pki/etcd/server.key \
+          endpoint status --write-out=json
+      executable: /bin/bash
+
+  - name: Determine if this node is the etcd leader
+    when: etcd_endpoint_status.rc == 0
+    vars:
+      etcd_status: "{{ (etcd_endpoint_status.stdout | from_json)[0] }}"
+    ansible.builtin.set_fact:
+      is_etcd_leader: "{{ etcd_status.Status.header.member_id == etcd_status.Status.leader }}"
+
+  - name: Default to non-leader if etcd status check failed
+    when: etcd_endpoint_status.rc != 0
+    ansible.builtin.set_fact:
+      is_etcd_leader: false
+
+  - name: Identify the etcd leader host
+    ansible.builtin.set_fact:
+      etcd_leader_host: "{% for host in groups['control_planes'] %}{% if hostvars[host].is_etcd_leader | default(false) | bool %}{{ host }}{% endif %}{% endfor %}"
+
+  - name: Set first control plane for upgrade (first etcd follower)
+    ansible.builtin.set_fact:
+      first_kube_control_plane: "{{ groups['control_planes'] | reject('equalto', etcd_leader_host) | first | default(groups['control_planes'] | first) }}"
+
+  - name: Display upgrade order information
+    run_once: true
+    ansible.builtin.debug:
+      msg: >-
+        Etcd leader: {{ etcd_leader_host | default('unknown', true) }}.
+        First control plane for upgrade (kubeadm upgrade apply): {{ first_kube_control_plane }}.
+        Etcd followers will be upgraded before the leader to maintain quorum.
+
+  - name: Add etcd followers to ordered upgrade group
+    loop: "{{ groups['control_planes'] }}"
+    run_once: true
+    when: not (hostvars[item].is_etcd_leader | default(false) | bool)
+    ansible.builtin.add_host:
+      groups: upgrade_ordered
+      name: "{{ item }}"
+
+  - name: Add etcd leader to ordered upgrade group
+    loop: "{{ groups['control_planes'] }}"
+    run_once: true
+    when: hostvars[item].is_etcd_leader | default(false) | bool
+    ansible.builtin.add_host:
+      groups: upgrade_ordered
+      name: "{{ item }}"
+
+  - name: Add worker nodes to ordered upgrade group
+    loop: "{{ groups['worker_nodes'] | default([]) | difference(groups['control_planes']) }}"
+    run_once: true
+    ansible.builtin.add_host:
+      groups: upgrade_ordered
+      name: "{{ item }}"
+
 - name: Upgrade nodes
+  any_errors_fatal: true
   become: true
   gather_facts: true
-  hosts: kubernetes
+  hosts: upgrade_ordered
   serial: 1
   vars:
     version: "{{ kubernetes_version }}"
