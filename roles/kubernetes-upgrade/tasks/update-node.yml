@@ -86,6 +86,52 @@
     mode: "{{ item.mode | default('0600') }}"
     backup: false
 
+# Workaround for etcd 3.6 membership store inconsistency (etcd-io/etcd#20967):
+# v2store and v3store membership data can become inconsistent. In etcd 3.5.x, v2store is
+# the source of truth so this is invisible. In etcd 3.6.x, v3store becomes the source of
+# truth, causing stale/duplicate member entries to surface during WAL replay. This can
+# reset the raft voter configuration and break quorum. Fixed in etcd 3.5.26 + 3.6.7, but
+# K8s releases may bundle affected versions. Forcing a raft snapshot before upgrade ensures
+# stale ConfChange entries are truncated from the WAL, preventing the issue regardless of
+# etcd version. This is a safe no-op on unaffected versions.
+# See: https://github.com/etcd-io/etcd/issues/20967
+- name: Force etcd raft snapshot to prevent WAL conf change replay issues
+  changed_when: true
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      export ETCDCTL_API=3
+
+      ETCD_ARGS="--endpoints=https://127.0.0.1:2379 \
+        --cacert={{ kubernetes_pki_directory }}/etcd/ca.crt \
+        --cert={{ kubernetes_pki_directory }}/etcd/server.crt \
+        --key={{ kubernetes_pki_directory }}/etcd/server.key"
+
+      echo "Forcing etcd raft snapshot before upgrade..."
+
+      # Write enough entries to cross the snapshot-count boundary (default: 10000).
+      # This triggers etcd to create a new raft snapshot, truncating old WAL entries.
+      seq 1 10001 | xargs -P 20 -I {} sh -c \
+        "etcdctl ${ETCD_ARGS} put /pre-upgrade-snapshot/{} x >/dev/null 2>&1"
+
+      # Allow time for raft snapshot to be written to disk
+      sleep 5
+
+      # Clean up trigger keys
+      etcdctl ${ETCD_ARGS} del "/pre-upgrade-snapshot/" --prefix >/dev/null 2>&1
+
+      # Compact to latest revision to reclaim storage
+      REVISION=$(etcdctl ${ETCD_ARGS} endpoint status -w json | \
+        python3 -c "import sys,json; print(json.load(sys.stdin)[0]['Status']['header']['revision'])")
+      etcdctl ${ETCD_ARGS} compact "${REVISION}" >/dev/null 2>&1 || true
+
+      # Defragment to reclaim disk space
+      etcdctl ${ETCD_ARGS} defrag >/dev/null 2>&1 || true
+
+      echo "Raft snapshot forced successfully at revision ${REVISION}"
+    executable: /bin/bash
+
 - name: Upgrade kubernetes primary control plane node
   changed_when: true
   when: first_kube_control_plane == inventory_hostname
