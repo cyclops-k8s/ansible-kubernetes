@@ -250,7 +250,7 @@
   - first_kube_control_plane != inventory_hostname
   - inventory_hostname in groups['control_planes']
   ansible.builtin.command:
-    cmd: kubectl get --raw /healthz --server=https://{{ ansible_default_ipv4.address }}:6443 --kubeconfig /etc/kubernetes/admin.conf
+    cmd: kubectl get --raw /healthz --server=https://{{ ansible_facts['default_ipv4'].address }}:6443 --kubeconfig /etc/kubernetes/admin.conf
 
 - name: Verify control plane pods are running after upgrade
   changed_when: false
