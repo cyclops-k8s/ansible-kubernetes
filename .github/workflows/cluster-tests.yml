@@ -1,4 +1,4 @@
-name: Cluster Upgrade Tests
+name: Cluster Tests
 
 on:
   push:
@@ -10,7 +10,6 @@ on:
       - main
       - develop
   workflow_dispatch:
-
 
 env:
   WORKING_DIR: ci-cd/test
