@@ -19,7 +19,7 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.WORKING_DIR }}
-    name: Test K8s ${{ matrix.kubernetes_version }} on ${{ matrix.os_image }}
+    name: Install Test ${{ matrix.kubernetes_version }} on ${{ matrix.os_image }}
     runs-on:
       group: Default
     timeout-minutes: 90
@@ -216,29 +216,3 @@ jobs:
       - name: Cleanup test environment
         if: always()
         run: ./shutdown-test-environment.sh || true
-
-  upgrade-summary:
-    name: Upgrade Test Summary
-    runs-on: ubuntu-latest
-    needs: [test-upgrade, test-skip-version-upgrade]
-    if: always()
-    steps:
-      - name: Check upgrade test results
-        run: |
-          SEQUENTIAL_RESULT="${{ needs.test-upgrade.result }}"
-          SKIP_RESULT="${{ needs.test-skip-version-upgrade.result }}"
-
-          echo "Sequential upgrade tests: ${SEQUENTIAL_RESULT}"
-          echo "Skip version upgrade test: ${SKIP_RESULT}"
-
-          if [ "${SEQUENTIAL_RESULT}" != "success" ]; then
-            echo "::error::Sequential upgrade tests failed. Check the test-upgrade job for details."
-            exit 1
-          fi
-
-          # Skip version test is allowed to fail
-          if [ "${SKIP_RESULT}" == "success" ]; then
-            echo "All upgrade tests passed successfully!"
-          else
-            echo "Sequential upgrade tests passed. Skip version test status: ${SKIP_RESULT}"
-          fi
