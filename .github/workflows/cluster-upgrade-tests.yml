@@ -23,7 +23,6 @@ jobs:
     name: Upgrade Test ${{ matrix.start_version.start }} → ${{ matrix.start_version.end }} on ${{ matrix.os_image }}
     runs-on:
       group: Default
-      labels: cyclops-k8s-runners
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -33,14 +32,14 @@ jobs:
           - start: "1.33"
             intermediate: "1.34"
             end: "1.35"
-          # - start: "1.34"
-          #   intermediate: "Skip"
-          #   end: "1.35"
+          - start: "1.34"
+            intermediate: "Skip"
+            end: "1.35"
         os_image:
           - ubuntu-24.04
-          # - ubuntu-25.10
-          # - centos9
-          # - centos10
+          - ubuntu-25.10
+          - centos9
+          - centos10
 
     steps:
       - name: Checkout repository
@@ -106,83 +105,83 @@ jobs:
         if: always()
         run: ./shutdown-test-environment.sh || true
 
-  # test-skip-version-upgrade:
-  #   defaults:
-  #     run:
-  #       working-directory: ${{ env.WORKING_DIR }}
-  #   name: Skip Version Upgrade Test (1.33 → 1.35)
-  #   runs-on:
-  #     group: Default
-  #   timeout-minutes: 120
+  test-skip-version-upgrade:
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+    name: Skip Version Upgrade Test (1.33 → 1.35)
+    runs-on:
+      group: Default
+    timeout-minutes: 120
 
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  #     - name: Set up PATH
-  #       run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Set up PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-  #     - name: Install dependencies
-  #       run: ./install-dependencies.sh
+      - name: Install dependencies
+        run: ./install-dependencies.sh
 
-  #     - name: Spin up test environment
-  #       run: ./spin-up-test-environment.sh --os-image ubuntu-24.04
-  #       env:
-  #         GITHUB_RUN_NUMBER: ${{ github.run_number }}
+      - name: Spin up test environment
+        run: ./spin-up-test-environment.sh --os-image ubuntu-24.04
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
-  #     - name: Install Kubernetes 1.33
-  #       run: ./install.sh -v 1.33
+      - name: Install Kubernetes 1.33
+        run: ./install.sh -v 1.33
 
-  #     - name: Verify initial cluster
-  #       run: ./verify-cluster-health.sh 1.33
+      - name: Verify initial cluster
+        run: ./verify-cluster-health.sh 1.33
 
-  #     - name: Attempt direct upgrade to 1.35
-  #       continue-on-error: true
-  #       run: |
-  #         ./upgrade.sh -v 1.35 || {
-  #           echo "Direct upgrade from 1.33 to 1.35 failed as expected"
-  #           echo "Kubernetes upgrade policy typically requires upgrading through intermediate versions"
-  #           exit 0
-  #         }
+      - name: Attempt direct upgrade to 1.35
+        continue-on-error: true
+        run: |
+          ./upgrade.sh -v 1.35 || {
+            echo "Direct upgrade from 1.33 to 1.35 failed as expected"
+            echo "Kubernetes upgrade policy typically requires upgrading through intermediate versions"
+            exit 0
+          }
 
-  #     - name: Collect logs on failure
-  #       if: failure()
-  #       run: ./collect-logs.sh
+      - name: Collect logs on failure
+        if: failure()
+        run: ./collect-logs.sh
 
-  #     - name: Upload logs artifact
-  #       if: failure()
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: logs-${{ matrix.start_version.start }}-to-${{ matrix.start_version.end }}-${{ matrix.os_image }}-${{ github.run_number }}
-  #         path: /tmp/logs/${{ github.run_number }}/
-  #         retention-days: 7
+      - name: Upload logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.start_version.start }}-to-${{ matrix.start_version.end }}-${{ matrix.os_image }}-${{ github.run_number }}
+          path: /tmp/logs/${{ github.run_number }}/
+          retention-days: 7
 
-  #     - name: Cleanup test environment
-  #       if: always()
-  #       run: ./shutdown-test-environment.sh || true
+      - name: Cleanup test environment
+        if: always()
+        run: ./shutdown-test-environment.sh || true
 
-  # upgrade-summary:
-  #   name: Upgrade Test Summary
-  #   runs-on: ubuntu-latest
-  #   needs: [test-upgrade, test-skip-version-upgrade]
-  #   if: always()
-  #   steps:
-  #     - name: Check upgrade test results
-  #       run: |
-  #         SEQUENTIAL_RESULT="${{ needs.test-upgrade.result }}"
-  #         SKIP_RESULT="${{ needs.test-skip-version-upgrade.result }}"
+  upgrade-summary:
+    name: Upgrade Test Summary
+    runs-on: ubuntu-latest
+    needs: [test-upgrade, test-skip-version-upgrade]
+    if: always()
+    steps:
+      - name: Check upgrade test results
+        run: |
+          SEQUENTIAL_RESULT="${{ needs.test-upgrade.result }}"
+          SKIP_RESULT="${{ needs.test-skip-version-upgrade.result }}"
 
-  #         echo "Sequential upgrade tests: ${SEQUENTIAL_RESULT}"
-  #         echo "Skip version upgrade test: ${SKIP_RESULT}"
+          echo "Sequential upgrade tests: ${SEQUENTIAL_RESULT}"
+          echo "Skip version upgrade test: ${SKIP_RESULT}"
 
-  #         if [ "${SEQUENTIAL_RESULT}" != "success" ]; then
-  #           echo "::error::Sequential upgrade tests failed. Check the test-upgrade job for details."
-  #           exit 1
-  #         fi
+          if [ "${SEQUENTIAL_RESULT}" != "success" ]; then
+            echo "::error::Sequential upgrade tests failed. Check the test-upgrade job for details."
+            exit 1
+          fi
 
-  #         # Skip version test is allowed to fail
-  #         if [ "${SKIP_RESULT}" == "success" ]; then
-  #           echo "All upgrade tests passed successfully!"
-  #         else
-  #           echo "Sequential upgrade tests passed. Skip version test status: ${SKIP_RESULT}"
-  #         fi
+          # Skip version test is allowed to fail
+          if [ "${SKIP_RESULT}" == "success" ]; then
+            echo "All upgrade tests passed successfully!"
+          else
+            echo "Sequential upgrade tests passed. Skip version test status: ${SKIP_RESULT}"
+          fi
