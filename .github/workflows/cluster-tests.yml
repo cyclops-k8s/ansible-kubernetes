@@ -134,9 +134,6 @@ jobs:
         if: matrix.start_version.intermediate != 'Skip'
         run: ./run-smoke-tests.sh
 
-      - name: Sleep 2 minutes
-        run: sleep 120
-
       - name: Upgrade to ${{ matrix.start_version.end }}
         run: ./upgrade.sh -v ${{ matrix.start_version.end }}
 
