@@ -66,7 +66,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.kubernetes_version }}-${{ matrix.os_image }}
+          name: logs-install-${{ matrix.kubernetes_version }}-${{ matrix.os_image }}-${{ github.run_number }}
           path: /tmp/logs/${{ github.run_number }}/
           retention-days: 7
 
@@ -151,7 +151,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: logs-${{ matrix.start_version.start }}-to-${{ matrix.start_version.end }}-${{ matrix.os_image }}-${{ github.run_number }}
+          name: logs-upgrade-${{ matrix.start_version.start }}-to-${{ matrix.start_version.end }}-${{ matrix.os_image }}-${{ github.run_number }}
           path: /tmp/logs/${{ github.run_number }}/
           retention-days: 7
 
@@ -206,7 +206,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: logs-${{ matrix.start_version.start }}-to-${{ matrix.start_version.end }}-${{ matrix.os_image }}-${{ github.run_number }}
+          name: logs-skip-version-upgrade--${{ github.run_number }}
           path: /tmp/logs/${{ github.run_number }}/
           retention-days: 7
 
