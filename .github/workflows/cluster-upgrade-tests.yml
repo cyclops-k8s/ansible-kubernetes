@@ -16,6 +16,65 @@ env:
   WORKING_DIR: ci-cd/test
 
 jobs:
+  install-cluster:
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+    name: Test K8s ${{ matrix.kubernetes_version }} on ${{ matrix.os_image }}
+    runs-on:
+      group: Default
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        kubernetes_version:
+        - "1.35"
+        os_image:
+        - ubuntu-24.04
+        - ubuntu-25.10
+        - centos9
+        - centos10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: ./install-dependencies.sh
+
+      - name: Spin up test environment
+        run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+
+      - name: Install Kubernetes cluster
+        run: ./install.sh -v ${{ matrix.kubernetes_version }}
+
+      - name: Verify cluster health
+        run: ./verify-cluster-health.sh ${{ matrix.kubernetes_version }}
+
+      - name: Run smoke tests
+        run: ./run-smoke-tests.sh
+
+      - name: Collect logs on failure
+        if: failure()
+        run: ./collect-logs.sh
+
+      - name: Upload logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.kubernetes_version }}-${{ matrix.os_image }}
+          path: /tmp/logs/${{ github.run_number }}/
+          retention-days: 7
+
+      - name: Cleanup test environment
+        if: always()
+        run: ./shutdown-test-environment.sh || true
+
   test-upgrade:
     defaults:
       run:
