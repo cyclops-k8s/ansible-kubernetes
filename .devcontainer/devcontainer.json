@@ -42,6 +42,8 @@
     }
   },
 
+  "postStartCommand": ".devcontainer/bind/bind9-init.sh || true",
+
   "remoteUser": "vscode",
 
   "mounts": [
