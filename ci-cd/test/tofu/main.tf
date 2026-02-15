@@ -17,18 +17,15 @@ provider "kubernetes" {
 
 locals {
   kubernetes_config = {
-    kubernetes_api_server_port              = 6443
-    kubernetes_version                      = var.kubernetes_version
-    kubernetes_cluster_name                 = "testcluster"
-    kubernetes_control_plane_check_interval = "250ms"
-    kubernetes_api_endpoint                 = "${module.vm-proxy.hostname}.${var.namespace_name}"
-    kubernetes_encryption_key               = random_bytes.encryption_key.base64
-    kubernetes_cluster_signing_duration     = "720h0m0s"
-    # TODO: Replace with your own OIDC client ID for testing
-    kubernetes_oidc_client_id = "test-client-id"
-    # TODO: Replace with your own OIDC issuer URL for testing
+    kubernetes_api_server_port                        = 6443
+    kubernetes_version                                = var.kubernetes_version
+    kubernetes_cluster_name                           = "testcluster"
+    kubernetes_control_plane_check_interval           = "250ms"
+    kubernetes_api_endpoint                           = "${module.vm-proxy.hostname}.${var.namespace_name}"
+    kubernetes_encryption_key                         = random_bytes.encryption_key.base64
+    kubernetes_cluster_signing_duration               = "720h0m0s"
+    kubernetes_oidc_client_id                         = "test-client-id"
     kubernetes_oidc_issuer_url                        = "https://assets.cyclops-assets"
-    # Testing values only - do not use in production
     kubernetes_kubelet_csr_approver_regex             = ".*"
     kubernetes_kubelet_csr_approver_ips               = "0.0.0.0/0"
     kubernetes_kubelet_csr_approver_bypass_dns_checks = "true"
