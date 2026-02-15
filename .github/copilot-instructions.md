@@ -132,41 +132,111 @@ Control plane role uses **version-specific templates** for kubeadm configuration
 
 ## Testing Environment
 
-[test/](test/) provides a local testing harness (dev container required):
+The project includes two test environments:
 
-### Setup & Execution
-1. **VM Provisioning:** `./spin-up-test-environment.sh` creates 6 VMs via cloud-init + QEMU
+### Local Testing (Dev Container)
+[test/](test/) provides a testing harness for local development:
+
+**Setup & Execution**
+1. **VM Provisioning:** `./test/spin-up-test-environment.sh` creates 6 VMs via cloud-init + QEMU
    - 1 proxy (px.k8s.local)
    - 3 control planes (cp1.k8s.local, cp2.k8s.local, cp3.k8s.local)
    - 2 worker nodes (w1.k8s.local, w2.k8s.local)
-2. **Cluster Installation:** `./install.sh` runs Terraform for inventory generation + `ansible-playbook install.yaml`
+2. **Cluster Installation:** `./test/install.sh` runs Terraform for inventory generation + `ansible-playbook install.yaml`
 3. **Inventory:** Terraform auto-generates Ansible inventory from VM definitions; template at [test/inventory_terraform.yaml](test/inventory_terraform.yaml)
 
-### Networking Architecture
+**Networking Architecture**
 - **User-mode networking:** QEMU user device type (no bridge, no host kernel module required)
 - **Inter-VM communication:** Socket-based multicast via `socket` device driver on address `224.1.1.1:1234`
 - **Host access:** VMs accessible via SSH on random host ports (configured in Terraform)
 - **No external connectivity:** VMs isolated from host network by design (tests offline scenarios)
 
-### VM Specifications
+**VM Specifications**
 - **Resource allocation:** 4GB RAM, 2 CPUs per VM
 - **Base image:** Latest Ubuntu LTS (downloaded via cloud-init)
 - **Cloud-init config:** [test/cloud-init/](test/cloud-init/) provides network and user-data scripts
   - Network config: Multicast socket device for inter-VM communication
   - User-data: System packages, SSH setup, hostname configuration
 
-### Hardware Requirements & Dev Container Setup
-- **Host OS:** Linux with QEMU support (x86-64 only; Apple Silicon untested)
-- **Memory:** ≥24GB available (6 VMs × 4GB = 24GB minimum; swap acceptable but slower)
-- **Disk:** ≥120GB (6 VMs × 20GB max allocation; typical ~6GB per cluster)
-- **WSL2 users:** Enable nested virtualization for better performance
-- **Dev container requirement:** Must run within dev container; too many host-specific variables otherwise
-
-### Key Test Files
+**Key Test Files**
 - [test/inventory_terraform.yaml](test/inventory_terraform.yaml) - Ansible inventory template (Terraform renders with actual VM IPs)
 - [test/main.tf](test/main.tf) - Terraform module for QEMU VM provisioning, networking, cloud-init injection
 - [test/vars.yaml](test/vars.yaml) - Kubernetes cluster variables for test runs (e.g., `kubernetes_version`, hook paths)
 - [test/ansible.cfg](test/ansible.cfg) - Ansible config pointing to `../roles` for role discovery
+
+### CI/CD Testing Infrastructure
+
+[ci-cd/test/](ci-cd/test/) provides comprehensive testing infrastructure supporting GitHub Actions CI/CD:
+
+### Overview
+Testing uses Terraform/Tofu to provision infrastructure with either KubeVirt (Kubernetes-based) or QEMU (local) backends. Test environment creates:
+- 1 proxy VM (px.k8s.local)
+- 3 control plane VMs (cp1-3.k8s.local)
+- 3 worker node VMs (w1-3.k8s.local)
+- VM naming: `gh-{GITHUB_RUN_NUMBER}-{random-6-chars}-{purpose}` (e.g., `gh-12345-abcdef-px`)
+
+### Local Testing (Dev Container)
+1. **Environment setup:** Must run inside dev container; requires host Linux with Terraform/Tofu
+2. **VM Provisioning:** `./test/spin-up-test-environment.sh [--os-image VARIANT]`
+   - Creates QEMU VMs via cloud-init with user-mode networking (no bridge required)
+   - Supports OS variants: ubuntu-24.04 (default), ubuntu-25.10, centos9, centos10
+   - Override image URL: `UBUNTU_IMAGE_URL=http://custom-mirror/ubuntu.img ./test/spin-up-test-environment.sh`
+3. **Cluster Installation:** `./test/install.sh`
+   - Runs Terraform/Tofu `init` and `apply` to generate inventory
+   - Executes Ansible playbook with generated inventory and test variables
+4. **Test Cleanup:** `./test/shutdown-test-environment.sh` destroys VMs and resources
+
+### CI/CD Testing (GitHub Actions)
+GitHub Actions workflows in [.github/workflows/](/.github/workflows/) provide automated testing on each PR:
+- **cluster-tests.yml** - Parametrized workflow testing multiple Kubernetes versions and OS distributions
+  - Runs on self-hosted KubeVirt-enabled runners (VMs provisioned in Kubernetes cluster)
+  - Parallel matrix: Kubernetes 1.33, 1.34, 1.35 × Ubuntu 24.04, Ubuntu 25.10, CentOS Stream 9
+  - Performs cluster install, smoke tests, and upgrade verification
+- **Related scripts:**
+  - [ci-cd/test/verify-cluster-health.sh](ci-cd/test/verify-cluster-health.sh) - Validates node readiness, pod status, API health
+  - [ci-cd/test/run-smoke-tests.sh](ci-cd/test/run-smoke-tests.sh) - Executes post-deployment pod scheduling/networking tests
+  - [ci-cd/test/collect-logs.sh](ci-cd/test/collect-logs.sh) - Gathers logs for failed test runs
+
+### KubeVirt Testing Requirements (GitHub Actions)
+- Runners must have KubeVirt and DataVolumes installed
+- Persistent storage class (ceph-block used by default; configurable via Terraform variables)
+- Base OS images cached at `http://assets.cyclops-assets/os-images/` (pulled from upstream)
+- VM network isolation: No external access; tests offline/restricted network scenarios
+
+### Local QEMU Testing Architecture
+- **User-mode networking:** No bridge, no host kernel modules required
+- **Inter-VM communication:** Socket multicast via `224.1.1.1:1234`
+- **Host access:** SSH on random ports (output by provision script)
+- **Resource allocation:** 2GB RAM, 2 CPUs per VM
+- **Base image:** Latest Ubuntu LTS (cloud-init downloaded on demand)
+- **Cloud-init config:** [ci-cd/test/cloud-init/](ci-cd/test/cloud-init/)
+  - `network` - Socket device configuration for inter-VM comms
+  - `user-data` - Package installation, user creation (ansible user for SSH), hostname setup
+
+### Hardware Requirements
+| Scenario | Requirements |
+|----------|--------------|
+| **Local QEMU testing** | Linux host, Terraform/Tofu, ≥14GB RAM (7 VMs × 2GB), ≥120GB disk, dev container |
+| **GitHub Actions (KubeVirt)** | Kubernetes cluster with KubeVirt, DataVolumes, persistent storage (ceph-block or equivalent) |
+| **WSL2 users** | Enable nested virtualization for QEMU performance |
+
+### Infrastructure as Code (Terraform/Tofu)
+- **CLI detection:** Scripts auto-detect tofu (preferred) or terraform; set `TF_CMD` env var to override
+- **Configuration:** [ci-cd/test/tofu/](ci-cd/test/tofu/) contains Terraform modules
+  - [ci-cd/test/tofu/main.tf](ci-cd/test/tofu/main.tf) - Provider config for QEMU or KubeVirt, Kubernetes variables
+  - [ci-cd/test/tofu/machines.tf](ci-cd/test/tofu/machines.tf) - VM module definitions (proxy, control planes, workers)
+  - [ci-cd/test/tofu/ansible-stuff.tf](ci-cd/test/tofu/ansible-stuff.tf) - Ansible inventory generation (cloud.terraform plugin)
+  - [ci-cd/test/tofu/variables.tf](ci-cd/test/tofu/variables.tf) - Module variables (kubernetes_version, storage_class, image URL)
+- **Inventory generation:** Terraform generates Ansible inventory via cloud.terraform provider; template at [ci-cd/test/inventory_terraform.yaml](ci-cd/test/inventory_terraform.yaml)
+- **Variable overrides:** Pass via environment (`TF_VAR_kubernetes_version=1.35`) or `-var` flag
+
+### Key Test Files & Scripts
+- [ci-cd/test/install.sh](ci-cd/test/install.sh) - Orchestrates Terraform provisioning and Ansible playbook execution
+- [ci-cd/test/upgrade.sh](ci-cd/test/upgrade.sh) - Tests cluster upgrade path (runs upgrade.yaml after installation)
+- [ci-cd/test/vars.yaml](ci-cd/test/vars.yaml) - Test-specific Kubernetes variables (e.g., hook paths, CSR approver settings for testing)
+- [ci-cd/test/ansible.cfg](ci-cd/test/ansible.cfg) - Ansible config pointing to ../roles for role discovery
+- [ci-cd/test/spin-up-test-environment.sh](ci-cd/test/spin-up-test-environment.sh) - Detects OS, validates environment, invokes Terraform to provision VMs
+- [ci-cd/test/shutdown-test-environment.sh](ci-cd/test/shutdown-test-environment.sh) - Cleans up Terraform-managed resources
 
 ## Code Patterns & Conventions
 
@@ -237,7 +307,7 @@ This consistent ordering aids readability and is enforced during reviews. Follow
 1. Copy prior version templates: `cp roles/kubernetes-control-plane/templates/*-1.34.yaml.j2 roles/kubernetes-control-plane/templates/*-1.35.yaml.j2`
 2. Update template content (API changes, feature additions) using kubeadm docs
 3. Test with `kubernetes_version: 1.35` in vars
-4. Run full test harness: `cd test && ./spin-up-test-environment.sh && ./install.sh`
+4. Run full test harness: `cd ci-cd/test && ./spin-up-test-environment.sh && ./install.sh` (or `cd test` for legacy testing)
 
 ### Adding a new hardening control
 1. Update [roles/kubernetes-defaults/defaults/main.yml](roles/kubernetes-defaults/defaults/main.yml) with variable + CIS/STIG annotation
