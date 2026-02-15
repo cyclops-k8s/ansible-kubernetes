@@ -1,10 +1,6 @@
 #!/bin/bash
 set -e
 
-[ ! -x "$(command -v bind9)" ] && echo "bind9 is not installed. Installing..." && \
-    sudo apt update && \
-    sudo apt install -y bind9
-
 LOCAL_IP=$(ip -j address | jq '.[] | select(.ifname=="eth0") | .addr_info[] | select(.family=="inet") | .local' -r)
 FORWARDER_IP=$(grep -m 1 'nameserver' /etc/resolv.conf | awk '{print $2}')
 
