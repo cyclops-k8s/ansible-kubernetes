@@ -1,4 +1,6 @@
-#!/usr/bin/bash -e
+#!/usr/bin/bash
+
+set -e
 
 cd tofu
 tofu destroy \

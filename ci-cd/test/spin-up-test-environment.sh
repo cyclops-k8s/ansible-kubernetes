@@ -1,4 +1,6 @@
-#!/usr/bin/bash -e
+#!/usr/bin/bash
+
+set -e
 
 usage()
 {
@@ -98,7 +100,8 @@ CERT=$(curl http://assets.cyclops-assets/ssl-ca/ca.crt || true)
 mkdir -p /tmp/cloud-init
 cp -f tofu/cloud-init/* /tmp/cloud-init/
 
-if [ -n "${CERT}" ]; then
+if [ -n "${CERT}" ]
+then
   echo "Injecting CA certificate into cloud-init configuration..."
   cat tofu/cloud-init/user-data.tpl | \
     yq --yaml-output "

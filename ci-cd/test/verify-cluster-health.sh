@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 KUBERNETES_VERSION=$1
 
 # Wait for all nodes to be ready

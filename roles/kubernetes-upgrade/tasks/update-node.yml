@@ -139,7 +139,10 @@
       echo "Writing ${WRITE_COUNT} entries to force raft snapshot (snapshot-count={{ etcd_snapshot_count }})..."
       for i in $(seq 1 "${WRITE_COUNT}"); do
         {{ etcd_ctl }} put "/pre-upgrade-snapshot/${i}" x >/dev/null 2>&1 &
-        if (( i % 20 == 0 )); then wait; fi
+        if (( i % 20 == 0 ))
+        then
+          wait
+        fi
       done
       wait
     executable: /bin/bash

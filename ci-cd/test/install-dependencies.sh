@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Update package list
 sudo apt-get update
 
@@ -17,14 +19,16 @@ pipx inject ansible dnspython
 ansible-galaxy collection install -r ../../requirements.yaml
 
 # Install OpenTofu
-if ! command -v tofu &> /dev/null; then
+if ! command -v tofu &> /dev/null
+then
   echo "Installing OpenTofu..."
   curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh > /tmp/install-opentofu.sh
   sudo bash /tmp/install-opentofu.sh --install-method deb
 fi
 
 # Install kubectl
-if ! command -v kubectl &> /dev/null; then
+if ! command -v kubectl &> /dev/null
+then
   echo "Installing kubectl..."
   curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
   sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
