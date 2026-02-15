@@ -18,7 +18,7 @@ spec:
     command:
     - sh
     - -c
-    - 'sleep 10 && cp -v /original-certs/* /certs && chown -R {{ kubernetes_etcd_user_id }}:{{ kubernetes_etcd_group_id }} /certs/* /var/lib/etcd'
+    - 'while [ ! -f /original-certs/ca.crt ]; do echo "Missing certificates"; sleep 1; done; cp -v /original-certs/* /certs && chown -R {{ kubernetes_etcd_user_id }}:{{ kubernetes_etcd_group_id }} /certs/* /var/lib/etcd'
   volumes:
   - name: etcd-certs
     emptyDir:

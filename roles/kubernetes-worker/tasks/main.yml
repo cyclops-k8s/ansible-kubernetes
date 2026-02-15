@@ -103,26 +103,19 @@
     file: "{{ post_worker_node_join_hook }}"
 
 # Get an updated list of nodes in the cluster
-- name: Get nodes in the cluster
+- name: Wait for node to appear in cluster
   changed_when: false
+  delay: 2
   delegate_to: "{{ first_kube_control_plane }}"
   register: kubernetes_nodes
+  retries: 15
+  until: inventory_hostname in kubernetes_nodes.stdout_lines or inventory_hostname_short in kubernetes_nodes.stdout_lines
   ansible.builtin.command:
     cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o custom-columns=NAME:.metadata.name --no-headers
 
 - name: Set the node name fact
   ansible.builtin.set_fact:
     kubernetes_node_name: "{% if inventory_hostname in kubernetes_nodes.stdout_lines %}{{ inventory_hostname }}{% elif inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ inventory_hostname_short }}{% endif %}"
-
-- name: Fail if Kubernetes node name could not be determined
-  when:
-  - kubernetes_node_name is not defined or
-    kubernetes_node_name | length == 0
-  ansible.builtin.fail:
-    msg: >-
-      Could not determine Kubernetes node name for host {{ inventory_hostname }}.
-      Ensure either '{{ inventory_hostname }}' or '{{ inventory_hostname_short }}' appears
-      in the list of Kubernetes nodes: {{ kubernetes_nodes.stdout_lines | default('') | join(', ') }}
 
 # This kubectl command returns all certificate signing requests for the node, one per line
 - name: Get certificate signing requests

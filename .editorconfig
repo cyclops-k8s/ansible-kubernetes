@@ -7,10 +7,17 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 tab_width = 4
 
+# yaml files
 [*.{yaml,yml}]
 indent_size = 2
 indent_style = space
 
+# jinja files
 [*.{yaml.j2,yml.j2}]
+indent_size = 2
+indent_style = space
+
+# shell scripts
+[*.sh]
 indent_size = 2
 indent_style = space

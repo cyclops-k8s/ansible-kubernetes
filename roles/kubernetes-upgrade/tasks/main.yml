@@ -11,6 +11,7 @@
 
 - name: Define first control plane node
   run_once: true
+  when: first_kube_control_plane is not defined
   ansible.builtin.set_fact:
     first_kube_control_plane: "{{ groups['control_planes'] | first }}"
 

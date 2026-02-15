@@ -1,5 +1,5 @@
 {
-    "ansible.python.interpreterPath": "python3",
+    "ansible.python.interpreterPath": "/home/vscode/.local/share/pipx/venvs/ansible-core/bin/python",
     "ansible.validation.lint.path": "ansible-lint",
     "files.associations": {
         "**/roles/**/*.yml": "ansible",
