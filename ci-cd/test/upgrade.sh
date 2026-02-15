@@ -21,7 +21,7 @@ PARSED_ARGUMENTS=$(getopt -a -n "$0" -o v:h --long version:,help -- "$@")
 VALID_ARGUMENTS=$?
 
 # Make sure some arguments were passed in
-if [ "$VALID_ARGUMENTS" != "0" ];
+if [ "$VALID_ARGUMENTS" != "0" ]
 then
   usage
 fi

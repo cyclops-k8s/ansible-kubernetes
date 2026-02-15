@@ -139,11 +139,11 @@ WORKER_NODE_HOSTNAMES=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.worker
 PASSWORD=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.vm_password')
 
 echo "Proxy VM: ssh ansible@${PROXY_HOSTNAME}"
-for HOSTNAME in ${CONTROL_PLANE_HOSTNAMES}; do
-  echo "Control Plane VM: ssh ansible@${HOSTNAME}"
+for VM_HOSTNAME in ${CONTROL_PLANE_HOSTNAMES}; do
+  echo "Control Plane VM: ssh ansible@${VM_HOSTNAME}"
 done
-for HOSTNAME in ${WORKER_NODE_HOSTNAMES}; do
-  echo "Worker Node VM: ssh ansible@${HOSTNAME}"
+for VM_HOSTNAME in ${WORKER_NODE_HOSTNAMES}; do
+  echo "Worker Node VM: ssh ansible@${VM_HOSTNAME}"
 done
 
 echo "VM Password is '${PASSWORD}'"
