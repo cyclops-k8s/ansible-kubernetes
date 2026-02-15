@@ -9,9 +9,9 @@
       timeout: 120
 
   - name: Wait for cloud init to finish
+    delay: 5
+    register: cloud_init
+    retries: 120
+    until: "cloud_init.cloud_init_data_facts.status.v1.stage is defined and not cloud_init.cloud_init_data_facts.status.v1.stage"
     community.general.cloud_init_data_facts:
       filter: status
-    register: cloud_init
-    until: "cloud_init.cloud_init_data_facts.status.v1.stage is defined and not cloud_init.cloud_init_data_facts.status.v1.stage"
-    retries: 120
-    delay: 5
