@@ -11,7 +11,7 @@ By default it uses hardcoded default URL's for the os-images under http://assets
 These are pulled from upstream sources and cached locally for higher performance and lower bandwidth usage. You can override the location of the image you want to use by specifying the URL environment variable when calling `spin-up-test-environment.sh`.
 
 ## Purpose
-This will spin up 7 VMs for testing the playbook using KubeVirt in the runners hosting Kubernetes cluster. It will base the virtual machine name on the github run number and a random 6 character value followed by the purpose, cp(1|2|3), px, w(1|2|3).
+This will spin up 7 VMs for testing the playbook using KubeVirt in the Kubernetes cluster hosting the runners. It will base the virtual machine name prefixed with `gh-`, the github run number and a random 6 character value followed by the purpose, cp(1|2|3), px, w(1|2|3).
 
 * 1 proxy, px.k8s.local
 * 3 control planes, cp(1-3).k8s.local
@@ -20,7 +20,7 @@ This will spin up 7 VMs for testing the playbook using KubeVirt in the runners h
 ## Usage
 To use the tests execute the `spin-up-test-environment.sh` file. If you want to test with an image besides the default latest Ubuntu LTS image, specify `--os-image` and the variant you wish to use.
 
-Once that script exits, you will have the required VMs. Then run install.sh
+Once that script exits, you will have the required VMs. Then run install.sh.
 
 ### Choosing the OS Distribution
 
@@ -42,7 +42,7 @@ By default, the test environment uses Ubuntu 24.04. You can test with CentOS Str
 
 **Note:** When testing with CentOS Stream, you may want to enable SELinux configuration, by default this is enabled:
 
-```bash
+```yaml
 # In test/vars.yaml, add:
-# kubernetes_configure_selinux: true
+kubernetes_configure_selinux: true
 ```
