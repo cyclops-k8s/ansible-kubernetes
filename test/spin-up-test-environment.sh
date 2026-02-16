@@ -2,7 +2,7 @@
 
 usage()
 {
-  echo "Usage: $0 [options] [-- tfvar files]
+  echo "Usage: $0 [options]
   -d | --domain               The domain to use for the VMs.
                               Default is k8s.local
                               Environment variable: DOMAIN
@@ -42,9 +42,7 @@ Examples:
     -s ~/.ssh/k8s.id.pub \\
     -t /tmp/k8s-vms \\
     -u https://example.com/custom-centos-image.qcow2 \\
-    -v ~/ovmf.fd \\
-    -- \\
-    ../example-hooks/registry-mirrors/post_proxies/test.tfvars
+    -v ~/ovmf.fd
 
   # Using Environment Variables:
     export DOMAIN=somethingrandom.tld
@@ -54,9 +52,7 @@ Examples:
     export TEMP_DIR=/tmp/k8s-vms
     export URL=https://example.com/custom-centos-image.qcow2
     export OVMF_FILE=~/ovmf.fd
-    $0 \\
-    -- \\
-    ../example-hooks/registry-mirrors/post_proxies/test.tfvars
+    $0
 "
   exit 2
 }
@@ -210,7 +206,6 @@ function get_options() {
       -u | --url)                 URL="$2"; shift 2 ;;
       -v | --ovmf-file)           OVMF_FILE="$2"; shift 2 ;;
       -h | --help)                usage;;
-      --)                         shift; break ;;
       *)                          echo "Unexpected option: $1"; usage ;;
     esac
   done
