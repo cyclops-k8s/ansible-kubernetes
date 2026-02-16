@@ -1,0 +1,49 @@
+- name: Generate test secret name with random 6 character suffix
+  ansible.builtin.set_fact:
+    test_secret_name: "playbook-secret-{{ lookup('community.general.random_string', length=6, upper=false, numbers=false, special=false) }}"
+
+- name: Create generic secret for testing
+  changed_when: true
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  ansible.builtin.command:
+    cmd: kubectl create secret generic {{ test_secret_name }} --from-literal=key=value -n default
+
+- name: Get an etcd pod name
+  changed_when: false
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: etcd_pod_task
+  ansible.builtin.command:
+    cmd: kubectl get pods -n kube-system -l component=etcd,tier=control-plane -o jsonpath='{.items[0].metadata.name}'
+
+# Don't fail here because we always want to delete the secret
+- name: Get etcd raw secret value
+  changed_when: false
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  failed_when: false
+  register: etcd_raw_secret
+  ansible.builtin.command:
+    cmd: |
+      kubectl exec -n kube-system {{ etcd_pod_task.stdout }} --
+          etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt
+            --cert=/etc/kubernetes/pki/etcd/server.crt
+            --key=/etc/kubernetes/pki/etcd/server.key
+            --hex
+            get --print-value-only /registry/secrets/default/{{ test_secret_name }}
+
+- name: Delete test secret
+  changed_when: true
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  ansible.builtin.command:
+    cmd: kubectl delete secret "{{ test_secret_name }}" -n default
+
+- name: Assert etcd secret value is encrypted
+  ansible.builtin.assert:
+    fail_msg: "etcd secret value is not encrypted at rest: {{ etcd_raw_secret.stdout }}"
+    success_msg: "etcd secret value is encrypted at rest"
+    # the value below is the hex output of the string "k8s:enc:"
+    that:
+    - etcd_raw_secret.stdout is search('^\\\\x6b\\\\x38\\\\x73\\\\x3a\\\\x65\\\\x6e\\\\x63\\\\x3a')

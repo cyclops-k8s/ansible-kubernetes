@@ -69,3 +69,11 @@
   roles:
   - role: kubernetes-defaults
   - role: post-kubernetes-worker
+
+- name: Post Cluster Validation
+  any_errors_fatal: true
+  become: true
+  hosts: control_planes[0]
+  roles:
+  - role: kubernetes-defaults
+  - role: post-kubernetes-validation

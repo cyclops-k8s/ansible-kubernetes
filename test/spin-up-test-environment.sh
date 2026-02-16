@@ -206,6 +206,7 @@ function get_options() {
       -u | --url)                 URL="$2"; shift 2 ;;
       -v | --ovmf-file)           OVMF_FILE="$2"; shift 2 ;;
       -h | --help)                usage;;
+      --)                         shift; break ;;
       *)                          echo "Unexpected option: $1"; usage ;;
     esac
   done
