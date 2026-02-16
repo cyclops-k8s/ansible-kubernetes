@@ -26,12 +26,12 @@
   register: etcd_raw_secret
   ansible.builtin.command:
     cmd: |
-      kubectl exec -n kube-system {{ etcd_pod_name }} --
+      kubectl exec -n kube-system {{ etcd_pod_task.stdout }} --
           etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt
             --cert=/etc/kubernetes/pki/etcd/server.crt
             --key=/etc/kubernetes/pki/etcd/server.key
             --hex
-            get --print-value-only /registry/secrets/default/{{ etcd_pod_task.stdout }}
+            get --print-value-only /registry/secrets/default/{{ test_secret_name }}
 
 - name: Delete test secret
   changed_when: true
