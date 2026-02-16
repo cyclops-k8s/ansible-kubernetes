@@ -1,0 +1,4 @@
+- name: Verify Etcd data is encrypted at rest
+  run_once: true
+  delegate_to: "{{ first_kube_control_plane }}"
+  ansible.builtin.import_tasks: verify-encrypted.yml

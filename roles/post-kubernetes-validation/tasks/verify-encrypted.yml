@@ -1,0 +1,20 @@
+- name: Create generic secret for testing
+  changed_when: true
+  ansible.builtin.command: kubectl create secret generic test-secret --from-literal=key=value -n default
+
+- name: Verify Etcd data is encrypted at rest
+  changed_when: false
+  ansible.builtin.shell: |
+    set -eo pipefail
+
+    ETCD_PODNAME=$(kubectl get pods -n kube-system -l component=etcd -o jsonpath='{.items[0].metadata.name}')
+    RAW_SECRET=$(kubectl exec -n kube-system "$ETCD_PODNAME" -- \
+      etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt   \
+        --cert=/etc/kubernetes/pki/etcd/server.crt \
+        --key=/etc/kubernetes/pki/etcd/server.key  \
+        get /registry/secrets/default/test-secret)
+    echo "$RAW_SECRET" | grep -qe '^k8s:enc'
+
+- name: Delete test secret
+  changed_when: true
+  ansible.builtin.command: kubectl delete secret test-secret -n default
