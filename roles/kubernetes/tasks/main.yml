@@ -34,6 +34,8 @@
   register: kubernetes_kubeadm_images_pulled
   retries: 10
   until: kubernetes_kubeadm_images_pulled.rc == 0
+  # only when the host is in the control plane group, as kubeadm config images pull needs to be run on a control plane node
+  when: inventory_hostname in groups['control_planes']
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
