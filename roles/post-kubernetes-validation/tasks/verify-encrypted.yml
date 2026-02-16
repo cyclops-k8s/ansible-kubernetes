@@ -6,18 +6,16 @@
   changed_when: true
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-  ansible.builtin.command: kubectl create secret generic {{ test_secret_name }} --from-literal=key=value -n default
+  ansible.builtin.command:
+    cmd: kubectl create secret generic {{ test_secret_name }} --from-literal=key=value -n default
 
 - name: Get an etcd pod name
   changed_when: false
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   register: etcd_pod_task
-  ansible.builtin.command: kubectl get pods -n kube-system -l component=etcd,tier=control-plane -o jsonpath='{.items[0].metadata.name}'
-
-- name: Set etcd pod name fact
-  ansible.builtin.set_fact:
-    etcd_pod_name: "{{ etcd_pod_task.stdout }}"
+  ansible.builtin.command:
+    cmd: kubectl get pods -n kube-system -l component=etcd,tier=control-plane -o jsonpath='{.items[0].metadata.name}'
 
 # Don't fail here because we always want to delete the secret
 - name: Get etcd raw secret value
@@ -33,18 +31,19 @@
             --cert=/etc/kubernetes/pki/etcd/server.crt
             --key=/etc/kubernetes/pki/etcd/server.key
             --hex
-            get --print-value-only /registry/secrets/default/{{ test_secret_name }}
+            get --print-value-only /registry/secrets/default/{{ etcd_pod_task.stdout }}
 
 - name: Delete test secret
   changed_when: true
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-  ansible.builtin.command: kubectl delete secret "{{ test_secret_name }}" -n default
+  ansible.builtin.command:
+    cmd: kubectl delete secret "{{ test_secret_name }}" -n default
 
 - name: Assert etcd secret value is encrypted
   ansible.builtin.assert:
+    fail_msg: "etcd secret value is not encrypted at rest: {{ etcd_raw_secret.stdout }}"
+    success_msg: "etcd secret value is encrypted at rest"
     # the value below is the hex output of the string "k8s:enc:"
     that:
     - etcd_raw_secret.stdout is search('^\\\\x6b\\\\x38\\\\x73\\\\x3a\\\\x65\\\\x6e\\\\x63\\\\x3a')
-    fail_msg: "etcd secret value is not encrypted at rest: {{ etcd_raw_secret.stdout }}"
-    success_msg: "etcd secret value is encrypted at rest"
