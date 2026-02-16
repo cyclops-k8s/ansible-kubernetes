@@ -41,6 +41,7 @@ done
 
 #combine the rest of the arguments as tfvar files prefixed with -var-file=
 TFVAR_FILES=()
+DID_TFVAR_FILES=0
 for arg in "$@"
 do
   if [ ! -f "${arg}" ]
@@ -49,7 +50,17 @@ do
     exit 1
   fi
   TFVAR_FILES+=("-var-file=${arg}")
+  DID_TFVAR_FILES=1
 done
+
+if [ "${DID_TFVAR_FILES}" -eq "0" ] && ls .local/*.tfvars > /dev/null 2>&1
+then
+  for file in .local/*.tfvars
+  do
+    echo "Adding local tfvar file: ${file}"
+    TFVAR_FILES+=("-var-file=${file}")
+  done
+fi
 
 if [ -z "${DEVCONTAINER}" ]
 then

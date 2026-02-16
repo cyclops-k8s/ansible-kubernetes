@@ -2,7 +2,7 @@
 
 usage()
 {
-  echo "Usage: $0 [options] [-- tfvar files]
+  echo "Usage: $0 [options]
   -d | --domain               The domain to use for the VMs.
                               Default is k8s.local
                               Environment variable: DOMAIN
@@ -42,9 +42,7 @@ Examples:
     -s ~/.ssh/k8s.id.pub \\
     -t /tmp/k8s-vms \\
     -u https://example.com/custom-centos-image.qcow2 \\
-    -v ~/ovmf.fd \\
-    -- \\
-    ../example-hooks/registry-mirrors/post_proxies/test.tfvars
+    -v ~/ovmf.fd
 
   # Using Environment Variables:
     export DOMAIN=somethingrandom.tld
@@ -54,9 +52,7 @@ Examples:
     export TEMP_DIR=/tmp/k8s-vms
     export URL=https://example.com/custom-centos-image.qcow2
     export OVMF_FILE=~/ovmf.fd
-    $0 \\
-    -- \\
-    ../example-hooks/registry-mirrors/post_proxies/test.tfvars
+    $0
 "
   exit 2
 }
@@ -73,6 +69,7 @@ Examples:
 # For example:
 #   create_vm px 2021 11 2 2 10 ",hostfwd=tcp::6443-:6443"
 function create_vm() {
+  local LOCAL_IP
   local name=$1
   local ssh_port=$2
   local ip=$3
@@ -81,9 +78,11 @@ function create_vm() {
   local hdd_size=$6
   local additional_forwarding=$7
 
+  LOCAL_IP=$(ip -j address | jq '.[] | select(.ifname=="eth0") | .addr_info[] | select(.family=="inet") | .local' -r)
   echo "Creating virtual machine: ${name}"
   echo "  SSH Port: ${ssh_port}"
   echo "  IP: ${ip}"
+  echo "  Local IP: ${LOCAL_IP}"
   echo "  CPU: ${cpu_num}"
   echo "  Mem: ${mem_size}"
   echo "  HDD: ${hdd_size}"
@@ -114,6 +113,7 @@ function create_vm() {
     yq --yaml-output \
       ".network.ethernets.eth0.match.macaddress = \"${MAC0}\" | \
        .network.ethernets.eth0.nameservers.search = [ \"${DOMAIN}\" ] | \
+       .network.ethernets.eth0.nameservers.addresses = [\"${LOCAL_IP}\"] | \
        .network.ethernets.eth1.match.macaddress = \"${MAC1}\" | \
        .network.ethernets.eth1.addresses += [\"${IP_PREFIX}.${ip}/24\"]" \
     >> "${TEMP_DIR}/${name}.network"
@@ -206,7 +206,6 @@ function get_options() {
       -u | --url)                 URL="$2"; shift 2 ;;
       -v | --ovmf-file)           OVMF_FILE="$2"; shift 2 ;;
       -h | --help)                usage;;
-      --)                         shift; break ;;
       *)                          echo "Unexpected option: $1"; usage ;;
     esac
   done

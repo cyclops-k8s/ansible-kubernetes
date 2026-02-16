@@ -1,5 +1,5 @@
 extra_kubernetes_configuration = {
-  containerd_registry_mirrors = [{
+  kubernetes_containerd_registry_mirrors = [{
     registry = "_default"
     hosts = [
       {

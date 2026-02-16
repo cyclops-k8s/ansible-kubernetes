@@ -5,13 +5,12 @@ options {
     allow-query { any; };
 
     forwarders {
-        8.8.8.8;
-        8.8.4.4;
+        {{FORWARDER_IP}};
     };
 
     dnssec-validation no;
 
-    listen-on { any; };
+    listen-on { {{LOCAL_IP}}; };
     listen-on-v6 { none; };
 
 };

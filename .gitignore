@@ -7,6 +7,7 @@ vars.yaml
 vars.tfvars
 *.img
 .temp
+.local
 
 # Created by https://www.toptal.com/developers/gitignore/api/ansible,terraform
 # Edit at https://www.toptal.com/developers/gitignore?templates=ansible,terraform
