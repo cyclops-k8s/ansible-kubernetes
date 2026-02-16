@@ -12,6 +12,6 @@
 
 - name: Wait for calico to be ready
   register: calico_ready
-  retries: 12
+  retries: 300
   until: calico_ready.rc == 0
-  ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready pod -l k8s-app=calico-node --timeout=5s --namespace kube-system
+  ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready pod -l k8s-app=calico-node --timeout=1s --namespace kube-system
