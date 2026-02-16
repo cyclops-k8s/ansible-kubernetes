@@ -40,9 +40,6 @@ do
 done
 
 #combine the rest of the arguments as tfvar files prefixed with -var-file=
-
-
-#combine the rest of the arguments as tfvar files prefixed with -var-file=
 TFVAR_FILES=()
 DID_TFVAR_FILES=0
 for arg in "$@"
