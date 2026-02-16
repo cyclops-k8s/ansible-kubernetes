@@ -42,7 +42,7 @@
     }
   },
 
-  "postStartCommand": ".devcontainer/bind/bind9-init.sh || true",
+  "postStartCommand": ".devcontainer/bind/bind9-init.sh || echo 'Warning: bind9-init.sh failed, DNS may not be available'",
 
   "remoteUser": "vscode",
 
