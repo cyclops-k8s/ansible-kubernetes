@@ -249,11 +249,13 @@
   register: api_health_secondary
   retries: 150
   until: api_health_secondary.rc == 0
-  when:
-  - first_kube_control_plane != inventory_hostname
-  - inventory_hostname in groups['control_planes']
+  when: inventory_hostname in groups['control_planes']
   ansible.builtin.command:
-    cmd: kubectl get --raw /healthz --server=https://{{ ansible_facts['default_ipv4'].address }}:6443 --kubeconfig /etc/kubernetes/admin.conf
+    cmd: kubectl get --raw /healthz --server=https://{{
+      kubernetes_api_server_public_ip |
+          default(kubernetes_api_server_bind_address |
+            default(ansible_facts['default_ipv4'].address))
+      }}:6443 --kubeconfig /etc/kubernetes/admin.conf
 
 - name: Verify control plane pods are running after upgrade
   changed_when: false
@@ -269,15 +271,13 @@
     executable: /bin/bash
 
 - name: Pause to allow etcd cluster to stabilize
-  when:
-  - inventory_hostname in groups['control_planes']
+  when: inventory_hostname in groups['control_planes']
   ansible.builtin.pause:
     seconds: 10
 
 - name: Upgrade worker nodes
   changed_when: true
-  when:
-  - inventory_hostname not in groups['control_planes']
+  when: inventory_hostname not in groups['control_planes']
   ansible.builtin.command: kubeadm upgrade node
 
 - name: Drain Kubernetes node
