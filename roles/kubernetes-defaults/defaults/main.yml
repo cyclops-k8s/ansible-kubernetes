@@ -261,9 +261,32 @@ kubernetes_configure_selinux: true
 # The domain name for the cluster, this is used in-cluster to resolve things like services and pods
 kubernetes_dns_domain: cluster.local
 
+# Additionally allowed encryption keys for decrypting the etcd data, this should be a list of base64 encoded 32 byte keys.
+# This is used for key rotation, you can add new keys here and then remove old keys after the rotation is complete.
+# Example value
+# kubernetes_encryption_additional_keys:
+# - name: key1
+#   key: Z8s...Qw=
+# - name: key2
+#   key: 3d9...CU=
+# When rotating keys you will want to add the old `kubernetes_encryption_key_name` and `kubernetes_encryption_key`
+# to this list with a unique id, then update `kubernetes_encryption_key_name` and `kubernetes_encryption_key` to
+# the new key. After the rotation is complete and you are sure the old key is no longer needed, you can remove it
+# from this list. You must not change the key id from what was originally in `kubernetes_encryption_key_name` when
+# adding it to the list, as the key id is what identifies the key to use in the etcd data.
+kubernetes_encryption_additional_keys: []
+
+# The configuration template to use for encrypting the etcd data, this should be a file that is compatible with th
+# kube-apiserver --encryption-provider-config flag. This defaults to using the template file that is included in the
+# role named `encryption-{{ kubernetes_version }}.yaml.j2`
+kubernetes_encryption_configuration_file: null
+
 # Required
 # 32 bytes used to encrypt the etcd data, this should be base64 encoded.
+# You can generate one with `head -c 32 /dev/urandom | base64`
+# This is the encryption key that will be used to encrypt the data in etcd. This should be a base64 encoded 32 byte key.
 kubernetes_encryption_key: null
+kubernetes_encryption_key_name: key1
 
 # Extra arguments to pass to the ETCD backend
 # Must not contain any of the following names:

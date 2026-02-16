@@ -7,5 +7,9 @@ resources:
   providers:
   - secretbox:
       keys:
-      - name: key1
+      - name: {{ kubernetes_encryption_key_name }}
         secret: {{ kubernetes_encryption_key }}
+{% for key in kubernetes_additional_encryption_keys %}
+      - name: {{ key.name }}
+        secret: {{ key.key }}
+{% endfor %}
