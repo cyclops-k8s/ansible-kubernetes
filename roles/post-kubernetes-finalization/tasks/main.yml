@@ -1,12 +1,12 @@
 # Issue #52 Rebalance the CoreDNS deployment
 - name: Rebalance the CoreDNS deployment
-  run_once: true
   delegate_to: "{{ first_kube_control_plane }}"
+  run_once: true
   ansible.builtin.import_tasks:
     file: rebalance-coredns.yaml
 
 - name: Verify Etcd data is encrypted at rest
-  run_once: true
   delegate_to: "{{ first_kube_control_plane }}"
+  run_once: true
   ansible.builtin.import_tasks:
     file: verify-encrypted.yml
