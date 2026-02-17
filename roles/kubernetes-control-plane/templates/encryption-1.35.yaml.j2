@@ -9,7 +9,7 @@ resources:
       keys:
       - name: {{ kubernetes_encryption_key_name }}
         secret: {{ kubernetes_encryption_key }}
-{% for key in kubernetes_additional_encryption_keys %}
+{% for key in kubernetes_encryption_additional_keys %}
       - name: {{ key.name }}
         secret: {{ key.key }}
 {% endfor %}
