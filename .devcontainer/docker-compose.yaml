@@ -16,3 +16,4 @@ services:
     volumes:
     - ..:/workspace:cached
     - ~/.ssh:/host/.ssh:ro
+    network_mode: bridge
