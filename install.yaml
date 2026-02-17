@@ -70,10 +70,10 @@
   - role: kubernetes-defaults
   - role: post-kubernetes-worker
 
-- name: Post Cluster Validation
+- name: Post Cluster Finalization
   any_errors_fatal: true
   become: true
-  hosts: control_planes[0]
+  hosts: kubernetes
   roles:
   - role: kubernetes-defaults
-  - role: post-kubernetes-validation
+  - role: post-kubernetes-finalization
