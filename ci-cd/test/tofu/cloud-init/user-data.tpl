@@ -20,6 +20,11 @@ ssh_pwauth: true
 chpasswd:
   expire: false
 
+runcmd:
+- |
+    mkdir /var/lib/etcd
+    mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
+
 package_reboot_if_required: false
 package_update: true
 package_upgrade: true
