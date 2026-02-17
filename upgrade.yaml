@@ -86,11 +86,11 @@
   - role: kubernetes-defaults
   - role: kubernetes-upgrade
 
-- name: Post upgrade validation
+- name: Post upgrade finalization
   any_errors_fatal: true
   become: true
   gather_facts: true
   hosts: upgrade_ordered
   roles:
   - role: kubernetes-defaults
-  - role: post-kubernetes-validation
+  - role: post-kubernetes-finalization
