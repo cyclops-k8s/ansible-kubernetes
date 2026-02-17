@@ -3,18 +3,14 @@
 
 - name: Rebalance the CoreDNS deployment
   changed_when: false
-  delegate_to: "{{ first_kube_control_plane }}"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-  run_once: true
   ansible.builtin.command:
     cmd: kubectl -n kube-system rollout restart deployment coredns
 
 - name: Wait for CoreDNS to rebalance
   changed_when: false
-  delegate_to: "{{ first_kube_control_plane }}"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-  run_once: true
   ansible.builtin.command:
     cmd: kubectl -n kube-system rollout status deployment coredns --timeout=120s
