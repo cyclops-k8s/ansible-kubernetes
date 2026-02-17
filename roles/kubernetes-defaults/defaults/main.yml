@@ -276,7 +276,7 @@ kubernetes_dns_domain: cluster.local
 # adding it to the list, as the key id is what identifies the key to use in the etcd data.
 kubernetes_encryption_additional_keys: []
 
-# The configuration template to use for encrypting the etcd data, this should be a file that is compatible with th
+# The configuration template to use for encrypting the etcd data, this should be a file that is compatible with the
 # kube-apiserver --encryption-provider-config flag. This defaults to using the template file that is included in the
 # role named `encryption-{{ kubernetes_version }}.yaml.j2`
 kubernetes_encryption_configuration_file: null
