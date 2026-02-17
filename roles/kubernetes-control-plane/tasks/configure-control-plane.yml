@@ -13,9 +13,18 @@
     mode: '0700'
     state: directory
 
+# CIS 1.2.27
+- name: Copy Kubernetes encryption configuration file
+  ansible.builtin.template:
+    backup: true
+    dest: "{{ kubernetes_config_directory }}/encryption.yaml"
+    group: root
+    mode: '0600'
+    owner: root
+    src: "{{ kubernetes_encryption_configuration_file | default('encryption-' ~ kubernetes_version ~ '.yaml.j2', true) }}"
+
 - name: Create kubernetes configuration files
   loop:
-  - {file: "encryption-{{ kubernetes_version }}.yaml.j2", destination: "{{ kubernetes_config_directory }}/encryption.yaml"}
   # CIS 3.1.1, 3.1.2, 3.1.3
   - {file: "kube-api-authentication-{{ kubernetes_version }}.yaml.j2", destination: "{{ kubernetes_config_directory }}/kube-api-authentication.yaml"}
   # CIS 1.2.6, 1.2.7, 1.2.8
