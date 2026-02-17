@@ -79,10 +79,13 @@ function create_vm() {
   local additional_forwarding=$7
 
   LOCAL_IP=$(ip -j address | jq '.[] | select(.ifname=="eth0") | .addr_info[] | select(.family=="inet") | .local' -r)
+  MTU=$(ip -j address | jq '.[] | select(.ifname=="eth0").mtu')
+
   echo "Creating virtual machine: ${name}"
   echo "  SSH Port: ${ssh_port}"
   echo "  IP: ${ip}"
   echo "  Local IP: ${LOCAL_IP}"
+  echo "  MTU: ${MTU}"
   echo "  CPU: ${cpu_num}"
   echo "  Mem: ${mem_size}"
   echo "  HDD: ${hdd_size}"
@@ -114,6 +117,7 @@ function create_vm() {
       ".network.ethernets.eth0.match.macaddress = \"${MAC0}\" | \
        .network.ethernets.eth0.nameservers.search = [ \"${DOMAIN}\" ] | \
        .network.ethernets.eth0.nameservers.addresses = [\"${LOCAL_IP}\"] | \
+       .network.ethernets.eth0.mtu = ${MTU} | \
        .network.ethernets.eth1.match.macaddress = \"${MAC1}\" | \
        .network.ethernets.eth1.addresses += [\"${IP_PREFIX}.${ip}/24\"]" \
     >> "${TEMP_DIR}/${name}.network"

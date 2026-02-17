@@ -9,6 +9,7 @@ network:
       dhcp6: false
       dhcp4-overrides:
         use-dns: false
+      mtu: 1500
       nameservers:
         search:
         - k8s.local
