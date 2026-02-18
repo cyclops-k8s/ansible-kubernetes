@@ -97,6 +97,9 @@ locals {
             "{{ inventory_dir }}/../example-hooks/install-calico/post-cluster-init/install-calico.yaml",
             "{{ inventory_dir }}/../example-hooks/copy-admin-config/post-cluster-init/copy-admin-config.yaml"
           ]
+          pre_prerequisites = [
+            "{{ inventory_dir }}/../example-hooks/install-calico/pre-prerequisites/configure-rhel-for-calico.yaml"
+          ]
         }
       })
     }
