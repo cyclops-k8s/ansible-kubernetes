@@ -135,9 +135,10 @@
       ansible.builtin.command:
         cmd: dnf versionlock add {{ item }}
 
+  # Fixes #57: Configure the image-endpoint for crictl
   - name: Set crictl.yaml options
     ansible.builtin.command:
-      cmd: crictl config --set runtime-endpoint=unix:///run/containerd/containerd.sock
+      cmd: crictl config --set image-endpoint=unix:///run/containerd/containerd.sock,runtime-endpoint=unix:///run/containerd/containerd.sock
       creates: /etc/crictl.yaml
 
   - name: Start kubelet
