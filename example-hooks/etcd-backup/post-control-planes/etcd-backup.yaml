@@ -38,10 +38,8 @@
                   - name: etcd-backup
                     securityContext:
                       runAsUser: 0
-                    image: bitnami/etcd:3.5.16
+                    image: registry.k8s.io/etcd:3.6.6-0
                     command:
-                    - sh
-                    - -c
                     - etcdctl snapshot save /var/lib/etcd/snapshots/snap-$(date +%Y%m%d-%H%M%S).db --cert /etc/kubernetes/pki/etcd/peer.crt --key /etc/kubernetes/pki/etcd/peer.key --endpoints https://127.0.0.1:2379 --cacert /etc/kubernetes/pki/etcd/ca.crt
                     volumeMounts:
                     - mountPath: /var/lib/etcd/snapshots
@@ -65,11 +63,14 @@
 
   - name: Apply etcd-backup cronjob
     changed_when: etcd_backup_cronjob.rc != 0
+    environment:
+      KUBECONFIG: /etc/kubernetes/admin.conf
     failed_when: etcd_backup_cronjob.rc != 0
     ignore_errors: true
     register: etcd_backup_cronjob
     when: install_etcd_backup
-    ansible.builtin.command: kubectl apply -f {{ kubernetes_config_directory }}/etcd-backup-cronjob.yaml --kubeconfig /etc/kubernetes/admin.conf
+    ansible.builtin.command:
+      cmd: kubectl apply -f {{ kubernetes_config_directory }}/etcd-backup-cronjob.yaml
 
   rescue:
   - name: Output etcd_backup
