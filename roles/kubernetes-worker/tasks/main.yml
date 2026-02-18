@@ -9,44 +9,76 @@
   ansible.builtin.set_fact:
     kubernetes_needs_to_join_cluster: "{% if inventory_hostname in kubernetes_nodes.stdout_lines or inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ 'false' | bool }}{% else %}{{ 'true' | bool }}{% endif %}"
 
-- name: Set variables from first control plane
-  ansible.builtin.set_fact:
-    cluster_ca_cert_hash: "{{ hostvars[first_kube_control_plane].cluster_ca_cert_hash }}"
-    join_token: "{{ hostvars[first_kube_control_plane].join_token }}"
 
-- name: Create kubeadm file
-  register: kubeadm_file
-  when:
-  - kubernetes_needs_to_join_cluster
-  ansible.builtin.template:
-    backup: true
-    dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
-    group: root
-    mode: '0644'
-    owner: root
-    src: worker-kubeadm-{{ kubernetes_version }}.yaml.j2
+- name: Join workers to the cluster
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  block:
+  - name: Generate Join token
+    changed_when: true
+    delegate_to: "{{ first_kube_control_plane }}"
+    register: temp_token
+    ansible.builtin.command:
+      cmd: kubeadm token create --ttl 30m
 
-- name: Post configure worker hooks
-  when:
-  - kubernetes_hookfiles.post_configure_workers is defined
-  with_items: "{{ kubernetes_hookfiles.post_configure_workers }}"
-  ansible.builtin.include_tasks: "{{ item }}"
+  - name: Set facts
+    ansible.builtin.set_fact:
+      cluster_ca_cert_hash: "{{ hostvars[first_kube_control_plane].cluster_ca_cert_hash }}"
+      join_token: "{{ temp_token.stdout }}"
 
-- name: Stop kubelet service
-  when:
-  - kubernetes_needs_to_join_cluster
-  ansible.builtin.systemd:
-    enabled: true
-    name: kubelet
-    state: stopped
+  - name: Create kubeadm file
+    register: kubeadm_file
+    when:
+    - kubernetes_needs_to_join_cluster
+    ansible.builtin.template:
+      backup: true
+      dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
+      group: root
+      mode: '0644'
+      owner: root
+      src: worker-kubeadm-{{ kubernetes_version }}.yaml.j2
 
-- name: Add the worker node
-  changed_when: kubernetes_join_output.rc == 0
-  register: kubernetes_join_output
-  when:
-  - kubernetes_needs_to_join_cluster
-  ansible.builtin.command:
-    cmd: kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_join_extra_args | default('') }}
+  - name: Post configure worker hooks
+    when:
+    - kubernetes_hookfiles.post_configure_workers is defined
+    with_items: "{{ kubernetes_hookfiles.post_configure_workers }}"
+    ansible.builtin.include_tasks: "{{ item }}"
+
+  - name: Stop kubelet service
+    when:
+    - kubernetes_needs_to_join_cluster
+    ansible.builtin.systemd:
+      enabled: true
+      name: kubelet
+      state: stopped
+
+  - name: Add the worker node
+    changed_when: kubernetes_join_output.rc == 0
+    register: kubernetes_join_output
+    when:
+    - kubernetes_needs_to_join_cluster
+    ansible.builtin.command:
+      cmd: kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_join_extra_args | default('') }}
+
+  - name: Expire join token
+    changed_when: true
+    delegate_to: "{{ first_kube_control_plane }}"
+    when: join_token is defined
+    ansible.builtin.command:
+      cmd: kubeadm token delete "{{ join_token }}"
+
+  rescue:
+  - name: Expire join token
+    changed_when: true
+    delegate_to: "{{ first_kube_control_plane }}"
+    when: join_token is defined
+    ansible.builtin.command:
+      cmd: kubeadm token delete "{{ join_token }}"
+
+  - name: Fail worker node join
+    ansible.builtin.fail:
+      msg: >-
+        Joining worker node {{ inventory_hostname }} to the cluster failed.
 
 # CIS 1.1.20
 - name: CIS 1.1.20 - Secure certificates
