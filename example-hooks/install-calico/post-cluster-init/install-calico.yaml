@@ -18,11 +18,8 @@
   - name: Install Calico
     register: calico
     when: install_calico
-    ansible.builtin.shell:
-      cmd: |
-        set -eo pipefail
-        kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.3/manifests/calico.yaml
-      executable: /usr/bin/bash
+    ansible.builtin.command:
+      cmd: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.3/manifests/calico.yaml
 
   - name: Wait for Calico to be ready
     delay: 1
@@ -36,10 +33,11 @@
   rescue:
   - name: Calico variable contents
     ansible.builtin.debug:
-      calico_installed_cmd: calico_installed_cmd | default("Not ran")
-      install_calico: install_calico | default("Not ran")
-      calico: calico | default("Not ran")
-      calico_pods: calico_pods | default("Not ran")
+      msg:
+        calico_installed_cmd: '{{ calico_installed_cmd | default("Not ran") }}'
+        install_calico: '{{ install_calico | default("Not ran") }}'
+        calico: '{{ calico | default("Not ran") }}'
+        calico_pods: '{{ calico_pods | default("Not ran") }}'
 
   - name: Calico failed
     ansible.builtin.fail:
