@@ -10,7 +10,7 @@
     kubernetes_needs_to_join_cluster: "{% if inventory_hostname in kubernetes_nodes.stdout_lines or inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ 'false' | bool }}{% else %}{{ 'true' | bool }}{% endif %}"
 
 
-- name: Join additional control planes to the cluster
+- name: Join workers to the cluster
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   block:
@@ -60,7 +60,7 @@
     ansible.builtin.command:
       cmd: kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_join_extra_args | default('') }}
 
-  - name: Expire join token if control plane join fails to prevent security risk
+  - name: Expire join token
     changed_when: true
     delegate_to: "{{ first_kube_control_plane }}"
     when: join_token is defined
@@ -68,7 +68,7 @@
       cmd: kubeadm token delete "{{ join_token }}"
 
   rescue:
-  - name: Expire join token if control plane join fails to prevent security risk
+  - name: Expire join token
     changed_when: true
     delegate_to: "{{ first_kube_control_plane }}"
     when: join_token is defined
