@@ -21,7 +21,7 @@
     delegate_to: "{{ first_kube_control_plane }}"
     register: token_raw
     run_once: true
-    ansible.builtin.command: kubeadm token create --kubeconfig /etc/kubernetes/admin.conf
+    ansible.builtin.command: kubeadm token create --kubeconfig /etc/kubernetes/admin.conf --ttl 30m
 
   - name: Set config facts
     ansible.builtin.set_fact:

@@ -69,6 +69,7 @@
   when: kubernetes_install_kustomize
   block:
   - name: Download Kustomize
+    register: kustomize_download
     ansible.builtin.get_url:
       dest: /tmp/install_kustomize.sh
       group: root
@@ -76,19 +77,33 @@
       owner: root
       url: https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
 
+  - name: Remove existing Kustomize binary if it exists to allow install script to work
+    ansible.builtin.file:
+      path: /usr/bin/kustomize
+      state: absent
+
   - name: Install Kustomize
-    ansible.builtin.shell:
-      cmd: |
-        set -eo pipefail
-        /tmp/install_kustomize.sh
-        mv kustomize /usr/bin/kustomize
-      creates: /usr/bin/kustomize
-      executable: /bin/bash
+    changed_when: true
+    register: kustomize_install
+    ansible.builtin.command:
+      chdir: /usr/bin
+      cmd: /tmp/install_kustomize.sh
 
   - name: Remove Kustomize install script
+    register: kustomize_remove_script
     ansible.builtin.file:
       path: /tmp/install_kustomize.sh
       state: absent
+  rescue:
+  - name: Kustomize variable contents
+    ansible.builtin.debug:
+      msg:
+        kustomize_download: '{{ kustomize_download | default("Not ran") }}'
+        kustomize_install: '{{ kustomize_install | default("Not ran") }}'
+        kustomize_remove_script: '{{ kustomize_remove_script | default("Not ran") }}'
+  - name: Kustomize failed
+    ansible.builtin.fail:
+      msg: Kustomize failed to install
 
 - name: Post configure control plane hooks
   loop: "{{ kubernetes_hookfiles.post_configure_control_planes }}"
@@ -117,14 +132,6 @@
   ansible.builtin.set_fact:
     kubernetes_initialize_ran: true
 
-- name: Get Join token
-  changed_when: true
-  delegate_to: "{{ first_kube_control_plane }}"
-  register: temp_token
-  run_once: true
-  ansible.builtin.command:
-    cmd: kubeadm token create --kubeconfig /etc/kubernetes/admin.conf
-
 - name: Get CA certificate hash
   changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"
@@ -150,15 +157,50 @@
   run_once: true
   ansible.builtin.set_fact:
     cluster_ca_cert_hash: "sha256:{{ cluster_ca_cert_hash_temp.stdout }}"
-    join_token: "{{ temp_token.stdout }}"
     kubeadm_upload_token: "{{ kubeadm_upload_cert.stdout_lines[-1] | trim }}"
 
-- name: Configure additional control planes
-  when:
-  - first_kube_control_plane != inventory_hostname
-  - inventory_hostname in groups['control_planes']
-  ansible.builtin.import_tasks:
-    file: secondary-control-plane.yml
+- name: Join additional control planes to the cluster
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: inventory_hostname in groups['control_planes']
+  block:
+  - name: Generate Join token
+    changed_when: true
+    delegate_to: "{{ first_kube_control_plane }}"
+    register: temp_token
+    ansible.builtin.command:
+      cmd: kubeadm token create --ttl 30m
+
+  - name: Set facts
+    ansible.builtin.set_fact:
+      join_token: "{{ temp_token.stdout }}"
+
+  - name: Configure additional control planes
+    when:
+    - first_kube_control_plane != inventory_hostname
+    - inventory_hostname in groups['control_planes']
+    ansible.builtin.import_tasks:
+      file: secondary-control-plane.yml
+
+  - name: Expire join token
+    changed_when: true
+    delegate_to: "{{ first_kube_control_plane }}"
+    when: join_token is defined
+    ansible.builtin.command:
+      cmd: kubeadm token delete "{{ join_token }}"
+
+  rescue:
+  - name: Expire join token
+    changed_when: true
+    delegate_to: "{{ first_kube_control_plane }}"
+    when: join_token is defined
+    ansible.builtin.command:
+      cmd: kubeadm token delete "{{ join_token }}"
+
+  - name: Fail control plane join
+    ansible.builtin.fail:
+      msg: >-
+        Joining control plane {{ inventory_hostname }} to the cluster failed.
 
 # Get an updated list of nodes in the cluster
 - name: Get nodes in the cluster
