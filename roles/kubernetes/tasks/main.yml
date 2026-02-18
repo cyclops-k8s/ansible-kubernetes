@@ -11,6 +11,17 @@
   with_items: "{{ kubernetes_hookfiles.post_install_packages }}"
   ansible.builtin.include_tasks: "{{ item }}"
 
+# Fixes #58: Verify the CRI is set up successfully
+- name: Verify crictl can connect to the container runtime
+  changed_when: false
+  loop:
+  - crictl info
+  - crictl version
+  loop_control:
+    loop_var: crictl_command
+  ansible.builtin.command:
+    cmd: '{{ crictl_command }}'
+
 - name: Make sure kubernetes config directory exists
   ansible.builtin.file:
     mode: '0700'
