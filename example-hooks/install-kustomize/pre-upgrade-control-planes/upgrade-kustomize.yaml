@@ -1,0 +1,3 @@
+- name: Upgrade Kustomize
+  ansible.builtin.include_tasks:
+    file: ../pre-configure-control-planes/install-kustomize.yaml

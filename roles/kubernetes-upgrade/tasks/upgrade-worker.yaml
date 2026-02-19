@@ -1,0 +1,30 @@
+- name: Pre worker upgrade hooks
+  loop: "{{ kubernetes_hookfiles.pre_upgrade_workers }}"
+  loop_control:
+    loop_var: hook
+  when:
+  - kubernetes_hookfiles.pre_upgrade_workers is defined
+  - inventory_hostname not in groups['control_planes']
+  ansible.builtin.include_tasks: "{{ hook }}"
+
+- name: Create patches directory for kubeadm upgrade
+  ansible.builtin.file:
+    group: root
+    mode: "0700"
+    owner: root
+    path: "{{ kubernetes_config_directory }}/patches"
+    state: directory
+
+- name: Upgrade worker nodes
+  changed_when: true
+  when: inventory_hostname not in groups['control_planes']
+  ansible.builtin.command: kubeadm upgrade node --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml
+
+- name: Post worker upgrade hooks
+  loop: "{{ kubernetes_hookfiles.post_upgrade_workers }}"
+  loop_control:
+    loop_var: hook
+  when:
+  - kubernetes_hookfiles.post_upgrade_workers is defined
+  - inventory_hostname not in groups['control_planes']
+  ansible.builtin.include_tasks: "{{ hook }}"

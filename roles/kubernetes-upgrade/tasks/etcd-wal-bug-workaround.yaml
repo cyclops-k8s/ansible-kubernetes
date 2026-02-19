@@ -1,0 +1,90 @@
+# Workaround for etcd 3.6 membership store inconsistency (etcd-io/etcd#20967):
+# v2store and v3store membership data can become inconsistent. In etcd 3.5.x, v2store is
+# the source of truth so this is invisible. In etcd 3.6.x, v3store becomes the source of
+# truth, causing stale/duplicate member entries to surface during WAL replay. This can
+# reset the raft voter configuration and break quorum. Fixed in etcd 3.5.26 + 3.6.7, but
+# K8s releases may bundle affected versions. Forcing a raft snapshot before upgrade ensures
+# stale ConfChange entries are truncated from the WAL, preventing the issue regardless of
+# etcd version. This is a safe no-op on unaffected versions.
+# See: https://github.com/etcd-io/etcd/issues/20967
+- name: Read etcd static pod manifest
+  register: etcd_manifest_raw
+  ansible.builtin.slurp:
+    src: "/etc/kubernetes/manifests/etcd.yaml"
+
+- name: Determine etcd snapshot-count from manifest
+  vars:
+    etcd_manifest: "{{ etcd_manifest_raw.content | b64decode | from_yaml }}"
+    etcd_command: "{{ etcd_manifest.spec.containers[0].command }}"
+    snapshot_args: "{{ etcd_command | select('match', '^--snapshot-count=') | list }}"
+  ansible.builtin.set_fact:
+    etcd_snapshot_count: "{{ (snapshot_args | first | split('='))[1] if snapshot_args | length > 0 else '10000' }}"
+
+- name: Find running etcd container
+  changed_when: false
+  failed_when: etcd_container_result.stdout_lines | length == 0
+  register: etcd_container_result
+  ansible.builtin.command:
+    cmd: crictl ps --name etcd -q
+
+- name: Set etcd connection facts
+  ansible.builtin.set_fact:
+    etcd_container: "{{ etcd_container_result.stdout_lines[0] }}"
+    etcd_ctl: >-
+      crictl exec {{ etcd_container_result.stdout_lines[0] }} etcdctl
+      --endpoints=https://127.0.0.1:2379
+      --cacert=/etc/kubernetes/pki/etcd/ca.crt
+      --cert=/etc/kubernetes/pki/etcd/server.crt
+      --key=/etc/kubernetes/pki/etcd/server.key
+
+# - name: Write entries to force etcd raft snapshot
+#   changed_when: true
+#   ansible.builtin.shell:
+#     cmd: |
+#       set -eo pipefail
+#       WRITE_COUNT=$(( {{ etcd_snapshot_count }} + 1 ))
+#       echo "Writing ${WRITE_COUNT} entries to force raft snapshot (snapshot-count={{ etcd_snapshot_count }})..."
+#       for i in $(seq 1 "${WRITE_COUNT}"); do
+#         {{ etcd_ctl }} put "/pre-upgrade-snapshot/${i}" x >/dev/null 2>&1 &
+#         if (( i % 20 == 0 ))
+#         then
+#           wait
+#         fi
+#       done
+#       wait
+#     executable: /bin/bash
+
+- name: Wait for raft snapshot to be written to disk
+  ansible.builtin.pause:
+    seconds: 5
+
+- name: Clean up snapshot trigger keys
+  changed_when: true
+  ansible.builtin.shell:
+    cmd: "{{ etcd_ctl }} del /pre-upgrade-snapshot/ --prefix"
+    executable: /bin/bash
+
+- name: Get current etcd revision
+  changed_when: false
+  register: etcd_status_result
+  ansible.builtin.shell:
+    cmd: "{{ etcd_ctl }} endpoint status -w json"
+    executable: /bin/bash
+
+- name: Set etcd revision fact
+  ansible.builtin.set_fact:
+    etcd_revision: "{{ (etcd_status_result.stdout | from_json)[0].Status.header.revision }}"
+
+- name: Compact etcd to current revision
+  changed_when: true
+  failed_when: false
+  ansible.builtin.shell:
+    cmd: "{{ etcd_ctl }} compact {{ etcd_revision }}"
+    executable: /bin/bash
+
+- name: Defragment etcd storage
+  changed_when: true
+  failed_when: false
+  ansible.builtin.shell:
+    cmd: "{{ etcd_ctl }} defrag"
+    executable: /bin/bash

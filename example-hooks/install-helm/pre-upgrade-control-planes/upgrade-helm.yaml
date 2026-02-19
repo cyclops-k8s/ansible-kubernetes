@@ -1,0 +1,3 @@
+- name: Upgrade Helm
+  ansible.builtin.include_tasks:
+    file: ../pre-configure-control-planes/install-helm.yaml

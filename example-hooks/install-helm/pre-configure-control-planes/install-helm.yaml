@@ -1,0 +1,47 @@
+- name: Install Helm
+  block:
+  - name: Install git (required for Helm install script)
+    register: helm_git_install
+    when: kubernetes_install_helm
+    ansible.builtin.package:
+      name: git
+      state: present
+
+  - name: Download Helm install script
+    register: helm_download
+    when: kubernetes_install_helm
+    ansible.builtin.get_url:
+      dest: /tmp/install_helm.sh
+      group: root
+      mode: '0755'
+      owner: root
+      url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4
+
+  - name: Install Helm
+    changed_when: true
+    environment:
+      HELM_INSTALL_DIR: /usr/bin
+    register: helm_install
+    when: kubernetes_install_helm
+    ansible.builtin.shell:
+      cmd: /tmp/install_helm.sh
+      creates: /usr/bin/helm
+      executable: /bin/bash
+
+  - name: Remove Helm install script
+    register: helm_remove_script
+    when: kubernetes_install_helm
+    ansible.builtin.file:
+      path: /tmp/install_helm.sh
+      state: absent
+  rescue:
+  - name: Helm variable contents
+    ansible.builtin.debug:
+      msg:
+      - helm_git_install: '{{ helm_git_install | default("Not ran") }}'
+      - helm_download: '{{ helm_download | default("Not ran") }}'
+      - helm_install: '{{ helm_install | default("Not ran") }}'
+      - helm_remove_script: '{{ helm_remove_script | default("Not ran") }}'
+  - name: Helm failed to install
+    ansible.builtin.fail:
+      msg: Helm failed to install

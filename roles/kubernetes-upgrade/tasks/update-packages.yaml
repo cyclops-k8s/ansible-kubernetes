@@ -1,0 +1,78 @@
+- name: Update kubelet, kubectl and containerd.io (Debian/Ubuntu)
+  when: ansible_facts.os_family == "Debian"
+  block:
+  - name: Update kubelet and kubectl to specified k8s_version
+    with_items:
+    - kubelet={{ k8s_version }}
+    - kubectl={{ k8s_version }}
+    ansible.builtin.apt:
+      allow_change_held_packages: true
+      name: "{{ item }}"
+      state: present
+
+  - name: Upgrade containerd to latest version
+    ansible.builtin.apt:
+      allow_change_held_packages: true
+      name: containerd.io
+      only_upgrade: true
+      state: latest
+
+  - name: Reconfigure containerd for new version
+    ansible.builtin.include_role:
+      name: containerd
+      tasks_from: configure-containerd.yml
+
+  - name: Hold kubelet, kubectl and containerd.io
+    with_items:
+    - kubelet
+    - kubectl
+    - containerd.io
+    ansible.builtin.dpkg_selections:
+      name: "{{ item }}"
+      selection: hold
+
+- name: Update kubelet, kubectl and containerd.io (RedHat/Rocky/Alma/Fedora)
+  when: ansible_facts.os_family == "RedHat"
+  block:
+  - name: Remove version locks
+    changed_when: true
+    with_items:
+    - kubelet
+    - kubectl
+    - containerd.io
+    ansible.builtin.command:
+      cmd: dnf versionlock delete {{ item }}
+
+  - name: Update kubelet and kubectl to specified k8s_version
+    with_items:
+    - kubelet-{{ k8s_version }}
+    - kubectl-{{ k8s_version }}
+    ansible.builtin.dnf:
+      name: "{{ item }}"
+      state: present
+
+  - name: Upgrade containerd to the latest version
+    ansible.builtin.dnf:
+      name: containerd.io
+      state: latest  # noqa: package-latest
+
+  - name: Reconfigure containerd for new version
+    ansible.builtin.include_role:
+      name: containerd
+      tasks_from: configure-containerd.yml
+
+  - name: Hold kubelet, kubectl and containerd.io
+    changed_when: true
+    with_items:
+    - kubelet
+    - kubectl
+    - containerd.io
+    ansible.builtin.command:
+      cmd: dnf versionlock add {{ item }}
+
+- name: Reload kubelet
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    enabled: true
+    name: kubelet
+    state: restarted
