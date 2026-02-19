@@ -2,14 +2,12 @@
   block:
   - name: Install git (required for Helm install script)
     register: helm_git_install
-    when: kubernetes_install_helm
     ansible.builtin.package:
       name: git
       state: present
 
   - name: Download Helm install script
     register: helm_download
-    when: kubernetes_install_helm
     ansible.builtin.get_url:
       dest: /tmp/install_helm.sh
       group: root
@@ -22,7 +20,6 @@
     environment:
       HELM_INSTALL_DIR: /usr/bin
     register: helm_install
-    when: kubernetes_install_helm
     ansible.builtin.shell:
       cmd: /tmp/install_helm.sh
       creates: /usr/bin/helm
@@ -30,7 +27,6 @@
 
   - name: Remove Helm install script
     register: helm_remove_script
-    when: kubernetes_install_helm
     ansible.builtin.file:
       path: /tmp/install_helm.sh
       state: absent

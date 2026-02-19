@@ -99,7 +99,6 @@ kubernetes_hookfiles:
 - `kubernetes_api_endpoint` - FQDN for clients; must have DNS resolution before playbook run
 
 ### Key Optional Variables
-- `kubernetes_install_helm`, `kubernetes_install_kustomize` - Control plane tools (default: true)
 - `kubernetes_manage_cert_renewal` - Auto-renew kubelet/CA certs (default: true)
 - `kubernetes_admission_control_plugins` - List of kube-apiserver admission controllers
 - `kubernetes_admission_configuration` - Pod security policies (STIG V-254800)

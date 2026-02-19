@@ -1,5 +1,4 @@
 - name: Install Kustomize
-  when: kubernetes_install_kustomize
   block:
   - name: Download Kustomize install script
     register: kustomize_download

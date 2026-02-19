@@ -364,12 +364,6 @@ kubernetes_hookfiles:
 # Phases to skip in the kubeadm init process, you can view the list of phases by checking out `kubeadm init --help`
 kubernetes_init_skip_phases: []
 
-# Install Helm on the control plane nodes
-kubernetes_install_helm: true
-
-# Install Kustomize on the control plane nodes
-kubernetes_install_kustomize: true
-
 # Extra arguments to add to kubeadm init. This is added verbatim to the end of the `kubeadm init` command
 kubernetes_kubeadm_init_extra_args: ""
 

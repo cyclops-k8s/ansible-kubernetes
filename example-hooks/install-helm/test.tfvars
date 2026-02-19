@@ -4,7 +4,7 @@ extra_kubernetes_configuration = {
       "{{ inventory_dir }}/../../example-hooks/install-helm/pre-configure-control-planes/install-helm.yaml",
     ]
     pre_upgrade_control_planes = [
-      "{{ inventory_dir }}/../../example-hooks/install-helm/pre-upgrade-control-planes/install-helm.yaml",
+      "{{ inventory_dir }}/../../example-hooks/install-helm/pre-upgrade-control-planes/upgrade-helm.yaml",
     ]
   }
 }
