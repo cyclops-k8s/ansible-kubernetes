@@ -60,16 +60,14 @@
 
 - name: Clean up snapshot trigger keys
   changed_when: true
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "{{ etcd_ctl }} del /pre-upgrade-snapshot/ --prefix"
-    executable: /bin/bash
 
 - name: Get current etcd revision
   changed_when: false
   register: etcd_status_result
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "{{ etcd_ctl }} endpoint status -w json"
-    executable: /bin/bash
 
 - name: Set etcd revision fact
   ansible.builtin.set_fact:
@@ -78,13 +76,11 @@
 - name: Compact etcd to current revision
   changed_when: true
   failed_when: false
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "{{ etcd_ctl }} compact {{ etcd_revision }}"
-    executable: /bin/bash
 
 - name: Defragment etcd storage
   changed_when: true
   failed_when: false
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "{{ etcd_ctl }} defrag"
-    executable: /bin/bash
