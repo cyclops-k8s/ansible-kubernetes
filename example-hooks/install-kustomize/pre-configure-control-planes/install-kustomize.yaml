@@ -1,0 +1,43 @@
+- name: Install Kustomize
+  block:
+  - name: Download Kustomize install script
+    register: kustomize_download
+    ansible.builtin.get_url:
+      dest: /tmp/install_kustomize.sh
+      group: root
+      mode: '0755'
+      owner: root
+      url: https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
+
+  - name: Remove existing Kustomize binary if it exists to allow install script to work
+    register: kustomize_remove
+    ansible.builtin.file:
+      path: /usr/bin/kustomize
+      state: absent
+
+  - name: Install Kustomize
+    changed_when: true
+    register: kustomize_install
+    ansible.builtin.command:
+      chdir: /usr/bin
+      cmd: /tmp/install_kustomize.sh
+
+  - name: Remove Kustomize install script
+    register: kustomize_remove_script
+    ansible.builtin.file:
+      path: /tmp/install_kustomize.sh
+      state: absent
+
+  rescue:
+
+  - name: Kustomize variable contents
+    ansible.builtin.debug:
+      msg:
+        kustomize_download: '{{ kustomize_download | default("Not ran") }}'
+        kustomize_install: '{{ kustomize_install | default("Not ran") }}'
+        kustomize_remove: '{{ kustomize_remove | default("Not ran") }}'
+        kustomize_remove_script: '{{ kustomize_remove_script | default("Not ran") }}'
+
+  - name: Kustomize failed
+    ansible.builtin.fail:
+      msg: Kustomize failed to install

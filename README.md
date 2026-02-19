@@ -37,8 +37,6 @@ It is a vanilla `kubeadm` cluster that can be managed by `kubeadm` going forward
 
 It installs HAProxy and Keepalived on the proxy nodes, this is needed for high availability of the cluster's control plane. If you decide to run the frontend of the control plane on the control planes themselves, there is an example hook that will do that for you.
 
-It also, by default, installs `Helm` and `Kustomize` on the control plane nodes for use by the hooks. They are not required to run the playbook. This can be opted out of by setting `kubernetes_install_helm` and/or `kubernetes_install_kustomize` to `false` in your variables for the `control_plane` nodes.
-
 ## Running
 
 Execute the `install.yaml` playbook. There are a number of configurable options (see below). It is fully configurable and does not need to be copied and modified. If there additional extension points needed in this playbook/roles then please open an issue. We gladly accept pull requests.
