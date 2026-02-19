@@ -54,7 +54,7 @@
       kubernetes_api_server_public_ip |
           default(kubernetes_api_server_bind_address |
             default(ansible_facts['default_ipv4'].address))
-      }}:6443 --kubeconfig /etc/kubernetes/admin.conf
+      }}:{{ kubernetes_api_server_port }} --kubeconfig /etc/kubernetes/admin.conf
 
 - name: Verify control plane pods are running after upgrade
   changed_when: false
