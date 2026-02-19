@@ -1,0 +1,73 @@
+- name: Ensure version variable is set
+  when: version is not defined
+  ansible.builtin.fail:
+    msg: "version variable is not set"
+
+- name: Install versionlock plugin (RedHat/Rocky/Alma/Fedora)
+  when: ansible_facts.os_family == "RedHat"
+  ansible.builtin.dnf:
+    name: python3-dnf-plugin-versionlock
+    state: present
+
+- name: Define first control plane node
+  run_once: true
+  when: first_kube_control_plane is not defined
+  ansible.builtin.set_fact:
+    first_kube_control_plane: "{{ groups['control_planes'] | first }}"
+
+- name: Update repositories
+  ansible.builtin.import_tasks:
+    file: update-repositories.yaml
+
+- name: Get Kubeadm version
+  ansible.builtin.import_tasks:
+    file: get-kubeadm-version.yaml
+
+- name: Create kubeadm upgrade config file
+  with_items:
+  - {file: "kubeadm-upgrade.yaml.j2", destination: "{{ kubernetes_config_directory }}/kubeadm-upgrade.yaml"}
+  ansible.builtin.template:
+    backup: false
+    dest: "{{ item.destination }}"
+    group: root
+    mode: "{{ item.mode | default('0600') }}"
+    owner: root
+    src: "{{ item.file }}"
+
+- name: Drain Kubernetes node
+  changed_when: true
+  delegate_to: "{{ first_kube_control_plane }}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  ansible.builtin.command:
+    cmd: kubectl drain {{ inventory_hostname_short }} --ignore-daemonsets --delete-emptydir-data --force --grace-period=30
+
+- name: Upgrade Control Plane node
+  when: inventory_hostname in groups['control_planes']
+  ansible.builtin.include_tasks:
+    file: upgrade-control-plane.yaml
+
+- name: Upgrade worker node
+  when: inventory_hostname not in groups['control_planes']
+  ansible.builtin.include_tasks:
+    file: upgrade-worker.yaml
+
+- name: Uncordon kubernetes node
+  changed_when: true
+  delay: 5
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: uncordon_result
+  retries: 60
+  until: uncordon_result.rc == 0
+  ansible.builtin.command:
+    cmd: kubectl uncordon {{ inventory_hostname_short }} --kubeconfig /etc/kubernetes/admin.conf
+
+- name: Wait for kubernetes node to be ready
+  changed_when: false
+  delay: 5
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: node_ready
+  retries: 60
+  until: node_ready.rc == 0
+  ansible.builtin.command:
+    cmd: kubectl wait --for=condition=Ready node/{{ inventory_hostname_short }} --timeout=30s --kubeconfig /etc/kubernetes/admin.conf

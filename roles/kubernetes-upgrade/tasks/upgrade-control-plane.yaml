@@ -1,0 +1,80 @@
+- name: Update control plane configuration files for new version
+  ansible.builtin.include_role:
+    name: kubernetes-control-plane
+    tasks_from: configure-control-plane.yml
+
+- name: Workaround for etcd membership store inconsistency
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.include_tasks: etcd-wal-bug-workaround.yaml
+
+- name: Pre control plane upgrade hooks
+  loop: "{{ kubernetes_hookfiles.pre_upgrade_control_planes }}"
+  loop_control:
+    loop_var: hook
+  when: kubernetes_hookfiles.pre_upgrade_control_planes is defined
+  ansible.builtin.include_tasks: "{{ hook }}"
+
+- name: Upgrade kubernetes primary control plane node
+  changed_when: true
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.command: kubeadm upgrade apply {{ kubeadm_version.stdout }} --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml --yes
+
+- name: Upgrade Kubernetes non-primary control plane node
+  changed_when: true
+  when: first_kube_control_plane != inventory_hostname
+  ansible.builtin.command: kubeadm upgrade node --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml
+
+- name: Wait for etcd to stabilize after control plane upgrade
+  changed_when: false
+  delay: 2
+  register: etcd_health_secondary
+  retries: 150
+  until: etcd_health_secondary.rc == 0
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      ETCD_CONTAINER=$(crictl ps --name etcd -q | head -1)
+      [ -z "${ETCD_CONTAINER}" ] && exit 1
+      crictl exec "${ETCD_CONTAINER}" etcdctl \
+        --endpoints=https://127.0.0.1:2379 \
+        --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+        --cert=/etc/kubernetes/pki/etcd/server.crt \
+        --key=/etc/kubernetes/pki/etcd/server.key \
+        endpoint health 2>&1 | grep -q "is healthy"
+    executable: /bin/bash
+
+- name: Wait for API server to be healthy after control plane upgrade
+  changed_when: false
+  delay: 2
+  register: api_health_secondary
+  retries: 150
+  until: api_health_secondary.rc == 0
+  ansible.builtin.command:
+    cmd: kubectl get --raw /healthz --server=https://{{
+      kubernetes_api_server_public_ip |
+          default(kubernetes_api_server_bind_address |
+            default(ansible_facts['default_ipv4'].address))
+      }}:6443 --kubeconfig /etc/kubernetes/admin.conf
+
+- name: Verify control plane pods are running after upgrade
+  changed_when: false
+  delay: 2
+  register: cp_pods_check
+  retries: 150
+  until: cp_pods_check.rc == 0
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      ! kubectl get pods -n kube-system -l tier=control-plane --kubeconfig /etc/kubernetes/admin.conf --no-headers | grep -qv Running
+    executable: /bin/bash
+
+- name: Pause to allow etcd cluster to stabilize
+  ansible.builtin.pause:
+    seconds: 10
+
+- name: Post control plane upgrade hooks
+  loop: "{{ kubernetes_hookfiles.post_upgrade_control_planes }}"
+  loop_control:
+    loop_var: hook
+  when: kubernetes_hookfiles.post_upgrade_control_planes is defined
+  ansible.builtin.include_tasks: "{{ hook }}"
