@@ -52,6 +52,10 @@
   ansible.builtin.include_tasks:
     file: upgrade-worker.yaml
 
+- name: Update Kubelet, kubectl and containerd packages
+  ansible.builtin.include_tasks:
+    file: update-packages.yaml
+
 - name: Uncordon kubernetes node
   changed_when: true
   delay: 5
