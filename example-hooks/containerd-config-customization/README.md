@@ -2,7 +2,7 @@ This hook will configure ContainerD to enable the device_ownership_from_security
 
 This makes it so the CDI plugin for Kubernetes and KubeVirt works as expected.
 
-Containerd can safely be restarted on a node without draining so it can be done anwhere in the playbook you want.
+Containerd can safely be restarted on a node without draining so it can be done anywhere in the playbook you want.
 
 These are just a couple great hooks to do it in.
 * `pre_prerequisites` is before after the ContainerD configuration is rewritten during install and before the control plane components is configured.
