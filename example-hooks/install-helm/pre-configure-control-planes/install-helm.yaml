@@ -30,7 +30,9 @@
     ansible.builtin.file:
       path: /tmp/install_helm.sh
       state: absent
+
   rescue:
+
   - name: Helm variable contents
     ansible.builtin.debug:
       msg:
@@ -38,6 +40,7 @@
       - helm_download: '{{ helm_download | default("Not ran") }}'
       - helm_install: '{{ helm_install | default("Not ran") }}'
       - helm_remove_script: '{{ helm_remove_script | default("Not ran") }}'
+
   - name: Helm failed to install
     ansible.builtin.fail:
       msg: Helm failed to install
