@@ -27,7 +27,9 @@
     ansible.builtin.file:
       path: /tmp/install_kustomize.sh
       state: absent
+
   rescue:
+
   - name: Kustomize variable contents
     ansible.builtin.debug:
       msg:
@@ -35,6 +37,7 @@
         kustomize_install: '{{ kustomize_install | default("Not ran") }}'
         kustomize_remove: '{{ kustomize_remove | default("Not ran") }}'
         kustomize_remove_script: '{{ kustomize_remove_script | default("Not ran") }}'
+
   - name: Kustomize failed
     ansible.builtin.fail:
       msg: Kustomize failed to install
