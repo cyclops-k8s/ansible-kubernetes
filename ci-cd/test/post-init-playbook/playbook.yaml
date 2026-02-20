@@ -3,18 +3,6 @@
   hosts: all
   gather_facts: false
   tasks:
-  - name: Wait for port 22 on the host
-    delegate_to: localhost
-    register: ssh_port
-    retries: 30
-    until: ssh_port is ansible.builtin.success
-    ansible.builtin.wait_for:
-      connect_timeout: 10
-      delay: "{{ delay | default(0) }}"
-      host: "{{ inventory_hostname }}"
-      port: 22
-      sleep: 10
-      timeout: 10
   - name: Wait for ssh access
     register: ssh_access
     retries: 30
