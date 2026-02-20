@@ -31,6 +31,7 @@ locals {
     kubernetes_kubelet_csr_approver_bypass_dns_checks = "true"
     kubernetes_pod_subnet                             = "10.200.0.0/16"
     kubernetes_service_subnet                         = "10.201.0.0/16"
+    calico_manifest_url                               = "https://assets.cyclops-assets/os-images/calico.yaml"
   }
   special_config = {
     kubernetes = {
