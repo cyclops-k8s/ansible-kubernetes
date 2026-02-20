@@ -26,5 +26,5 @@ runcmd:
     mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
 
 package_reboot_if_required: false
-package_update: true
-package_upgrade: true
+package_update: false
+package_upgrade: false
