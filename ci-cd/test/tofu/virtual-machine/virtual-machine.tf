@@ -43,21 +43,23 @@ resource "kubernetes_manifest" "virtual-machine" {
         }
         spec = {
           affinity = {
-            nodeAffinity = {
-              preferredDuringSchedulingIgnoredDuringExecution = [
-                {
-                  nodeSelectorTerms = {
-                    matchExpressions = [
-                      {
-                        key      = "cyclops-k8s.io/ansible-kubernetes"
-                        operator = "In"
-                        values   = ["amd64"]
-                      }
-                    ]
+            nodeAffinity = [
+              {
+                preferredDuringSchedulingIgnoredDuringExecution = [
+                  {
+                    nodeSelectorTerms = {
+                      matchExpressions = [
+                        {
+                          key      = "cyclops-k8s.io/ansible-kubernetes"
+                          operator = "In"
+                          values   = ["amd64"]
+                        }
+                      ]
+                    }
                   }
-                }
-              ]
-            }
+                ]
+              }
+            ]
           }
           # architecture = "amd64" # Latest version of kubevirt doesn't support this field
           domain = {
