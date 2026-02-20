@@ -4,9 +4,12 @@
   gather_facts: false
   tasks:
   - name: Wait for ssh access
+    register: ssh_access
+    retries: 150
+    until: ssh_access is ansible.builtin.success
     ansible.builtin.wait_for_connection:
       delay: "{{ delay | default(0) }}"
-      timeout: 120
+      timeout: 2
 
   - name: Wait for cloud init to finish
     delay: 5
