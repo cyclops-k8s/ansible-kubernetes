@@ -4,6 +4,7 @@
   gather_facts: false
   tasks:
   - name: Wait for port 22 on the host
+    delegate_to: localhost
     register: ssh_port
     retries: 30
     until: ssh_port is ansible.builtin.success
