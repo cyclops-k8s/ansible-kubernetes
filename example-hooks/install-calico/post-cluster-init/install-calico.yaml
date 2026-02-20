@@ -19,7 +19,7 @@
     register: calico
     when: install_calico
     ansible.builtin.command:
-      cmd: "kubectl apply -f {{ calico_manifest_url | default('https://raw.githubusercontent.com/projectcalico/calico/v3.31.3/manifests/calico.yaml') }}"
+      cmd: "kubectl apply -f {{ calico_manifest_url | default('https://raw.githubusercontent.com/projectcalico/calico/v3.31.3/manifests/calico.yaml', true) }}"
 
   - name: Wait for Calico to be ready
     delay: 1
