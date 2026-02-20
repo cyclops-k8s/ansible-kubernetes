@@ -46,15 +46,20 @@ resource "kubernetes_manifest" "virtual-machine" {
             nodeAffinity = {
               preferredDuringSchedulingIgnoredDuringExecution = [
                 {
-                  nodeSelectorTerms = {
-                    matchExpressions = [
-                      {
-                        key      = "cyclops-k8s.io/ansible-kubernetes"
-                        operator = "In"
-                        values   = ["amd64"]
+                  nodeSelectorTerms = [
+                    {
+                      weight = 100
+                      preference = {
+                        matchExpressions = [
+                          {
+                            key      = "cyclops-k8s.io/ansible-kubernetes"
+                            operator = "In"
+                            values   = ["amd64"]
+                          }
+                        ]
                       }
-                    ]
-                  }
+                    }
+                  ]
                 }
               ]
             }
