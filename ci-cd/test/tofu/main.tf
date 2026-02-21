@@ -34,7 +34,7 @@ locals {
     calico_manifest_url                               = "https://assets.cyclops-assets/os-images/calico.yaml"
     kubernetes_mirror                                 = "{% if ansible_facts.os_family == 'Debian' %}http://apt-cacher-ng.cyclops-assets/HTTPS///pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb{% else %}http://apt-cacher-ng.cyclops-assets/HTTPS///pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm{% endif %}"
     kubernetes_containerd_mirror                      = "{% if ansible_facts['os_family'] == 'Debian' %}http://apt-cacher-ng.cyclops-assets/HTTPS///download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}{% else %}http://apt-cacher-ng.cyclops-assets/HTTPS///download.docker.com/linux/centos/$releasever/$basearch/stable{% endif %}"
-    kubernetes_containerd_mirror_gpgkey               = "{% if ansible_facts['os_family'] == 'Debian' %}https://assets.cyclops-assets/os-images/linux/debian/gpg{% else %}https://assets.cyclops-assets/os-images/docker-centos.gpg{% endif %}"
+    kubernetes_containerd_mirror_gpgkey               = "{% if ansible_facts['os_family'] == 'Debian' %}https://assets.cyclops-assets/os-images/gpg{% else %}https://assets.cyclops-assets/os-images/docker-centos.gpg{% endif %}"
   }
   special_config = {
     kubernetes = {
