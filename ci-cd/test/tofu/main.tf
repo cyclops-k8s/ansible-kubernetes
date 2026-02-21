@@ -32,9 +32,12 @@ locals {
     kubernetes_pod_subnet                             = "10.200.0.0/16"
     kubernetes_service_subnet                         = "10.201.0.0/16"
     calico_manifest_url                               = "https://assets.cyclops-assets/os-images/calico.yaml"
-    kubernetes_mirror                                 = "{% if ansible_facts.os_family == 'Debian' %}http://apt-cacher-ng.cyclops-assets/HTTPS///pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb{% else %}http://apt-cacher-ng.cyclops-assets/HTTPS///pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm{% endif %}"
-    kubernetes_containerd_mirror                      = "{% if ansible_facts['os_family'] == 'Debian' %}http://apt-cacher-ng.cyclops-assets/HTTPS///download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}{% else %}http://apt-cacher-ng.cyclops-assets/HTTPS///download.docker.com/linux/centos/$releasever/$basearch/stable{% endif %}"
-    kubernetes_containerd_mirror_gpgkey               = "{% if ansible_facts['os_family'] == 'Debian' %}https://assets.cyclops-assets/os-images/gpg{% else %}https://assets.cyclops-assets/os-images/docker-centos.gpg{% endif %}"
+    kubernetes_deb_mirror                             = "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/"
+    kubernetes_rpm_mirror                             = "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/"
+    kubernetes_containerd_mirror_deb                  = "http://apt-cacher-ng.cyclops-assets/HTTPS///download.docker.com/linux/debian"
+    kubernetes_containerd_mirror_rpm                  = "http://apt-cacher-ng.cyclops-assets/HTTPS///download.docker.com/linux/centos/$releasever/$basearch/stable"
+    kubernetes_containerd_mirror_gpgkey_deb           = "https://assets.cyclops-assets/os-images/gpg"
+    kubernetes_containerd_mirror_gpgkey_rpm           = "https://assets.cyclops-assets/os-images/docker-centos.gpg"
   }
   special_config = {
     kubernetes = {
