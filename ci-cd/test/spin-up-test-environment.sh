@@ -76,19 +76,24 @@ function get_options() {
   fi
 
   # Download cloud image if not already present
+  OS_TYPE=ubuntu
   OS_IMAGE=${OS_IMAGE:-ubuntu-24.04}
   if [ "${OS_IMAGE}" = "centos9" ]
   then
     IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2}"
+    OS_TYPE=rhel
   elif [ "${OS_IMAGE}" = "centos10" ]
   then
     IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/CentOS-Stream-GenericCloud-10-latest.x86_64.qcow2}"
+    OS_TYPE=rhel
   elif [ "${OS_IMAGE}" = "ubuntu-24.04" ]
   then
     IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/noble-server-cloudimg-amd64.img}"
+    OS_TYPE=ubuntu
   elif [ "${OS_IMAGE}" = "ubuntu-25.10" ]
   then
     IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/questing-server-cloudimg-amd64.img}"
+    OS_TYPE=ubuntu
   else
     echo "Unsupported os-image: ${OS_IMAGE}"
     exit 1
@@ -103,14 +108,40 @@ cp -f tofu/cloud-init/* /tmp/cloud-init/
 if [ -n "${CERT}" ]
 then
   echo "Injecting CA certificate into cloud-init configuration..."
-  cat tofu/cloud-init/user-data.tpl | \
-    yq --yaml-output "
-    .ca_certs = {
-      trusted: [
-        \"$CERT\"
-      ]
-    }" > /tmp/cloud-init/user-data.tpl.tmp
-
+  if [[ "${OS_TYPE}" == "rhel" ]]
+  then
+    # For RHEL-based images, we need to inject the CA certificate into the cloud-init configuration
+    # in a specific way to ensure it gets added to the trusted certificates on the VM.
+    cat "tofu/cloud-init/user-data.tpl" | \
+      yq --yaml-output "
+        .write_files +=
+          [
+            {
+                content: \"$CERT\",
+                path: \"/etc/pki/ca-trust/source/anchors/cyclops-root.crt\",
+                permissions: \"0644\"
+            }
+          ]
+        | .runcmd +=
+          [
+            \"update-ca-trust\"
+          ]
+        " > /tmp/cloud-init/user-data.tpl.tmp
+  elif [[ "${OS_TYPE}" == "ubuntu" ]]
+    then
+      # For Ubuntu-based images, we can inject the CA certificate into the cloud-init configuration using
+      # the 'ca_certs' module, which will automatically add it to the trusted certificates on the VM.
+      cat "tofu/cloud-init/user-data.tpl" | \
+        yq --yaml-output "
+          .ca_certs =
+            {
+              trusted:
+              [
+                \"$CERT\"
+              ]
+            }
+          " > /tmp/cloud-init/user-data.tpl.tmp
+  fi
   echo "#cloud-config" > /tmp/cloud-init/user-data.tpl
   echo >> /tmp/cloud-init/user-data.tpl
   cat /tmp/cloud-init/user-data.tpl.tmp >> /tmp/cloud-init/user-data.tpl

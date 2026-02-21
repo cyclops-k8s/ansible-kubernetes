@@ -352,14 +352,17 @@ kubernetes_hookfiles:
   # During a cluster upgrade, before any control planes are upgraded
   pre_upgrade_control_planes: []
 
-  # During a cluster upgrade, after all control planes are upgraded
+  # During a cluster upgrade, after the control plane kubeadm upgrade is completed
   post_upgrade_control_planes: []
 
   # During a cluster upgrade, before any workers are upgraded
   pre_upgrade_workers: []
 
-  # During a cluster upgrade, after all workers are upgraded
+  # During a cluster upgrade, after the worker kubeadm upgrade is completed
   post_upgrade_workers: []
+
+  # During a cluster upgrade, after kubelet, kubectl and containerd have been upgraded and reconfigured
+  post_upgrade: []
 
 # Phases to skip in the kubeadm init process, you can view the list of phases by checking out `kubeadm init --help`
 kubernetes_init_skip_phases: []

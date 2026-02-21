@@ -8,8 +8,8 @@ module "vm-proxy" {
   cpu_limit             = "1"
   cpu_request           = "100m"
   disk_size             = "20Gi"
-  memory_size           = "4Gi"
-  memory_size_request   = "4Gi"
+  memory_size           = "1Gi"
+  memory_size_request   = "1Gi"
   namespace_name        = var.namespace_name
   networkdata_filename  = "/tmp/cloud-init/network.tpl"
   userdata_filename     = "/tmp/cloud-init/user-data.tpl"
@@ -26,8 +26,8 @@ module "vm-controlplanes" {
   cpu_limit             = "4"
   cpu_request           = "100m"
   disk_size             = "30Gi"
-  memory_size           = "8Gi"
-  memory_size_request   = "8Gi"
+  memory_size           = "4Gi"
+  memory_size_request   = "4Gi"
   namespace_name        = var.namespace_name
   networkdata_filename  = "/tmp/cloud-init/network.tpl"
   userdata_filename     = "/tmp/cloud-init/user-data.tpl"
@@ -44,8 +44,8 @@ module "vm-workers" {
   cpu_limit             = "4"
   cpu_request           = "100m"
   disk_size             = "30Gi"
-  memory_size           = "4Gi"
-  memory_size_request   = "4Gi"
+  memory_size           = "2Gi"
+  memory_size_request   = "2Gi"
   namespace_name        = var.namespace_name
   networkdata_filename  = "/tmp/cloud-init/network.tpl"
   userdata_filename     = "/tmp/cloud-init/user-data.tpl"

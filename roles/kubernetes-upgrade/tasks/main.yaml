@@ -56,6 +56,13 @@
   ansible.builtin.include_tasks:
     file: update-packages.yaml
 
+- name: Post upgrade hooks
+  loop: "{{ kubernetes_hookfiles.post_upgrade }}"
+  loop_control:
+    loop_var: hook
+  when: kubernetes_hookfiles.post_upgrade is defined
+  ansible.builtin.include_tasks: "{{ hook }}"
+
 - name: Uncordon kubernetes node
   changed_when: true
   delay: 5

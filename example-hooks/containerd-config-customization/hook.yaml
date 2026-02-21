@@ -1,0 +1,20 @@
+- name: Enable device ownership from security context
+  register: device_ownership_replace
+  ansible.builtin.lineinfile:
+    backup: true
+    insertafter: "\\[plugins\\.'io\\.containerd\\.cri\\.v1\\.runtime'\\]"
+    line: '    device_ownership_from_security_context = true'
+    regexp: " *device_ownership_from_security_context *=.*"
+    path: /etc/containerd/config.toml
+
+- name: Restart containerd service
+  register: device_ownership_restart
+  when: device_ownership_replace.changed
+  ansible.builtin.service:
+    name: containerd
+    state: restarted
+
+- name: Wait for containerd to restart
+  when: device_ownership_restart.changed
+  ansible.builtin.pause:
+    seconds: 10

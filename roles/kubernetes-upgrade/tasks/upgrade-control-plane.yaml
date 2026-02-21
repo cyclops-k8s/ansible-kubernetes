@@ -43,6 +43,18 @@
         endpoint health 2>&1 | grep -q "is healthy"
     executable: /bin/bash
 
+- name: Set healthz command
+  ansible.builtin.set_fact:
+    healthz_command: "kubectl get --raw /healthz --server=https://{{
+        kubernetes_api_server_public_ip |
+        default(kubernetes_api_server_bind_address, true) |
+        default(ansible_facts['default_ipv4'].address, true)
+      }}:{{ kubernetes_api_server_port }} --kubeconfig /etc/kubernetes/admin.conf"
+
+- name: Write healthz command to stdout for debugging
+  ansible.builtin.debug:
+    msg: "Healthz command: {{ healthz_command }}"
+
 - name: Wait for API server to be healthy after control plane upgrade
   changed_when: false
   delay: 2
@@ -50,11 +62,7 @@
   retries: 150
   until: api_health_secondary.rc == 0
   ansible.builtin.command:
-    cmd: kubectl get --raw /healthz --server=https://{{
-      kubernetes_api_server_public_ip |
-          default(kubernetes_api_server_bind_address |
-            default(ansible_facts['default_ipv4'].address))
-      }}:6443 --kubeconfig /etc/kubernetes/admin.conf
+    cmd: "{{ healthz_command }}"
 
 - name: Verify control plane pods are running after upgrade
   changed_when: false
