@@ -21,21 +21,10 @@ chpasswd:
   expire: false
 
 runcmd:
-- |
-    mkdir /var/lib/etcd
-    mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
-
-write_files:
-- content: Acquire::http::Proxy "http://package-cache.cyclops-assets";
-  owner: root:root
-  path: /etc/apt/apt.conf.d/00cacher
-  permissions: '0644'
-- content: |
-    [main]
-    proxy=http://package-cache.cyclops-assets
-  owner: root:root
-  path: /etc/dnf/dnf.conf
-  permissions: '0644'
+- mkdir /var/lib/etcd
+- mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
+- sed -i 's/https:\/\//http:\/\/HTTPS\/\/\//g' /etc/apt/sources.list.d/* || true
+- sed -i 's/https:\/\//http:\/\/HTTPS\/\/\//g' /etc/yum.repos.d/* || true
 
 package_reboot_if_required: false
 package_update: false
