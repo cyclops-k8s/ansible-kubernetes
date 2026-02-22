@@ -26,22 +26,6 @@ runcmd:
 - sed -i 's/https:\/\//http:\/\/package-cache.cyclops-assets\/HTTPS\/\/\//g' /etc/apt/sources.list.d/* || true
 - sed -i 's/https:\/\//http:\/\/package-cache.cyclops-assets\/HTTPS\/\/\//g' /etc/yum.repos.d/* || true
 
-# - sed -i 's/https:\/\//http:\/\/HTTPS\/\/\//g' /etc/yum.repos.d/* || true
-
-write_files:
-# - content: |
-#     Acquire::http::Proxy "http://package-cache.cyclops-assets";
-#     Acquire::https::Proxy "http://package-cache.cyclops-assets";
-#   owner: root:root
-#   path: /etc/apt/apt.conf.d/00cacher
-#   permissions: '0644'
-# - content: |
-#     [main]
-#     proxy=http://package-cache.cyclops-assets
-#   owner: root:root
-#   path: /etc/dnf/dnf.conf
-#   permissions: '0644'
-
 package_reboot_if_required: false
 package_update: false
 package_upgrade: false
