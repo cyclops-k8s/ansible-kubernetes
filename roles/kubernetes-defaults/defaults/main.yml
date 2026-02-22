@@ -381,9 +381,9 @@ kubernetes_kubeadm_join_extra_args: ""
 kubernetes_manage_cert_renewal: true
 
 # Apt/Yum mirror to pull the Kubernetes packages from
-kubernetes_deb_mirror: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb"
-kubernetes_rpm_mirror: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm"
-kubernetes_mirror: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_deb_mirror }}{% else %}{{ kubernetes_rpm_mirror }}{% endif %}"
+kubernetes_mirror_deb: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb"
+kubernetes_mirror_rpm: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm"
+kubernetes_mirror: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_mirror_deb }}{% else %}{{ kubernetes_mirror_rpm }}{% endif %}"
 
 # The internal Kubernetes node cidr for pods
 kubernetes_node_cidr_mask_size: 24
