@@ -30,6 +30,12 @@ write_files:
   owner: root:root
   path: /etc/apt/apt.conf.d/00cacher
   permissions: '0644'
+- content: |
+    [main]
+    proxy=http://package-cache.cyclops-assets
+  owner: root:root
+  path: /etc/dnf/dnf.conf
+  permissions: '0644'
 
 package_reboot_if_required: false
 package_update: false
