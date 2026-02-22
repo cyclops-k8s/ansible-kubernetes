@@ -21,9 +21,10 @@ chpasswd:
   expire: false
 
 runcmd:
-- |
-    mkdir /var/lib/etcd
-    mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
+- mkdir /var/lib/etcd
+- mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
+- sed -i 's/https:\/\//http:\/\/package-cache.cyclops-assets\/HTTPS\/\/\//g' /etc/apt/sources.list.d/* || true
+- sed -i 's/https:\/\//http:\/\/package-cache.cyclops-assets\/HTTPS\/\/\//g' /etc/yum.repos.d/* || true
 
 package_reboot_if_required: false
 package_update: false
