@@ -85,8 +85,8 @@ output "hostname" {
   value = var.hostname
 }
 
-output "hugepages_pageSize" {
-  value = var.hugepages_pageSize
+output "hugepages_page_size" {
+  value = var.hugepages_page_size
 }
 
 output "namespace_name" {
