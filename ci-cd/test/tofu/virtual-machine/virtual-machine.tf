@@ -100,6 +100,9 @@ resource "kubernetes_manifest" "virtual-machine" {
             }
             memory = {
               guest = var.memory_size
+              hugepages = {
+                pageSize = var.hugepages_pageSize
+              }
             }
             resources = {
               limits = {
