@@ -36,6 +36,12 @@ variable "hostname" {
   description = "The prefix to use for the hostname of the virtual machine"
 }
 
+variable "hugepages_pageSize" {
+  type        = string
+  description = "The hugepages page size to allocate to the virtual machine in Kubernetes notation"
+  default    = "4ki"
+}
+
 variable "memory_size" {
   type        = string
   description = "The size of memory to allocate to the virtual machine in Kubernetes notation"
@@ -77,6 +83,10 @@ output "cloud-init-secret" {
 
 output "hostname" {
   value = var.hostname
+}
+
+output "hugepages_pageSize" {
+  value = var.hugepages_pageSize
 }
 
 output "namespace_name" {

@@ -28,6 +28,7 @@ module "vm-controlplanes" {
   disk_size             = "30Gi"
   memory_size           = "4Gi"
   memory_size_request   = "4Gi"
+  hugepages_pageSize    = "2Mi"
   namespace_name        = var.namespace_name
   networkdata_filename  = "/tmp/cloud-init/network.tpl"
   userdata_filename     = "/tmp/cloud-init/user-data.tpl"
@@ -53,7 +54,7 @@ module "vm-workers" {
 
 data "kubernetes_resource" "control_planes" {
   count       = 3
-  depends_on = [module.vm-controlplanes]
+  depends_on  = [module.vm-controlplanes]
   kind        = "VirtualMachineInstance"
   api_version = "kubevirt.io/v1"
   metadata {
@@ -64,7 +65,7 @@ data "kubernetes_resource" "control_planes" {
 
 data "kubernetes_resource" "workers" {
   count       = 3
-  depends_on = [module.vm-workers]
+  depends_on  = [module.vm-workers]
   kind        = "VirtualMachineInstance"
   api_version = "kubevirt.io/v1"
   metadata {
@@ -74,7 +75,7 @@ data "kubernetes_resource" "workers" {
 }
 
 data "kubernetes_resource" "proxy" {
-  depends_on = [module.vm-proxy]
+  depends_on  = [module.vm-proxy]
   kind        = "VirtualMachineInstance"
   api_version = "kubevirt.io/v1"
   metadata {
