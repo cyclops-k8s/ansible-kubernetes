@@ -36,7 +36,7 @@ variable "hostname" {
   description = "The prefix to use for the hostname of the virtual machine"
 }
 
-variable "hugepages_pageSize" {
+variable "hugepages_page_size" {
   type        = string
   description = "The hugepages page size to allocate to the virtual machine in Kubernetes notation"
   default     = null

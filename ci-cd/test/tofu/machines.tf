@@ -28,7 +28,7 @@ module "vm-controlplanes" {
   disk_size             = "30Gi"
   memory_size           = "4Gi"
   memory_size_request   = "4Gi"
-  hugepages_pageSize    = "2Mi"
+  hugepages_page_size   = "2Mi"
   namespace_name        = var.namespace_name
   networkdata_filename  = "/tmp/cloud-init/network.tpl"
   userdata_filename     = "/tmp/cloud-init/user-data.tpl"
