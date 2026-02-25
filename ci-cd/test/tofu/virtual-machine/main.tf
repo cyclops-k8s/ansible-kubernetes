@@ -39,7 +39,7 @@ variable "hostname" {
 variable "hugepages_page_size" {
   type        = string
   description = "The hugepages page size to allocate to the virtual machine in Kubernetes notation"
-  default     = ""
+  default     = "nothing"
 }
 
 variable "memory_size" {
