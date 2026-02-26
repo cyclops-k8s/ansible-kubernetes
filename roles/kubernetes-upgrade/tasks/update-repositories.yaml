@@ -31,7 +31,7 @@
   - name: Adding apt repository for Kubernetes
     ansible.builtin.apt_repository:
       filename: kubernetes-{{ kubernetes_version }}
-      repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }}/ /
+      repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
       state: present
 
   - name: Find latest kubernetes version in apt
