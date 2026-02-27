@@ -98,9 +98,16 @@ resource "kubernetes_manifest" "virtual-machine" {
             machine = {
               type = "q35"
             }
-            memory = {
-              guest = var.memory_size
-            }
+            memory = merge(
+              {
+                guest = var.memory_size
+              },
+              var.hugepages_page_size != "nothing" ? {
+                hugepages = {
+                  pageSize = var.hugepages_page_size
+                }
+              } : {}
+            )
             resources = {
               limits = {
                 cpu    = var.cpu_limit
