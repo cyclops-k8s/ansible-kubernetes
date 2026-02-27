@@ -23,8 +23,13 @@ chpasswd:
 runcmd:
 - mkdir /var/lib/etcd
 - mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
-- sed -i 's/https:\/\//http:\/\/package-cache.cyclops-assets\/HTTPS\/\/\//g' /etc/apt/sources.list.d/* || true
-- sed -i 's/https:\/\//http:\/\/package-cache.cyclops-assets\/HTTPS\/\/\//g' /etc/yum.repos.d/* || true
+- sed -i 's/https:\/\//http:\/\/package-cache-proxy.cyclops-assets\/HTTPS\/\/\//g' /etc/yum.repos.d/* || true
+
+apt:
+  primary:
+    - arches:
+        - default
+      uri: https://package-cache-proxy.cyclops-assets/HTTPS///archive.ubuntu.com/ubuntu
 
 package_reboot_if_required: false
 package_update: false
