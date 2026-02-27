@@ -36,10 +36,10 @@ locals {
   special_config = {
     kubernetes = {
       vars = merge(var.extra_kubernetes_configuration, {
-        kubernetes_mirror_apt                 = "http://package-cache.cyclops-assets/HTTPS///pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb"
-        kubernetes_mirror_rpm                 = "http://package-cache.cyclops-assets/HTTPS///pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm"
-        kubernetes_containerd_mirror_apt_root = "http://package-cache.cyclops-assets/HTTPS///download.docker.com/linux/{{ ansible_facts.distribution | lower }}"
-        kubernetes_containerd_mirror_rpm_root = "http://package-cache.cyclops-assets/HTTPS///download.docker.com/linux/centos"
+        kubernetes_mirror_apt                 = "https://package-cache-proxy.cyclops-assets/HTTPS///pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb"
+        kubernetes_mirror_rpm                 = "https://package-cache-proxy.cyclops-assets/HTTPS///pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm"
+        kubernetes_containerd_mirror_apt_root = "https://package-cache-proxy.cyclops-assets/HTTPS///download.docker.com/linux/{{ ansible_facts.distribution | lower }}"
+        kubernetes_containerd_mirror_rpm_root = "https://package-cache-proxy.cyclops-assets/HTTPS///download.docker.com/linux/centos"
         kubernetes_hookfiles = {
           post_cluster_init = [
             "{{ inventory_dir }}/../../example-hooks/install-calico/post-cluster-init/install-calico.yaml",
