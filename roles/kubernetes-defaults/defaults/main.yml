@@ -10,13 +10,14 @@ kubernetes_control_plane_ip: null
 kubernetes_containerd_credentials: []
 
 # Apt/Yum repository to pull containerd from
-kubernetes_containerd_mirror_deb_root: "https://download.docker.com/linux/{{ ansible_facts.distribution | lower }}"
+kubernetes_containerd_mirror_apt_root: "https://download.docker.com/linux/{{ ansible_facts.distribution | lower }}"
+kubernetes_containerd_mirror_apt: "{{ kubernetes_containerd_mirror_apt_root }}"
 kubernetes_containerd_mirror_rpm_root: "https://download.docker.com/linux/{{ ansible_facts.distribution | lower }}"
 kubernetes_containerd_mirror_rpm: "{{ kubernetes_containerd_mirror_rpm_root }}/$releasever/$basearch/stable"
-kubernetes_containerd_mirror: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_containerd_mirror_deb_root }}{% else %}{{ kubernetes_containerd_mirror_rpm }}{% endif %}"
-kubernetes_containerd_mirror_gpgkey_deb: "{{ kubernetes_containerd_mirror_deb_root }}/gpg"
+kubernetes_containerd_mirror: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_containerd_mirror_apt_root }}{% else %}{{ kubernetes_containerd_mirror_rpm }}{% endif %}"
+kubernetes_containerd_mirror_gpgkey_debian: "{{ kubernetes_containerd_mirror_apt_root }}/gpg"
 kubernetes_containerd_mirror_gpgkey_rpm: "{{ kubernetes_containerd_mirror_rpm_root }}/gpg"
-kubernetes_containerd_mirror_gpgkey: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_containerd_mirror_gpgkey_deb }}{% else %}{{ kubernetes_containerd_mirror_gpgkey_rpm }}{% endif %}"
+kubernetes_containerd_mirror_gpgkey: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_containerd_mirror_gpgkey_debian }}{% else %}{{ kubernetes_containerd_mirror_gpgkey_rpm }}{% endif %}"
 
 # This version of kubernetes_containerd_registry_mirrors is deprecated as of containerd version 2.0.0
 # This configuration works for versions below 2.2.0
@@ -382,9 +383,9 @@ kubernetes_kubeadm_join_extra_args: ""
 kubernetes_manage_cert_renewal: true
 
 # Apt/Yum mirror to pull the Kubernetes packages from
-kubernetes_mirror_deb: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb"
+kubernetes_mirror_apt: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb"
 kubernetes_mirror_rpm: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm"
-kubernetes_mirror: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_mirror_deb }}{% else %}{{ kubernetes_mirror_rpm }}{% endif %}"
+kubernetes_mirror: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_mirror_apt }}{% else %}{{ kubernetes_mirror_rpm }}{% endif %}"
 
 # The internal Kubernetes node cidr for pods
 kubernetes_node_cidr_mask_size: 24
