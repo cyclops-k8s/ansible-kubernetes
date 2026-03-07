@@ -384,7 +384,10 @@ kubernetes_manage_cert_renewal: true
 
 # Apt/Yum mirror to pull the Kubernetes packages from
 kubernetes_mirror_apt: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb"
+kubernetes_mirror_gpgkey_apt: "{{ kubernetes_mirror_apt }}/Release.key"
 kubernetes_mirror_rpm: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm"
+kubernetes_mirror_gpgkey_rpm: "{{ kubernetes_mirror_rpm }}/repodata/repomd.xml.key"
+kubernetes_mirror_gpgkey: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_mirror_gpgkey_apt }}{% else %}{{ kubernetes_mirror_gpgkey_rpm }}{% endif %}"
 kubernetes_mirror: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_mirror_apt }}{% else %}{{ kubernetes_mirror_rpm }}{% endif %}"
 
 # The internal Kubernetes node cidr for pods
