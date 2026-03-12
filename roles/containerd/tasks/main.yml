@@ -47,11 +47,28 @@
       state: present
       update_cache: true
 
+  - name: Resolve containerd package version (Debian/Ubuntu)
+    when: kubernetes_containerd_version != "latest"
+    changed_when: false
+    failed_when: containerd_version_resolved.stdout == ""
+    register: containerd_version_resolved
+    ansible.builtin.shell:
+      cmd: |
+        set -eo pipefail
+        apt-cache madison containerd.io | grep "{{ kubernetes_containerd_version }}" | head -n 1 | awk '{print $3}'
+      executable: /bin/bash
+
+  # noqa: var-naming[no-role-prefix]
+  - name: Set containerd_version fact (Debian/Ubuntu)
+    ansible.builtin.set_fact:
+      containerd_version: "{{ containerd_version_resolved.stdout if kubernetes_containerd_version != 'latest' else 'latest' }}"
+
   - name: Install containerd
     ansible.builtin.apt:
       name:
-      - containerd.io
-      state: present
+      - "{{ 'containerd.io=' + containerd_version if containerd_version != 'latest' else 'containerd.io' }}"
+      state: "{{ 'present' if containerd_version != 'latest' else 'latest' }}"
+      allow_downgrade: true
 
   - name: Hold containerd.io
     ansible.builtin.dpkg_selections:
@@ -75,11 +92,28 @@
       name: python3-dnf-plugin-versionlock
       state: present
 
+  - name: Resolve containerd package version (RedHat)
+    when: kubernetes_containerd_version != "latest"
+    changed_when: false
+    failed_when: containerd_version_resolved.stdout == ""
+    register: containerd_version_resolved
+    ansible.builtin.shell:
+      cmd: |
+        set -eo pipefail
+        dnf list --showduplicates containerd.io | grep "{{ kubernetes_containerd_version }}" | tail -n 1 | awk '{print $2}' | cut -d ':' -f 2
+      executable: /bin/bash
+
+  # noqa: var-naming[no-role-prefix]
+  - name: Set containerd_version fact (RedHat)
+    ansible.builtin.set_fact:
+      containerd_version: "{{ containerd_version_resolved.stdout if kubernetes_containerd_version != 'latest' else 'latest' }}"
+
   - name: Install containerd
     ansible.builtin.dnf:
       name:
-      - containerd.io
-      state: present
+      - "{{ 'containerd.io-' + containerd_version if containerd_version != 'latest' else 'containerd.io' }}"
+      state: "{{ 'present' if containerd_version != 'latest' else 'latest' }}"
+      allow_downgrade: true
 
   - name: Hold containerd.io
     changed_when: true
