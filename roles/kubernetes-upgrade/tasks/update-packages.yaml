@@ -10,12 +10,18 @@
       name: "{{ item }}"
       state: present
 
-  - name: Upgrade containerd to latest version
+  - name: Resolve containerd package version (Debian/Ubuntu)
+    ansible.builtin.include_role:
+      name: containerd
+      tasks_from: resolve-version-debian.yml
+
+  - name: Upgrade containerd
     ansible.builtin.apt:
       allow_change_held_packages: true
-      name: containerd.io
-      only_upgrade: true
-      state: latest
+      allow_downgrade: true
+      name: "{{ 'containerd.io=' + containerd_version if containerd_version != 'latest' else 'containerd.io' }}"
+      only_upgrade: "{{ containerd_version == 'latest' }}"
+      state: "{{ 'present' if containerd_version != 'latest' else 'latest' }}"
 
   - name: Reconfigure containerd for new version
     ansible.builtin.include_role:
@@ -51,10 +57,16 @@
       name: "{{ item }}"
       state: present
 
-  - name: Upgrade containerd to the latest version
+  - name: Resolve containerd package version (RedHat)
+    ansible.builtin.include_role:
+      name: containerd
+      tasks_from: resolve-version-redhat.yml
+
+  - name: Upgrade containerd
     ansible.builtin.dnf:
-      name: containerd.io
-      state: latest  # noqa: package-latest
+      name: "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io-' + containerd_version }}"
+      state: "{{ 'latest' if containerd_version == 'latest' else 'present' }}"
+      allow_downgrade: true
 
   - name: Reconfigure containerd for new version
     ansible.builtin.include_role:

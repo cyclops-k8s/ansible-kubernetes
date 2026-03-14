@@ -47,11 +47,16 @@
       state: present
       update_cache: true
 
+  - name: Resolve containerd package version (Debian/Ubuntu)
+    ansible.builtin.include_tasks:
+      file: resolve-version-debian.yml
+
   - name: Install containerd
     ansible.builtin.apt:
       name:
-      - containerd.io
+      - "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io=' + containerd_version }}"
       state: present
+      allow_downgrade: true
 
   - name: Hold containerd.io
     ansible.builtin.dpkg_selections:
@@ -75,11 +80,15 @@
       name: python3-dnf-plugin-versionlock
       state: present
 
+  - name: Resolve containerd package version (RedHat)
+    ansible.builtin.include_tasks:
+      file: resolve-version-redhat.yml
+
   - name: Install containerd
     ansible.builtin.dnf:
-      name:
-      - containerd.io
+      name: "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io-' + containerd_version }}"
       state: present
+      allow_downgrade: true
 
   - name: Hold containerd.io
     changed_when: true
