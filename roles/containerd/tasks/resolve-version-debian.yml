@@ -17,7 +17,7 @@
       {{
         (
           containerd_madison.stdout_lines |
-          select('search', kubernetes_containerd_version) |
+          select('search', '\b' ~ (kubernetes_containerd_version | regex_escape) ~ '\b') |
           list |
           first
         ) | default('')
