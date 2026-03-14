@@ -14,15 +14,25 @@
   when: kubernetes_hookfiles.pre_upgrade_control_planes is defined
   ansible.builtin.include_tasks: "{{ hook }}"
 
-- name: Upgrade kubernetes primary control plane node
+- name: Pre-pull control plane images
   changed_when: true
-  when: first_kube_control_plane == inventory_hostname
-  ansible.builtin.command: kubeadm upgrade apply {{ kubeadm_version.stdout }} --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml --yes
+  ansible.builtin.command:
+    cmd: kubeadm config images pull --kubeconfig {{ kubernetes_config_directory }}/admin.conf
 
-- name: Upgrade Kubernetes non-primary control plane node
+- name: Set control plane upgrade command
+  ansible.builtin.set_fact:
+    control_plane_upgrade_command: |
+      {{
+        (first_kube_control_plane == inventory_hostname) |
+        ternary(
+          'kubeadm upgrade apply ' ~ kubeadm_version.stdout ~ ' --config ' ~ kubernetes_config_directory ~ '/kubeadm-upgrade.yaml --yes',
+          'kubeadm upgrade node --config ' ~ kubernetes_config_directory ~ '/kubeadm-upgrade.yaml'
+        )
+      }}
+
+- name: Upgrade control plane node
   changed_when: true
-  when: first_kube_control_plane != inventory_hostname
-  ansible.builtin.command: kubeadm upgrade node --config {{ kubernetes_config_directory }}/kubeadm-upgrade.yaml
+  ansible.builtin.command: "{{ control_plane_upgrade_command }}"
 
 - name: Wait for etcd to stabilize after control plane upgrade
   changed_when: false

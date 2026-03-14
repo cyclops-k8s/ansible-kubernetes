@@ -10,6 +10,12 @@
     - vrrp_password != None
     - vrrp_virtual_router_id != None
 
+# Update the apt repositories
+- name: Update repositories (Debian/Ubuntu)
+  when: ansible_facts.os_family == "Debian"
+  ansible.builtin.apt:
+    update_cache: true
+
 - name: Install haproxy
   notify: restart-haproxy
   ansible.builtin.package:
