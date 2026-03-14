@@ -1,0 +1,49 @@
+# Resolves the containerd.io package version for RedHat-family distros.
+# Sets the fact `containerd_version` (either a pinned version string or 'latest').
+# Requires: kubernetes_containerd_version
+
+- name: Get available containerd package entries (RedHat)
+  when: kubernetes_containerd_version != "latest"
+  changed_when: false
+  register: containerd_list
+  ansible.builtin.command:
+    cmd: dnf list --showduplicates containerd.io
+
+- name: Find matching containerd line (RedHat)
+  when: kubernetes_containerd_version != "latest"
+  changed_when: false
+  ansible.builtin.set_fact:
+    containerd_matching_line: |
+      {{
+        (
+          containerd_list.stdout_lines |
+          select('search', kubernetes_containerd_version) |
+          list
+        ) | length > 0 and
+        (
+          containerd_list.stdout_lines |
+          select('search', kubernetes_containerd_version) |
+          list
+        )[-1] or ''
+      }}
+
+- name: Output containerd_list for debugging
+  when: kubernetes_containerd_version != "latest"
+  ansible.builtin.debug:
+    var: containerd_list.stdout_lines
+
+- name: Output containerd_matching_line for debugging
+  when: kubernetes_containerd_version != "latest"
+  ansible.builtin.debug:
+    var: containerd_matching_line
+
+- name: Resolve containerd package version (RedHat)
+  when: kubernetes_containerd_version != "latest"
+  changed_when: false
+  failed_when: containerd_matching_line == ''
+  ansible.builtin.set_fact:
+    containerd_version_resolved: "{{ containerd_matching_line.split()[1] }}"
+
+- name: Set containerd_version fact (RedHat)
+  ansible.builtin.set_fact:
+    containerd_version: "{{ containerd_version_resolved if kubernetes_containerd_version != 'latest' else 'latest' }}"
