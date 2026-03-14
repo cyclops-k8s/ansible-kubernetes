@@ -1,10 +1,5 @@
 - name: Install packages
   block:
-  - name: Install versionlock plugin (RedHat/Rocky/Alma/Fedora)
-    when: ansible_facts.os_family == "RedHat"
-    ansible.builtin.dnf:
-      name: python3-dnf-plugin-versionlock
-      state: present
 
   - name: Install packages (Debian/Ubuntu)
     when: ansible_facts.os_family == "Debian"
@@ -15,7 +10,7 @@
         group: root
         mode: '0644'
         owner: root
-        url: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/Release.key
+        url: "{{ kubernetes_mirror_gpgkey }}"
 
     - name: Add an apt signing key for Kubernetes
       ansible.builtin.command:
@@ -83,13 +78,18 @@
   - name: Install packages (RedHat/Rocky/Alma/Fedora)
     when: ansible_facts.os_family == "RedHat"
     block:
+    - name: Install versionlock plugin (RedHat/Rocky/Alma/Fedora)
+      ansible.builtin.dnf:
+        name: python3-dnf-plugin-versionlock
+        state: present
+
     - name: Add Kubernetes repository
       ansible.builtin.yum_repository:
         baseurl: "{{ kubernetes_mirror }}"
         description: Kubernetes
         enabled: true
         gpgcheck: true
-        gpgkey: https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/repodata/repomd.xml.key
+        gpgkey: "{{ kubernetes_mirror_gpgkey }}"
         name: kubernetes
 
     - name: Get latest specified version of kubeadm, kubelet and kubectl

@@ -100,13 +100,24 @@ function create_vm() {
   echo "#cloud-config" > "${TEMP_DIR}/${name}.network"
   echo "" >> "${TEMP_DIR}/${name}.network"
 
+  ADDITIONAL_USERDATA_CONFIG=""
+  ADDITIONAL_NETWORK_CONFIG=""
+  if [ -f .local/user-data.txt ]
+  then
+    ADDITIONAL_USERDATA_CONFIG=" | $(cat .local/user-data.txt)"
+  fi
+  if [ -f .local/network.txt ]
+  then
+    ADDITIONAL_NETWORK_CONFIG=" | $(cat .local/network.txt)"
+  fi
+
   # Update cloud-init files
   SSH_PUBLIC_KEY=$(cat "${SSH_PUBLIC_KEY_FILE}")
   cat cloud-init/user-data | \
     yq --yaml-output \
       ".hostname = \"${name}\" | \
        .fqdn = \"${name}.${DOMAIN}\" | \
-       .users[0].ssh_authorized_keys = [\"${SSH_PUBLIC_KEY}\"]" \
+       .users[0].ssh_authorized_keys = [\"${SSH_PUBLIC_KEY}\"]${ADDITIONAL_USERDATA_CONFIG}" \
     >> "${TEMP_DIR}/${name}.user-data"
 
   # Set MAC addresses and IP configuration in network config
@@ -119,7 +130,7 @@ function create_vm() {
        .network.ethernets.eth0.nameservers.addresses = [\"${LOCAL_IP}\"] | \
        .network.ethernets.eth0.mtu = ${MTU} | \
        .network.ethernets.eth1.match.macaddress = \"${MAC1}\" | \
-       .network.ethernets.eth1.addresses += [\"${IP_PREFIX}.${ip}/24\"]" \
+       .network.ethernets.eth1.addresses += [\"${IP_PREFIX}.${ip}/24\"]${ADDITIONAL_NETWORK_CONFIG}" \
     >> "${TEMP_DIR}/${name}.network"
 
   # Create the cloud-init iso
