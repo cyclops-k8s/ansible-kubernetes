@@ -16,7 +16,7 @@
     containerd_matching_line: |
       {{
         containerd_list.stdout_lines |
-        select('search', '\\b' ~ (kubernetes_containerd_version | regex_escape) ~ '\\b') |
+        select('search', '(?<![0-9.])' ~ (kubernetes_containerd_version | regex_escape) ~ '(?![0-9.])') |
         list |
         last |
         default('')
@@ -31,4 +31,4 @@
 
 - name: Set containerd_version fact (RedHat)
   ansible.builtin.set_fact:
-    containerd_version: "{{ containerd_version_resolved if kubernetes_containerd_version != 'latest' else 'latest' }}"
+    containerd_version: "{{ 'latest' if kubernetes_containerd_version == 'latest' else containerd_version_resolved }}"
