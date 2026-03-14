@@ -1,0 +1,35 @@
+# Resolves the containerd.io package version for Debian/Ubuntu.
+# Sets the fact `containerd_version` (either a pinned version string or 'latest').
+# Requires: kubernetes_containerd_version
+
+- name: Get available containerd package entries (Debian/Ubuntu)
+  when: kubernetes_containerd_version != "latest"
+  changed_when: false
+  register: containerd_madison
+  ansible.builtin.command:
+    cmd: 'apt-cache madison containerd.io'
+
+- name: Find matching containerd line (Debian/Ubuntu)
+  when: kubernetes_containerd_version != "latest"
+  changed_when: false
+  ansible.builtin.set_fact:
+    containerd_matching_line: |
+      {{
+        (
+          containerd_madison.stdout_lines |
+          select('search', kubernetes_containerd_version) |
+          list |
+          first
+        ) | default('')
+      }}
+
+- name: Resolve containerd package version (Debian/Ubuntu)
+  when: kubernetes_containerd_version != "latest"
+  changed_when: false
+  failed_when: containerd_matching_line == ''
+  ansible.builtin.set_fact:
+    containerd_version_resolved: "{{ containerd_matching_line.split()[2] }}"
+
+- name: Set containerd_version fact (Debian/Ubuntu)
+  ansible.builtin.set_fact:
+    containerd_version: "{{ containerd_version_resolved if kubernetes_containerd_version != 'latest' else 'latest' }}"
