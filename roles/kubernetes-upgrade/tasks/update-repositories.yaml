@@ -7,7 +7,7 @@
       group: root
       mode: '0644'
       owner: root
-      url: "{{ kubernetes_mirror }}/Release.key"
+      url: "{{ kubernetes_mirror_gpgkey }}"
 
   - name: Add an apt signing key for Kubernetes
     changed_when: false
@@ -31,7 +31,7 @@
   - name: Adding apt repository for Kubernetes
     ansible.builtin.apt_repository:
       filename: kubernetes-{{ kubernetes_version }}
-      repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }}/ /
+      repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
       state: present
 
   - name: Find latest kubernetes version in apt
@@ -48,5 +48,5 @@
       description: Kubernetes
       enabled: true
       gpgcheck: true
-      gpgkey: "{{ kubernetes_mirror }}/repodata/repomd.xml.key"
+      gpgkey: "{{ kubernetes_mirror_gpgkey }}"
       name: kubernetes
