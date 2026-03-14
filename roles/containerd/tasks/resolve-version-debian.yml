@@ -15,12 +15,11 @@
   ansible.builtin.set_fact:
     containerd_matching_line: |
       {{
-        (
-          containerd_madison.stdout_lines |
-          select('search', '\b' ~ (kubernetes_containerd_version | regex_escape) ~ '\b') |
-          list |
-          first
-        ) | default('')
+        containerd_madison.stdout_lines |
+        select('search', '\\b' ~ (kubernetes_containerd_version | regex_escape) ~ '\\b') |
+        list |
+        first |
+        default('')
       }}
 
 - name: Resolve containerd package version (Debian/Ubuntu)
