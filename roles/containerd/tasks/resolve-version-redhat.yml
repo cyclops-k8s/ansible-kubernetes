@@ -27,16 +27,6 @@
         )[-1] or ''
       }}
 
-- name: Output containerd_list for debugging
-  when: kubernetes_containerd_version != "latest"
-  ansible.builtin.debug:
-    var: containerd_list.stdout_lines
-
-- name: Output containerd_matching_line for debugging
-  when: kubernetes_containerd_version != "latest"
-  ansible.builtin.debug:
-    var: containerd_matching_line
-
 - name: Resolve containerd package version (RedHat)
   when: kubernetes_containerd_version != "latest"
   changed_when: false
