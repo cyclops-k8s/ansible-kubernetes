@@ -55,7 +55,7 @@
     ansible.builtin.apt:
       name:
       - "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io=' + containerd_version }}"
-      state: "{{ 'latest' if containerd_version == 'latest' else 'present' }}"
+      state: present
       allow_downgrade: true
 
   - name: Hold containerd.io
@@ -87,7 +87,7 @@
   - name: Install containerd
     ansible.builtin.dnf:
       name: "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io-' + containerd_version }}"
-      state: "{{ 'latest' if containerd_version == 'latest' else 'present' }}"
+      state: present
       allow_downgrade: true
 
   - name: Hold containerd.io

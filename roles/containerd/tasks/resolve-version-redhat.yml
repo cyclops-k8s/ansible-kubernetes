@@ -17,12 +17,12 @@
       {{
         (
           containerd_list.stdout_lines |
-          select('search', kubernetes_containerd_version) |
+          select('search', '\b' ~ (kubernetes_containerd_version | regex_escape) ~ '\b') |
           list
         ) | length > 0 and
         (
           containerd_list.stdout_lines |
-          select('search', kubernetes_containerd_version) |
+          select('search', '\b' ~ (kubernetes_containerd_version | regex_escape) ~ '\b') |
           list
         )[-1] or ''
       }}
