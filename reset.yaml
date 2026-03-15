@@ -5,10 +5,11 @@
   tasks:
 
   - name: Reset kubeadm
-    changed_when: true
     failed_when: false
+    notify: reboot
     ansible.builtin.command:
       cmd: kubeadm reset -f
+      removes: /etc/kubernetes/kubelet.conf
 
   - name: Stop systemd units
     failed_when: false
@@ -18,28 +19,29 @@
     - keepalived.service
     loop_control:
       loop_var: unit
+    notify: reboot
     ansible.builtin.systemd_service:
       enabled: false
       name: "{{ unit }}"
       state: stopped
 
-  - name: Remove containerd containers
-    changed_when: true
+  - name: List containerd containers
+    changed_when: false
     failed_when: false
-    ansible.builtin.shell:
-      cmd: |
-        set -o pipefail
-        ctr --namespace k8s.io containers ls -q | xargs -r ctr --namespace k8s.io containers rm
-      executable: /usr/bin/bash
+    register: containerd_containers
+    ansible.builtin.command:
+      cmd: ctr --namespace k8s.io containers ls -q
 
-  - name: Remove containerd images
-    changed_when: true
+  - name: Remove containerd containers
     failed_when: false
-    ansible.builtin.shell:
-      cmd: |
-        set -o pipefail
-        ctr --namespace k8s.io images ls -q | xargs -r ctr --namespace k8s.io images rm
-      executable: /usr/bin/bash
+    loop: "{{ containerd_containers.stdout_lines }}"
+    loop_control:
+      label: "{{ containerd_image }}"
+      loop_var: containerd_image
+    notify: reboot
+    when: containerd_containers.stdout_lines | length > 0
+    ansible.builtin.command:
+      cmd: ctr --namespace k8s.io containers rm "{{ containerd_image }}"
 
   - name: Stop containerd
     failed_when: false
@@ -47,12 +49,14 @@
     - containerd.service
     loop_control:
       loop_var: unit
+    notify: reboot
     ansible.builtin.systemd_service:
       enabled: false
       name: "{{ unit }}"
       state: stopped
 
   - name: Uninstall packages
+    notify: reboot
     ansible.builtin.apt:
       allow_change_held_packages: true
       name:
@@ -68,6 +72,7 @@
       state: absent
 
   - name: Clean up unused packages
+    notify: reboot
     ansible.builtin.apt:
       autoremove: true
       purge: true
@@ -76,46 +81,60 @@
   # them from the dpkg database. This prevents issues on future installs where
   # the config files would not be installed because the dpkg database says
   # they are already present.
-  - name: Clean up unused package configuration files
-    changed_when: true
-    failed_when: false
-    ansible.builtin.shell:
-      cmd: |
-        set -o pipefail
-        apt-get autopurge --yes $(dpkg-query --show --showformat='${binary:Package} ${db:Status-Abbrev}\n' | grep ' rc' | cut -f 1 -d ' ' | tr '\n' ' ')
-      executable: /usr/bin/bash
+  - name: Find packages with residual config files
+    changed_when: false
+    register: residual_packages
+    ansible.builtin.command:
+      cmd: dpkg-query --show --showformat='${binary:Package} ${db:Status-Abbrev}\n'
 
-  - name: Reboot
-    ansible.builtin.reboot:
-      connect_timeout: 10
-      msg: Rebooting to complete package cleanup
-      reboot_timeout: 300
+  - name: Clean up unused package configuration files
+    when: residual_packages.stdout_lines | select('search', ' rc $') | list | length > 0
+    ansible.builtin.apt:
+      name: "{{ residual_packages.stdout_lines | select('search', ' rc $') | map('split', ' ') | map('first') | list }}"
+      purge: true
+      state: absent
+
+  - name: Remove files and directories that require rebooting
+    failed_when: false
+    loop:
+    - /etc/sysctl.d/99-kubernetes-cri.conf
+    - /etc/sysctl.d/99-non-local-bind.conf
+    - /etc/systemd/system/k8s-certs-renew.service
+    - /etc/systemd/system/k8s-certs-renew.timer
+    loop_control:
+      loop_var: file
+    notify: reboot
+    ansible.builtin.file:
+      path: "{{ file }}"
+      state: absent
+
+  - name: Daemon reload
+    notify: reboot
+    ansible.builtin.systemd_service:
+      daemon_reload: true
+
+  # Flush handlers to ensure any pending reboots are executed before continuing with cleanup
+  - name: Flush handlers
+    ansible.builtin.meta: flush_handlers
 
   - name: Remove files and directories
     failed_when: false
     loop:
     - /etc/apt/keyrings/docker
     - /etc/apt/keyrings/docker.gpg
-    - /etc/apt/keyrings/helm
-    - /etc/apt/keyrings/helm.gpg
     - /etc/apt/sources.list.d/docker.list
-    - /etc/apt/sources.list.d/helm.list
     - /etc/apt/sources.list.d/kubernetes.list
     - /etc/cni
     - /etc/containerd
     - /etc/default/kubelet
     - /etc/keepalived
     - /etc/kubernetes
-    - /etc/sysctl.d/99-kubernetes-cri.conf
-    - /etc/sysctl.d/99-non-local-bind.conf
-    - /etc/systemd/system/k8s-certs-renew.service
-    - /etc/systemd/system/k8s-certs-renew.timer
     - /opt/cni
     - /opt/containerd
     - /opt/kubernetes
     - /root/.kube
-    - /usr/bin/kustomize
     - /usr/bin/helm
+    - /usr/bin/kustomize
     - /var/lib/containerd
     - /var/lib/etcd
     - /var/log/apiserver
@@ -128,15 +147,12 @@
       path: "{{ file }}"
       state: absent
 
-  - name: Daemon reload
-    ansible.builtin.systemd_service:
-      daemon_reload: true
-
   - name: Find versioned files
     register: kubernetes_files
     ansible.builtin.find:
       paths:
       - /etc/apt/keyrings
+      - /etc/apt/sources.list.d
       patterns:
       - kubernetes*
 
@@ -167,8 +183,11 @@
       name: "{{ group }}"
       state: absent
 
+  handlers:
+
   - name: Reboot
+    listen: reboot
     ansible.builtin.reboot:
       connect_timeout: 10
-      msg: Rebooting to complete cleanup
+      msg: Reboot host to complete Kubernetes reset
       reboot_timeout: 300
