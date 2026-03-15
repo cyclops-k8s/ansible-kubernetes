@@ -1,69 +1,86 @@
+- name: Check if Cilium is already installed
+  delegate_to: "{{ first_kube_control_plane }}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: cilium_installed_cmd
+  run_once: true
+  ansible.builtin.command:
+    cmd: >-
+      kubectl get pods
+      --ignore-not-found=true
+      --namespace=kube-system
+      --no-headers=true
+      --request-timeout=5s
+      --selector=k8s-app=cilium
+
 - name: Install Cilium
   delegate_to: "{{ first_kube_control_plane }}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
   run_once: true
+  when: cilium_installed_cmd.stdout_lines | length >= 0
   block:
-  - name: Check for Cilium
-    register: cilium_installed_cmd
-    ansible.builtin.shell:
-      cmd: |
-        kubectl get pods -n kube-system --kubeconfig /etc/kubernetes/admin.conf 2> /dev/null | grep cilium > /dev/null 2> /dev/null || echo "Not installed"
-        echo "Installed"
-
-  - name: Set install_cilium fact
-    ansible.builtin.set_fact:
-      install_cilium: "{{ cilium_installed_cmd.stdout_lines[0] == 'Not installed' }}"
 
   - name: Copy Cilium values file
-    when: install_cilium
     ansible.builtin.template:
-      src: cilium.yaml.j2
       dest: "{{ kubernetes_config_directory }}/cilium.yaml"
+      group: root
+      mode: '0600'
+      owner: root
+      src: cilium.yaml.j2
 
   - name: Install Cilium Helm repo
-    when: install_cilium
-    ansible.builtin.shell:
-      cmd: |
-        set -e
-        set -o pipefail
-        helm repo add cilium https://helm.cilium.io/
-        helm repo update cilium
-      executable: /bin/bash
+    ansible.builtin.command:
+      cmd: helm repo add cilium https://helm.cilium.io/ --force-update
+
+  - name: Update Helm repo
+    ansible.builtin.command:
+      cmd: helm repo update cilium
 
   - name: Install Cilium Helm chart
-    register: cilium
-    when: install_cilium
-    ansible.builtin.shell:
-      cmd: |
-        set -e
-        set -o pipefail
-        helm upgrade --install cilium cilium/cilium \
-          {{ "--version " + kubernetes_cilium_version if kubernetes_cilium_version is defined }} \
-          --kubeconfig /etc/kubernetes/admin.conf \
-          --namespace kube-system \
-          --values {{ kubernetes_config_directory }}/cilium.yaml \
-          2>&1 | tee /etc/kubernetes/output/cilium-installed
-      creates: "{{ kubernetes_output_directory }}/cilium-installed"
-      executable: /bin/bash
+    register: cilium_helm
+    ansible.builtin.command:
+      cmd: >-
+        helm upgrade cilium cilium/cilium
+        --install
+        --namespace kube-system
+        --values {{ kubernetes_config_directory }}/cilium.yaml
+        {% if kubernetes_cilium_version is defined %}
+        --version {{ kubernetes_cilium_version }}
+        {% endif %}
 
-  - name: Wait for Cilium to be ready
-    delay: 1
-    register: cilium_pods
-    retries: 12
-    until: cilium_pods.rc == 0
-    when: install_cilium
-    ansible.builtin.command: kubectl --kubeconfig /etc/kubernetes/admin.conf --namespace kube-system wait --for=condition=Ready pod -l k8s-app=cilium --timeout=10s
-
-  - name: Give it another few seconds
-    when: install_cilium
-    ansible.builtin.pause:
-      seconds: 10
+  - name: Wait for Cilium status to be ready
+    delay: 2
+    register: cilium_status
+    retries: 30
+    until: cilium_status.rc == 0
+    ansible.builtin.command:
+      cmd: >-
+        kubectl exec daemonsets/cilium
+        --namespace=kube-system
+        --request-timeout=5s
+        --
+        cilium status --brief
 
   rescue:
+
   - name: Cilium variable contents
-    when: cilium is defined
+    when: cilium_helm is defined
     ansible.builtin.debug:
-      var: cilium
+      var: cilium_helm
 
   - name: Cilium failed
     ansible.builtin.fail:
-      msg: Cilium failed to install
+      msg: >-
+        Cilium failed to install.
+        Log file: {{ kubernetes_output_directory }}/cilium-installed
+
+  always:
+
+  - name: Save Cilium install output
+    when: cilium_helm is defined
+    ansible.builtin.copy:
+      content: |
+        {{ cilium_helm.stdout | default('') }}
+        {{ cilium_helm.stderr | default('') }}
+      dest: "{{ kubernetes_output_directory }}/cilium-installed"
