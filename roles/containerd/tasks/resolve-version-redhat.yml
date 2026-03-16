@@ -3,15 +3,15 @@
 # Requires: kubernetes_containerd_version
 
 - name: Get available containerd package entries (RedHat)
-  when: kubernetes_containerd_version != "latest"
   changed_when: false
   register: containerd_list
+  when: kubernetes_containerd_version != "latest"
   ansible.builtin.command:
     cmd: dnf list --showduplicates containerd.io
 
 - name: Find matching containerd line (RedHat)
-  when: kubernetes_containerd_version != "latest"
   changed_when: false
+  when: kubernetes_containerd_version != "latest"
   ansible.builtin.set_fact:
     containerd_matching_line: |
       {{
@@ -23,9 +23,9 @@
       }}
 
 - name: Resolve containerd package version (RedHat)
-  when: kubernetes_containerd_version != "latest"
   changed_when: false
   failed_when: containerd_matching_line == ''
+  when: kubernetes_containerd_version != "latest"
   ansible.builtin.set_fact:
     containerd_version_resolved: "{{ containerd_matching_line.split()[1] }}"
 

@@ -19,7 +19,7 @@
     ansible.builtin.apt:
       allow_change_held_packages: true
       allow_downgrade: true
-      name: "{{ 'containerd.io=' + containerd_version if containerd_version != 'latest' else 'containerd.io' }}"
+      name: "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io=' + containerd_version }}"
       only_upgrade: "{{ containerd_version == 'latest' }}"
       state: "{{ 'present' if containerd_version != 'latest' else 'latest' }}"
 
@@ -64,9 +64,9 @@
 
   - name: Upgrade containerd
     ansible.builtin.dnf:
+      allow_downgrade: true
       name: "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io-' + containerd_version }}"
       state: "{{ 'latest' if containerd_version == 'latest' else 'present' }}"
-      allow_downgrade: true
 
   - name: Reconfigure containerd for new version
     ansible.builtin.include_role:
