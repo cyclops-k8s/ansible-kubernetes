@@ -9,7 +9,7 @@
       group: root
       mode: '0600'
       owner: root
-      src: "kubeadm-init-{{ kubernetes_version }}.yaml.j2"
+      src: kubeadm-init-{{ kubernetes_version }}.yaml.j2
 
   - name: Stop kubelet
     when:
@@ -63,6 +63,7 @@
       file: "{{ hook }}"
 
   - name: Set admin.conf namespace to kube-system
+    changed_when: false
     environment:
       KUBECONFIG: /etc/kubernetes/admin.conf
     register: admin_namespace_set

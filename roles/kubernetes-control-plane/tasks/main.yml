@@ -76,17 +76,6 @@
       openssl dgst -sha256 -hex | sed 's/^.* //'
     executable: /usr/bin/bash
 
-# - name: Get CA certificate hash using ansible modules
-#   changed_when: false
-#   delegate_to: "{{ first_kube_control_plane }}"
-#   register: cluster_ca_cert_hash_openssl
-#   run_once: true
-#   ansible.builtin.openssl_certificate:
-#     format: pem
-#     hash_algorithm: sha256
-#     path: /etc/kubernetes/pki/ca.crt
-#     state: present
-
 - name: Upload certificates so they are fresh and not expired
   changed_when: true
   delegate_to: "{{ first_kube_control_plane }}"
