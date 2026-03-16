@@ -1,69 +1,90 @@
 # To help with CIS benchmarks related to securing communication between the api server and kubelet we need to approve csr's for the kublet service. (1.2.5)
 # By default this doesn't happen automatically, we are including this project so it does.
+
+- name: Check if kubelet-csr-approver is already installed
+  delegate_to: "{{ first_kube_control_plane }}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: kubelet_csr_approver_installed_cmd
+  run_once: true
+  ansible.builtin.command:
+    cmd: >-
+      kubectl get pods
+      --ignore-not-found=true
+      --namespace=kubelet-csr-approver-system
+      --no-headers=true
+      --request-timeout=5s
+      --selector=app.kubernetes.io/name=kubelet-csr-approver
+
 - name: Install kubelet-csr-approver
   delegate_to: "{{ first_kube_control_plane }}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
   run_once: true
+  when: kubelet_csr_approver_installed_cmd.stdout_lines | length == 0
   block:
-  - name: Check for kubelet-csr-approver
-    register: kubelet_csr_approver_installed_cmd
-    ansible.builtin.shell:
-      cmd: |
-        kubectl get ns kubelet-csr-approver-system --kubeconfig /etc/kubernetes/admin.conf > /dev/null 2> /dev/null || echo "Not installed"
-        echo "Installed"
 
-  - name: Set install_kubelet_csr_approver fact
-    ansible.builtin.set_fact:
-      install_kubelet_csr_approver: "{{ kubelet_csr_approver_installed_cmd.stdout_lines[0] == 'Not installed' }}"
-
-  - name: Configure kubelet-csr-approver
-    when: install_kubelet_csr_approver
+  - name: Copy kubelet-csr-approver values file
     ansible.builtin.template:
-      src: kubelet-csr-approver.yaml.j2
       dest: "{{ kubernetes_config_directory }}/kubelet-csr-approver.yaml"
-      owner: root
       group: root
       mode: '0600'
+      owner: root
+      src: kubelet-csr-approver.yaml.j2
 
-  - name: Install kubelet-csr-approver
-    register: csr_approver
-    when: install_kubelet_csr_approver
-    ansible.builtin.shell:
-      cmd: |
-        set -eo pipefail
-        namespace="kubelet-csr-approver-system"
-        helm repo add kubelet-csr-approver https://postfinance.github.io/kubelet-csr-approver
-        helm repo update
-        helm upgrade --install kubelet-csr-approver kubelet-csr-approver/kubelet-csr-approver \
-          --kubeconfig /etc/kubernetes/admin.conf \
-          --namespace ${namespace} \
-          --kubeconfig /etc/kubernetes/admin.conf \
-          --create-namespace \
-          --set namespace=${namespace} \
-          --values {{ kubernetes_config_directory }}/kubelet-csr-approver.yaml
-        touch "{{ kubernetes_output_directory }}/kubelet-csr-approver-installed"
-      executable: /bin/bash
-      creates: "{{ kubernetes_output_directory }}/kubelet-csr-approver-installed"
+  - name: Install kubelet-csr-approver Helm repo
+    ansible.builtin.command:
+      cmd: helm repo add kubelet-csr-approver https://postfinance.github.io/kubelet-csr-approver --force-update
 
-  - name: Write kubelet-csr-approver to stdout
-    when:
-    - csr_approver is defined
-    - install_kubelet_csr_approver
-    ansible.builtin.debug:
-      msg: "{{ csr_approver }}"
+  - name: Update Helm repo
+    ansible.builtin.command:
+      cmd: helm repo update kubelet-csr-approver
+
+  - name: Install kubelet-csr-approver Helm chart
+    register: kubelet_csr_approver_helm
+    ansible.builtin.command:
+      cmd: >-
+        helm upgrade kubelet-csr-approver kubelet-csr-approver/kubelet-csr-approver
+        --install
+        --namespace kubelet-csr-approver-system
+        --create-namespace
+        --values {{ kubernetes_config_directory }}/kubelet-csr-approver.yaml
+        {% if kubernetes_kubelet_csr_approver_version is defined %}
+        --version {{ kubernetes_kubelet_csr_approver_version }}
+        {% endif %}
+
+  - name: Wait for kubelet-csr-approver to be ready
+    delay: 2
+    register: kubelet_csr_approver_pods
+    retries: 30
+    until: kubelet_csr_approver_pods.rc == 0
+    ansible.builtin.command:
+      cmd: >-
+        kubectl wait pod
+        --for=condition=Ready
+        --namespace=kubelet-csr-approver-system
+        --selector=app.kubernetes.io/name=kubelet-csr-approver
+        --timeout=5s
 
   rescue:
-  - name: Delete kubelet-csr-approver-installed
-    ansible.builtin.file:
-      path: "{{ kubernetes_output_directory }}/kubelet-csr-approver-installed"
-      state: absent
 
-  - name: Output csr_approver lines
-    when: csr_approver.stdout_lines is defined
+  - name: Kubelet CSR Approver variable contents
+    when: kubelet_csr_approver_helm is defined
     ansible.builtin.debug:
-      msg: |
-        {{ csr_approver.stdout_lines }}
-        {{ csr_approver.stderr_lines }}
+      var: kubelet_csr_approver_helm
 
-  - name: Fail kubelet-csr-approver
+  - name: Kubelet CSR Approver failed
     ansible.builtin.fail:
-      msg: "Failed to install kubelet-csr-approver"
+      msg: >-
+        Kubelet CSR Approver failed to install.
+        Log file: {{ kubernetes_output_directory }}/kubelet-csr-approver-installed
+
+  always:
+
+  - name: Save Kubelet CSR Approver install output
+    when: kubelet_csr_approver_helm is defined
+    ansible.builtin.copy:
+      content: |
+        {{ kubelet_csr_approver_helm.stdout | default('') }}
+        {{ kubelet_csr_approver_helm.stderr | default('') }}
+      dest: "{{ kubernetes_output_directory }}/kubelet-csr-approver-installed"
