@@ -38,15 +38,15 @@
       owner: root
       src: worker-kubeadm-{{ kubernetes_version }}.yaml.j2
 
-  - name: Create kubelet dropin config directory
+  - name: Create kubeadm dropin config directory
     when:
     - kubernetes_kubelet_config_dropin_directory | default('', true) != ''
     ansible.builtin.file:
-      path: "{{ kubernetes_kubelet_config_dropin_directory }}"
-      state: directory
-      owner: root
       group: root
       mode: '0700'
+      owner: root
+      path: "{{ kubernetes_kubelet_config_dropin_directory }}"
+      state: directory
 
   - name: Create kubeadm patches directory
     ansible.builtin.file:

@@ -96,8 +96,8 @@
   when:
   - kubernetes_kubelet_config_dropin_directory | default('', true) != ''
   ansible.builtin.file:
-    path: "{{ kubernetes_kubelet_config_dropin_directory }}"
-    state: directory
-    owner: root
     group: root
     mode: '0700'
+    owner: root
+    path: "{{ kubernetes_kubelet_config_dropin_directory }}"
+    state: directory
