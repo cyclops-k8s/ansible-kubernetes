@@ -117,10 +117,34 @@
       state: absent
 
   - name: Fix for bad path in containerd config, issue https://github.com/containerd/containerd/issues/12636
+    when:
+    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.2.1", "lt")) or
+      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.2.1", "lt"))
     ansible.builtin.replace:
       path: /etc/containerd/config.toml
       regexp: config_path = '/etc/containerd/certs\.d.*'
       replace: config_path = '/etc/containerd/certs.d'
+
+  - name: Set containerd hosts path for containerd 2.2.1 and later
+    when:
+    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.2.1", "ge")) or
+      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.2.1", "ge"))
+    block:
+    - name: Create /etc/containerd/conf.d directory
+      ansible.builtin.file:
+        group: root
+        mode: '0700'
+        owner: root
+        path: /etc/containerd/conf.d
+        state: directory
+
+    - name: Create registry config file
+      ansible.builtin.template:
+        dest: /etc/containerd/conf.d/registry_mirrors.toml
+        group: root
+        mode: '0600'
+        owner: root
+        src: registry-mirror-containerd-2.toml.j2
 
   - name: Restart containerd service
     ansible.builtin.service:
