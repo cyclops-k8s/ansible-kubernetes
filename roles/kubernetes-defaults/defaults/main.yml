@@ -384,13 +384,6 @@ kubernetes_kubeadm_init_extra_args: ""
 # Extra arguments to add to kubeadm join. This is added verbatim to the end of the `kubeadm join` command
 kubernetes_kubeadm_join_extra_args: ""
 
-# List of extra arguments to pass to the kubelet. This should be a list of dictionaries with name and value keys,
-# for example:
-# kubernetes_kubelet_extra_args:
-# - name: somearg
-#   value: somevalue
-kubernetes_kubelet_extra_args: []
-
 # Directory to store kubelet configuration drop-in files, that override the default kubelet configuration.
 # This is used to pass configuration to the kubelet in a way that is compatible with kubeadm.
 # Do not change this unless you know what you are doing.
@@ -473,17 +466,17 @@ kubernetes_supported_versions:
 kubernetes_streamingconnectionidletimeout: 5m
 
 # Additional files to copy to worker nodes. This only copies files, it does not use them as a template
-# Expects an array of object containing source, destination and mode (defaults to 0600)
+# Expects an array of objects containing source, destination and mode (defaults to 0600)
 
 # Example:
 # kubernetes_worker_additional_files:
-# - source: "{{ inventory_dir }}/somefile.yaml.j2"
+# - source: "{{ inventory_dir }}/somefile.yaml"
 #   destination: "/etc/kubernetes/config/somefile.yaml"
 #   mode: "0644"
 kubernetes_worker_additional_files: []
 
 # Additional files to copy to worker nodes. This will run these files through the template, passing in variables.
-# Expects an array of object containing source, destination and mode (defaults to 0600)
+# Expects an array of objects containing source, destination and mode (defaults to 0600)
 
 # Example:
 # kubernetes_worker_additional_templates:
