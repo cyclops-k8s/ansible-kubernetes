@@ -92,7 +92,7 @@
     owner: root
     src: audit-policy.yaml
 
-- name: Create kubeadm dropin config directory
+- name: Create kubelet dropin config directory
   when:
   - kubernetes_kubelet_config_dropin_directory | default('', true) != ''
   ansible.builtin.file:
