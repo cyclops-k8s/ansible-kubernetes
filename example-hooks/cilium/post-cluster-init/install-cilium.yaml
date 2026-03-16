@@ -18,7 +18,7 @@
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   run_once: true
-  when: cilium_installed_cmd.stdout_lines | length >= 0
+  when: cilium_installed_cmd.stdout_lines | length == 0
   block:
 
   - name: Copy Cilium values file

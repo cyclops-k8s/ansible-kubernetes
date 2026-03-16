@@ -28,20 +28,21 @@
   - name: List containerd containers
     changed_when: false
     failed_when: false
-    register: containerd_containers
+    register: ctr_containers
     ansible.builtin.command:
       cmd: ctr --namespace k8s.io containers ls -q
 
   - name: Remove containerd containers
+    changed_when: true
     failed_when: false
-    loop: "{{ containerd_containers.stdout_lines }}"
+    loop: "{{ ctr_containers.stdout_lines }}"
     loop_control:
-      label: "{{ containerd_image }}"
-      loop_var: containerd_image
+      label: "{{ ctr_image }}"
+      loop_var: ctr_image
     notify: reboot
-    when: containerd_containers.stdout_lines | length > 0
+    when: ctr_containers.stdout_lines | length > 0
     ansible.builtin.command:
-      cmd: ctr --namespace k8s.io containers rm "{{ containerd_image }}"
+      cmd: ctr --namespace k8s.io containers rm "{{ ctr_image }}"
 
   - name: Stop containerd
     failed_when: false
