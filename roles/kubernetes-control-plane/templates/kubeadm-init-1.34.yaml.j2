@@ -219,6 +219,10 @@ nodeRegistration:
 {% endif %}
   - name: node-ip
     value: "{{ kubernetes_kubelet_node_ip | default(ansible_facts['default_ipv4'].address) }}"
+{% if kubernetes_kubelet_config_dropin_directory | default('', true) != '' %}
+  - name: config-dir
+    value: "{{ kubernetes_kubelet_config_dropin_directory }}"
+{% endif %}
 patches:
   directory: "{{ kubernetes_config_directory }}/patches"
 timeouts:
