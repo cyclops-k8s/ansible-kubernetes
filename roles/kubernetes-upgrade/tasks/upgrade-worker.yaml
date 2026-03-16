@@ -15,6 +15,28 @@
     path: "{{ kubernetes_config_directory }}/patches"
     state: directory
 
+- name: Copy additional worker files
+  loop: "{{ kubernetes_worker_additional_files }}"
+  loop_control:
+    loop_var: file
+  ansible.builtin.copy:
+    dest: "{{ file.destination }}"
+    group: root
+    mode: "{{ file.mode | default('0600') }}"
+    owner: root
+    src: "{{ file.source }}"
+
+- name: Copy additional worker templates
+  loop: "{{ kubernetes_worker_additional_templates }}"
+  loop_control:
+    loop_var: file
+  ansible.builtin.template:
+    dest: "{{ file.destination }}"
+    group: root
+    mode: "{{ file.mode | default('0600') }}"
+    owner: root
+    src: "{{ file.source }}"
+
 - name: Upgrade worker nodes
   changed_when: true
   when: inventory_hostname not in groups['control_planes']
