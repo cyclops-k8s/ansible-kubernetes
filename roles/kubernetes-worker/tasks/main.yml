@@ -38,6 +38,46 @@
       owner: root
       src: worker-kubeadm-{{ kubernetes_version }}.yaml.j2
 
+  - name: Create kubelet dropin config directory
+    when:
+    - kubernetes_kubelet_config_dropin_directory | default('', true) != ''
+    ansible.builtin.file:
+      path: "{{ kubernetes_kubelet_config_dropin_directory }}"
+      state: directory
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Create kubeadm patches directory
+    ansible.builtin.file:
+      path: "{{ kubernetes_config_directory }}/patches"
+      state: directory
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Copy additional worker files
+    loop: "{{ kubernetes_worker_additional_files }}"
+    loop_control:
+      loop_var: file
+    ansible.builtin.copy:
+      dest: "{{ file.destination }}"
+      group: root
+      mode: "{{ file.mode | default('0600') }}"
+      owner: root
+      src: "{{ file.source }}"
+
+  - name: Copy additional worker templates
+    loop: "{{ kubernetes_worker_additional_templates }}"
+    loop_control:
+      loop_var: file
+    ansible.builtin.template:
+      dest: "{{ file.destination }}"
+      group: root
+      mode: "{{ file.mode | default('0600') }}"
+      owner: root
+      src: "{{ file.source }}"
+
   - name: Post configure worker hooks
     when:
     - kubernetes_hookfiles.post_configure_workers is defined

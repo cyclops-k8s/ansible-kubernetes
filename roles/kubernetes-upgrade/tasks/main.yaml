@@ -25,7 +25,7 @@
 
 - name: Create kubeadm upgrade config file
   with_items:
-  - {file: "kubeadm-upgrade.yaml.j2", destination: "{{ kubernetes_config_directory }}/kubeadm-upgrade.yaml"}
+  - {file: "kubeadm-upgrade.yaml.{{ kubernetes_version }}.j2", destination: "{{ kubernetes_config_directory }}/kubeadm-upgrade.yaml"}
   ansible.builtin.template:
     backup: false
     dest: "{{ item.destination }}"
