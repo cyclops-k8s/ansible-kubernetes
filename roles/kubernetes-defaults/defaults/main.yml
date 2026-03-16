@@ -19,6 +19,11 @@ kubernetes_containerd_mirror_gpgkey_debian: "{{ kubernetes_containerd_mirror_apt
 kubernetes_containerd_mirror_gpgkey_rpm: "{{ kubernetes_containerd_mirror_rpm_root }}/gpg"
 kubernetes_containerd_mirror_gpgkey: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_containerd_mirror_gpgkey_debian }}{% else %}{{ kubernetes_containerd_mirror_gpgkey_rpm }}{% endif %}"
 
+# Version of containerd to install. Set to "latest" to install the latest available version,
+# or specify a base version (e.g. "1.7.29") and the playbook will resolve the latest
+# package build for that version (e.g. "1.7.29-1" on Debian, "1.7.29-3.1.el9" on RedHat).
+kubernetes_containerd_version: "latest"
+
 # This version of kubernetes_containerd_registry_mirrors is deprecated as of containerd version 2.0.0
 # This configuration works for versions below 2.2.0
 # Instructs containerd to use registry mirrors. Multiple enpoints can be defined in a list.
