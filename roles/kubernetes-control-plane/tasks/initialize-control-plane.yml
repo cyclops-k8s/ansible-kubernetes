@@ -42,7 +42,9 @@
     delay: 2
     environment:
       KUBECONFIG: /etc/kubernetes/admin.conf
+    register: kubernetes_sa_default_exists
     retries: 60
+    until: kubernetes_sa_default_exists.rc == 0
     when:
     - not kubernetes_already_installed
     ansible.builtin.command:
@@ -117,7 +119,6 @@
 
   # CIS 1.1.20, STIG V-242466
   - name: CIS 1.1.20, STIG V-242466 - Fix permissions on certificates
-    changed_when: true
     loop: "{{ kubernetes_pki_crt_files.files }}"
     loop_control:
       label: "{{ file.path }}"

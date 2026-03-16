@@ -21,7 +21,7 @@
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   run_once: true
-  when: kubelet_csr_approver_installed_cmd.stdout_lines | length >= 0
+  when: kubelet_csr_approver_installed_cmd.stdout_lines | length == 0
   block:
 
   - name: Copy kubelet-csr-approver values file
