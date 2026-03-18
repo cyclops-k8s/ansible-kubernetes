@@ -1,0 +1,98 @@
+- name: Install crun
+  when: ansible_facts["system"] == "Linux"
+  block:
+
+  - name: Set crun install path
+    when: (crun_install_path | default('', true)) == ''
+    ansible.builtin.set_fact:
+      crun_install_path: /opt/crun
+
+  - name: Set crun version
+    when: (crun_version | default('', true)) == ''
+    ansible.builtin.set_fact:
+      crun_version: latest
+
+  - name: Get crun download url
+    register: crun_release
+    ansible.builtin.uri:
+      return_content: true
+      url: |
+        {{
+          'https://api.github.com/repos/containers/crun/releases/latest'
+          if crun_version == 'latest' else
+          'https://api.github.com/repos/containers/crun/releases/tags/' ~ crun_version
+        }}
+
+  - name: Set crun architecture
+    ansible.builtin.set_fact:
+      crun_arch: >-
+        {{
+          {
+          'x86_64':  'amd64',
+          'aarch64': 'arm64',
+          'ppc64le': 'ppc64le',
+          'riscv64': 'riscv64',
+          's390x':   's390x',
+          }[ansible_facts["architecture"]]
+        }}
+
+  - name: Set crun name regex
+    ansible.builtin.set_fact:
+      crun_name_regex: 'crun-\d+\.\d+-linux-{{ crun_arch }}$'
+
+  - name: Extract crun download url and name from GitHub API response
+    failed_when: crun_download_url is not defined
+    ansible.builtin.set_fact:
+      crun_name: "{{ crun_release.json.assets | selectattr('name', 'match', crun_name_regex) | map(attribute='name') | list | first }}"
+      crun_download_url: "{{ crun_release.json.assets | selectattr('name', 'match', crun_name_regex) | map(attribute='browser_download_url') | list | first }}"
+
+  - name: Download crun file to output directory only if it doesn't already exist
+    register: crun_file
+    ansible.builtin.stat:
+      path: "{{ crun_install_path }}/{{ crun_name }}"
+
+  - name: Ensure crun install path exists
+    ansible.builtin.file:
+      group: root
+      mode: '0755'
+      owner: root
+      path: "{{ crun_install_path }}"
+      state: directory
+
+  - name: Download crun file
+    register: crun_download
+    when: not crun_file.stat.exists
+    ansible.builtin.get_url:
+      dest: "{{ crun_install_path }}/{{ crun_name }}"
+      group: root
+      mode: '0755'
+      owner: root
+      url: "{{ crun_download_url }}"
+
+  # /usr/local/bin is in the default PATH with systemd and checked first by containerd.
+  # By linking crun here as runc, we can ensure it is used as the default runtime without requiring users
+  # to modify their PATH or specify the runtime explicitly.
+  - name: Link crun to /usr/local/bin/runc
+    register: crun_link
+    ansible.builtin.file:
+      dest: "/usr/local/bin/runc"
+      force: true
+      src: "{{ crun_install_path }}/{{ crun_name }}"
+      state: link
+
+  - name: Remove /usr/bin/runc if it exists to avoid conflicts with containerd
+    ansible.builtin.file:
+      path: /usr/bin/runc
+      state: absent
+
+  - name: Restart containerd to pick up new runtime
+    when: crun_link.changed
+    ansible.builtin.service:
+      name: containerd
+      state: restarted
+
+  rescue:
+
+  - name: Fail crun installation
+    ansible.builtin.fail:
+      msg: "Failed to install crun runtime"
