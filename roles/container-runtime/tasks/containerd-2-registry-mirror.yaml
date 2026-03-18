@@ -12,7 +12,7 @@
     group: root
     mode: '0600'
     owner: root
-    src: hosts.toml.j2
+    src: containerd-hosts.toml.j2
 
 - name: Create containerd extra hosts files
   loop: "{{ registry_mirror.extra_files }}"

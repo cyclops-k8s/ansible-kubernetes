@@ -1,0 +1,11 @@
+# if Kubernetes runtime is containerd, execute the containerd tasks
+- name: Configure containerd
+  when: container_runtime == "containerd"
+  ansible.builtin.include_tasks:
+    file: containerd.yaml
+
+# TODO: Add support for CRI-O
+# - name: Configure cri-o
+#   when: container_runtime == "cri-o"
+#   ansible.builtin.include_tasks:
+#     file: cri-o.yaml

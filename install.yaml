@@ -17,7 +17,7 @@
   serial: 100
   roles:
   - role: kubernetes-defaults
-  - role: containerd
+  - role: container-runtime
 
 - name: Install kubernetes pre-requisites
   any_errors_fatal: true
