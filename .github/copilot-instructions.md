@@ -198,7 +198,7 @@ GitHub Actions workflows in [.github/workflows/](/.github/workflows/) provide au
 
 ### KubeVirt Testing Requirements (GitHub Actions)
 - Runners must have KubeVirt and DataVolumes installed
-- Persistent storage class (ceph-block used by default; configurable via Terraform variables)
+- Persistent storage class (cyclops-block used by default; configurable via Terraform variables)
 - Base OS images cached at `http://assets.cyclops-assets/os-images/` (pulled from upstream)
 - VM network isolation: No external access; tests offline/restricted network scenarios
 

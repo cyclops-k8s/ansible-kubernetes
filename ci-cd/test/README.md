@@ -5,7 +5,7 @@ KubeVirt must be configured and running in the hosting environment.
 
 DataVolumes must be installed and enabled.
 
-Currently it's hardcoded to use `ceph-block` as the backing storage class for the VMs.
+Currently it's hardcoded to use `cyclops-block` as the backing storage class for the VMs.
 
 By default it uses hardcoded default URL's for the os-images under http://assets.cyclops-assets/os-images/....
 These are pulled from upstream sources and cached locally for higher performance and lower bandwidth usage. You can override the location of the image you want to use by specifying the URL environment variable when calling `spin-up-test-environment.sh`.

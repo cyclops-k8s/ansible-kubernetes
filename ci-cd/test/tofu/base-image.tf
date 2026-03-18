@@ -30,7 +30,7 @@ resource "kubernetes_manifest" "base_data_volume" {
             storage = var.disk_size
           }
         }
-        storageClassName = "ceph-block"
+        storageClassName = "cyclops-block"
         volumeMode       = "Block"
       }
     }
