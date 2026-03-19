@@ -49,7 +49,7 @@
 
   - name: Resolve containerd package version (Debian/Ubuntu)
     ansible.builtin.include_tasks:
-      file: resolve-version-debian.yml
+      file: containerd-resolve-version-debian.yaml
 
   - name: Install containerd
     ansible.builtin.apt:
@@ -82,7 +82,7 @@
 
   - name: Resolve containerd package version (RedHat)
     ansible.builtin.include_tasks:
-      file: resolve-version-redhat.yml
+      file: containerd-resolve-version-redhat.yaml
 
   - name: Install containerd
     ansible.builtin.dnf:
@@ -97,4 +97,4 @@
 
 - name: Configure containerd
   ansible.builtin.include_tasks:
-    file: configure-containerd.yml
+    file: containerd-configure.yaml
