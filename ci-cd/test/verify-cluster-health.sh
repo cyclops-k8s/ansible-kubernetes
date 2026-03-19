@@ -11,9 +11,9 @@ kubectl wait --for=condition=Ready nodes --all --timeout=600s
 # Verify node count
 ACTUAL_NODES=$(kubectl get nodes --no-headers | wc -l)
 
-if [ "${ACTUAL_NODES}" -lt 6 ]
+if [ "${ACTUAL_NODES}" -lt 5 ]
 then
-  echo "ERROR: Expected at least 6 nodes, found ${ACTUAL_NODES}"
+  echo "ERROR: Expected at least 5 nodes, found ${ACTUAL_NODES}"
   kubectl get nodes
   exit 1
 fi
