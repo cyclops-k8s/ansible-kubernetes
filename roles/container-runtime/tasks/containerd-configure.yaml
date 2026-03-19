@@ -1,8 +1,3 @@
-# This file contains the configuration tasks for containerd.
-# It is included by both the install (main.yml) and upgrade roles.
-# These tasks configure containerd with credentials, registry mirrors, and cgroups settings.
-# Configuration format differs between containerd versions (1.x vs 2.x).
-
 - name: Get package facts
   become: true
   ansible.builtin.package_facts:
@@ -108,7 +103,7 @@
     - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.2.0", "ge")) or
       ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.2.0", "ge"))
     ansible.builtin.include_tasks:
-      file: registry-mirror-containerd-2.yaml
+      file: containerd-2-registry-mirror.yaml
 
   - name: Remove disabled plugins
     ansible.builtin.lineinfile:
@@ -144,7 +139,7 @@
         group: root
         mode: '0600'
         owner: root
-        src: registry-mirror-containerd-2.toml.j2
+        src: containerd-2-registry-mirror.toml.j2
 
   - name: Restart containerd service
     ansible.builtin.service:
