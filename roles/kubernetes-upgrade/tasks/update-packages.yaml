@@ -72,7 +72,7 @@
   # TODO: support crio
   - name: Reconfigure containerd for new version
     ansible.builtin.include_role:
-      name: containerd
+      name: container-runtime
       tasks_from: containerd-configure.yaml
 
   - name: Hold kubelet, kubectl and containerd.io
