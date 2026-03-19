@@ -35,7 +35,7 @@ module "vm-controlplanes" {
 }
 
 module "vm-workers" {
-  count                 = 3
+  count                 = 2
   source                = "./virtual-machine"
   base_data_volume_name = kubernetes_manifest.base_data_volume.object.metadata.name
   hostname              = "${kubernetes_manifest.base_data_volume.object.metadata.name}-w${count.index + 1}"
@@ -64,7 +64,7 @@ data "kubernetes_resource" "control_planes" {
 }
 
 data "kubernetes_resource" "workers" {
-  count       = 3
+  count       = 2
   depends_on  = [module.vm-workers]
   kind        = "VirtualMachineInstance"
   api_version = "kubevirt.io/v1"
