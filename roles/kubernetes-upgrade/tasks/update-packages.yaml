@@ -23,10 +23,11 @@
       only_upgrade: "{{ containerd_version == 'latest' }}"
       state: "{{ 'present' if containerd_version != 'latest' else 'latest' }}"
 
+  # TODO: support crio
   - name: Reconfigure containerd for new version
     ansible.builtin.include_role:
-      name: containerd
-      tasks_from: configure-containerd.yml
+      name: container-runtime
+      tasks_from: containerd-configure.yaml
 
   - name: Hold kubelet, kubectl and containerd.io
     with_items:
@@ -68,10 +69,11 @@
       name: "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io-' + containerd_version }}"
       state: "{{ 'latest' if containerd_version == 'latest' else 'present' }}"
 
+  # TODO: support crio
   - name: Reconfigure containerd for new version
     ansible.builtin.include_role:
       name: containerd
-      tasks_from: configure-containerd.yml
+      tasks_from: containerd-configure.yaml
 
   - name: Hold kubelet, kubectl and containerd.io
     changed_when: true
