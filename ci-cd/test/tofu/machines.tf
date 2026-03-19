@@ -35,7 +35,7 @@ module "vm-controlplanes" {
 }
 
 module "vm-workers" {
-  count                 = 3
+  count                 = 2
   source                = "./virtual-machine"
   base_data_volume_name = kubernetes_manifest.base_data_volume.object.metadata.name
   hostname              = "${kubernetes_manifest.base_data_volume.object.metadata.name}-w${count.index + 1}"
