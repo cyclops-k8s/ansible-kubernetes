@@ -13,7 +13,7 @@
   - name: Resolve containerd package version (Debian/Ubuntu)
     ansible.builtin.include_role:
       name: container-runtime
-      tasks_from: containerd-resolve-version-debian.yml
+      tasks_from: containerd-resolve-version-debian.yaml
 
   - name: Upgrade containerd
     ansible.builtin.apt:
@@ -61,7 +61,7 @@
   - name: Resolve containerd package version (RedHat)
     ansible.builtin.include_role:
       name: container-runtime
-      tasks_from: containerd-resolve-version-redhat.yml
+      tasks_from: containerd-resolve-version-redhat.yaml
 
   - name: Upgrade containerd
     ansible.builtin.dnf:
