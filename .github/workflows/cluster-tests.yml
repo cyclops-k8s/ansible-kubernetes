@@ -52,8 +52,15 @@ jobs:
       - name: Verify cluster health
         run: ./verify-cluster-health.sh ${{ matrix.kubernetes_version }}
 
-      - name: Run smoke tests
-        run: ./run-smoke-tests.sh
+      - name: Run conformance tests
+        run: ./run-conformance-tests.sh
+
+      - name: Upload conformance results
+        uses: actions/upload-artifact@v7
+        with:
+          name: conformance-results-${{ matrix.kubernetes_version }}-${{ matrix.os_image }}-${{ github.run_number }}
+          path: /tmp/sonobuoy-results/
+          retention-days: 7
 
       - name: Collect logs on failure
         if: failure()
