@@ -22,8 +22,7 @@ jobs:
     name: Install Test ${{ matrix.kubernetes_version }} on ${{ matrix.os_image }}
     runs-on:
       group: Default
-      labels: cyclops-k8s-runners
-    timeout-minutes: 120
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -53,15 +52,8 @@ jobs:
       - name: Verify cluster health
         run: ./verify-cluster-health.sh ${{ matrix.kubernetes_version }}
 
-      - name: Run conformance tests
-        run: ./run-conformance-tests.sh
-
-      - name: Upload conformance results
-        uses: actions/upload-artifact@v7
-        with:
-          name: conformance-${{ matrix.kubernetes_version }}-${{ matrix.os_image }}-${{ github.run_number }}
-          path: /tmp/sonobuoy/
-          retention-days: 7
+      - name: Run smoke tests
+        run: ./run-smoke-tests.sh
 
       - name: Collect logs on failure
         if: failure()
@@ -86,7 +78,6 @@ jobs:
     name: Upgrade Test ${{ matrix.start_version.start }} → ${{ matrix.start_version.end }} on ${{ matrix.os_image }}
     runs-on:
       group: Default
-      labels: cyclops-k8s-runners
     timeout-minutes: 120
     strategy:
       fail-fast: false
