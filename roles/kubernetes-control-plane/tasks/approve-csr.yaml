@@ -42,3 +42,10 @@
   - csr_check.stdout_lines | length > 0
   ansible.builtin.command:
     cmd: kubectl certificate approve "{{ csr_name }}"
+
+- name: Approve the CSRs
+  loop: "{{ range(1, 7) | list }}"
+  loop_control:
+    loop_var: csr_pass
+  ansible.builtin.include_tasks:
+    file: approve-csr-loop.yaml
