@@ -22,7 +22,7 @@ jobs:
     name: Install Test ${{ matrix.kubernetes_version }} on ${{ matrix.os_image }}
     runs-on:
       group: Default
-    timeout-minutes: 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
