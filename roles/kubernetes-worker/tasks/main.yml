@@ -189,21 +189,9 @@
   ansible.builtin.set_fact:
     kubernetes_node_name: "{% if inventory_hostname in kubernetes_nodes.stdout_lines %}{{ inventory_hostname }}{% elif inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ inventory_hostname_short }}{% endif %}"
 
-# This kubectl command returns all certificate signing requests for the node, one per line
-- name: Get certificate signing requests
-  changed_when: false
-  delegate_to: "{{ first_kube_control_plane }}"
-  register: csr_check
-  ansible.builtin.command:
-    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get csr -o jsonpath='{range .items[?(@.spec.username=="system:node:{{ kubernetes_node_name }}")]}{.metadata.name}{"\n"}{end}'
-
 - name: Approve certificate signing requests
-  changed_when: true
-  delegate_to: "{{ first_kube_control_plane }}"
-  loop: "{{ csr_check.stdout_lines }}"
+  loop: "{{ range(1, 7) | list }}"
   loop_control:
-    loop_var: csr_name
-  when:
-  - csr_check.stdout_lines | length > 0
-  ansible.builtin.command:
-    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf certificate approve "{{ csr_name }}"
+    loop_var: csr_pass
+  ansible.builtin.include_tasks:
+    file: approve-csr-loop.yaml

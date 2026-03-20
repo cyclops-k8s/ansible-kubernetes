@@ -1,0 +1,22 @@
+- name: "Get certificate signing requests - pass {{ csr_pass }}"
+  changed_when: false
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: csr_check
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get csr -o jsonpath='{range .items[?(@.spec.username=="system:node:{{ kubernetes_node_name }}")]}{.metadata.name}{"\n"}{end}'
+
+- name: "Approve certificate signing requests - pass {{ csr_pass }}"
+  changed_when: true
+  delegate_to: "{{ first_kube_control_plane }}"
+  loop: "{{ csr_check.stdout_lines }}"
+  loop_control:
+    loop_var: csr_name
+  when:
+  - csr_check.stdout_lines | length > 0
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf certificate approve "{{ csr_name }}"
+
+- name: "Wait before next CSR approval - pass {{ csr_pass }}"
+  when: csr_pass | int < 6
+  ansible.builtin.pause:
+    seconds: 5
