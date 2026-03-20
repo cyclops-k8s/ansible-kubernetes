@@ -1,0 +1,71 @@
+name: Conformance Tests
+
+on:
+  workflow_dispatch:
+
+env:
+  WORKING_DIR: ci-cd/test
+  KUBERNETES_VERSION: 1.35
+
+jobs:
+  install-cluster:
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+    name: Conformance test on ${{ matrix.os_image }}
+    runs-on:
+      group: Default
+    timeout-minutes: 600
+    strategy:
+      fail-fast: false
+      matrix:
+        os_image:
+        - ubuntu-24.04
+        - ubuntu-25.10
+        - centos9
+        - centos10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Spin up test environment
+        run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
+        env:
+          GITHUB_RUN_NUMBER: conf-${{ github.run_number }}
+
+      - name: Install Kubernetes cluster
+        run: ./install.sh -v ${{ env.KUBERNETES_VERSION }}
+
+      - name: Verify cluster health
+        run: ./verify-cluster-health.sh ${{ env.KUBERNETES_VERSION }}
+
+      - name: Run conformance tests
+        run: ./run-conformance-tests.sh
+
+      - name: Collect logs on failure
+        if: failure()
+        run: ./collect-logs.sh
+
+      - name: Upload logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-install-${{ matrix.os_image }}-${{ github.run_number }}
+          path: /tmp/logs/${{ github.run_number }}/
+          retention-days: 7
+
+      - name: Upload conformance results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: conformance-${{ matrix.os_image }}-${{ github.run_number }}
+          path: /tmp/sonobuoy/
+          retention-days: 7
+
+      - name: Cleanup test environment
+        if: always()
+        run: ./shutdown-test-environment.sh || true
