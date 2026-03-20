@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eo pipefail
+set -euo pipefail
 
 KUBERNETES_VERSION=$1
 
@@ -57,10 +57,10 @@ then
   exit 1
 fi
 
-CSRS=$(kubectl get csr --no-headers | grep -v 'Approved\|Denied' || true)
+CSRS=$(kubectl get csr --no-headers | grep -v 'Approved' || true)
 if [ -n "$CSRS" ]
 then
-  echo "ERROR: Found pending CSRs"
+  echo "ERROR: Found unapproved CSRs"
   kubectl get csr
   exit 1
 fi

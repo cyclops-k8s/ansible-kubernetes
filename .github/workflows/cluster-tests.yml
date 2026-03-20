@@ -58,8 +58,8 @@ jobs:
       - name: Upload conformance results
         uses: actions/upload-artifact@v7
         with:
-          name: conformance-results-${{ matrix.kubernetes_version }}-${{ matrix.os_image }}-${{ github.run_number }}
-          path: /tmp/sonobuoy-results/
+          name: conformance-${{ matrix.kubernetes_version }}-${{ matrix.os_image }}-${{ github.run_number }}
+          path: /tmp/sonobuoy/
           retention-days: 7
 
       - name: Collect logs on failure
