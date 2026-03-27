@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 KUBERNETES_VERSION=$1
 
@@ -54,6 +54,14 @@ if [ \
   ]
 then
   echo "ERROR: Not all nodes installed with version ${KUBERNETES_VERSION}"
+  exit 1
+fi
+
+CSRS=$(kubectl get csr --no-headers | grep -v 'Approved' || true)
+if [ -n "$CSRS" ]
+then
+  echo "ERROR: Found unapproved CSRs"
+  kubectl get csr
   exit 1
 fi
 
