@@ -167,7 +167,6 @@ TOFU_OUTPUT=$(tofu output -json -show-sensitive)
 PROXY_HOSTNAME=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.proxy.hostname')
 CONTROL_PLANE_HOSTNAMES=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.control_planes[].hostname')
 WORKER_NODE_HOSTNAMES=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.workers[].hostname')
-PASSWORD=$(echo "${TOFU_OUTPUT}" | jq -r '.information.value.vm_password')
 
 echo "Proxy VM: ssh ansible@${PROXY_HOSTNAME}"
 for VM_HOSTNAME in ${CONTROL_PLANE_HOSTNAMES}; do
@@ -176,8 +175,6 @@ done
 for VM_HOSTNAME in ${WORKER_NODE_HOSTNAMES}; do
   echo "Worker Node VM: ssh ansible@${VM_HOSTNAME}"
 done
-
-echo "VM Password is '${PASSWORD}'"
 
 cd ..
 # execute the post-init-playbook
