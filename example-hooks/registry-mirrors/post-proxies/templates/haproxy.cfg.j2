@@ -26,21 +26,19 @@ listen stats
     stats show-node
     stats uri /haproxy?stats
     http-request use-service prometheus-exporter if { path /metrics }
-    timeout connect 5000
-    timeout client  50000
-    timeout server  50000
 
 defaults
     log     global
     mode    http
     option  dontlognull
+    timeout check   5000
+    timeout connect 5000
+    timeout client  45000
+    timeout server  45000
 
 listen controlplane-in
     bind {{ kubernetes_proxy_bind_address }}:{{ kubernetes_proxy_port }}
     mode tcp
-    timeout client  5000
-    timeout connect 5000
-    timeout server  5000
     option httpchk
     http-check send meth GET uri /readyz
 {% for host in groups['control_planes'] %}
@@ -65,7 +63,3 @@ listen registry-router
 {% for mirror in registry_mirrors %}
     use-server {{ mirror.registry | regex_replace('[^a-zA-Z0-9]', '-') }} if ns_{{ mirror.registry | regex_replace('[^a-zA-Z0-9]', '-') }}
 {% endfor %}
-
-    timeout connect 5000
-    timeout client  50000
-    timeout server  50000

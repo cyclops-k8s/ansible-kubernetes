@@ -26,14 +26,15 @@ listen stats
     stats show-node
     stats uri /haproxy?stats
     http-request use-service prometheus-exporter if { path /metrics }
-    timeout connect 5000
-    timeout client  50000
-    timeout server  50000
 
 defaults
     log     global
     mode    http
     option  dontlognull
+    timeout check   5000
+    timeout connect 5000
+    timeout client  45000
+    timeout server  45000
 
  backend kubernetes-controlplane
     mode tcp
@@ -42,8 +43,6 @@ defaults
 
     http-check send meth GET uri /readyz
 
-    timeout connect 5000
-    timeout server  5000
 {% for host in groups['control_planes'] %}
     server {{ hostvars[host]['ansible_host'] }} {{
         hostvars[host]['kubernetes_api_server_public_ip'] |
@@ -56,4 +55,3 @@ frontend controlplane-in
     bind {{ kubernetes_proxy_bind_address }}:{{ kubernetes_proxy_port }}
     mode tcp
     default_backend kubernetes-controlplane
-    timeout client  5000
