@@ -18,7 +18,7 @@ In a `spin-up.env` file, place the following to override the defaults
 | WORKER_VM_CPU | Number of CPU's assigned to the proxy VM | 2 |
 | WORKER_VM_MEMORY | Amount of memory assigned to the proxy VM | 2 |
 
-An example to run conformance tests (passing `--conformance` to the `spin-up-environment.sh` script will use these values as default):
+An example to run conformance tests (passing `--conformance` to the `spin-up-test-environment.sh` script will use these values as default):
 
 ```bash
 CONTROL_PLANE_VM_CPU=4

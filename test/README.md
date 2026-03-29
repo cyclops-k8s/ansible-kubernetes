@@ -67,5 +67,9 @@ Each VM is given 4 GB of memory and 2 cpu's.
 
 The install script will execute Terraform to configure the playbook. It will then run the `install.yaml` playbook and install Kubernetes.
 
+### Conformance tests
+
+Either set the `.local/spin-up.env` file for adaquent memory size or pass `--conformance` to the `spin-up-test-environment.sh` file. That will default the memory sizes to 8 gigabytes on the control planes and 4 gigs on the worker nodes.
+
 ## Local Configuration
-Please look at the [.lookup/README.md](.lookup/README.md) file for information about local configuration.
+Please look at the [.local/README.md](.local/README.md) file for information about local configuration.
