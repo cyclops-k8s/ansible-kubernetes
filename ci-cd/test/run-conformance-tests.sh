@@ -1,29 +1,16 @@
 #!/bin/bash
 
-set -euo pipefail
+# We don't do a set -e here because we want to capture the results even if the tests fail.
 
-RELEASE_JSON=$(curl -sL https://api.github.com/repos/vmware-tanzu/sonobuoy/releases/latest)
-DOWNLOAD_URL=$(jq -r '.assets[] | select(.name | test(".*_linux_amd64.tar.gz$")) | .browser_download_url' <<< "$RELEASE_JSON")
+mkdir -p /tmp/hydrophone
+cd /tmp/hydrophone
 
-if [ -z "$DOWNLOAD_URL" ]
-then
-  echo "ERROR: Failed to find Sonobuoy download URL in release assets"
-  exit 1
-fi
+GOPATH=$(pwd)
+export GOPATH
 
-echo "Downloading Sonobuoy from: ${DOWNLOAD_URL}"
+go install sigs.k8s.io/hydrophone@latest
 
-mkdir -p /tmp/sonobuoy
-cd /tmp/sonobuoy
-curl -sL "$DOWNLOAD_URL" | tar xzv
+bin/hydrophone --conformance -v 6 --parallel 10 --output-dir /tmp/results
 
-SONOBUOY_TIMEOUT_SECONDS="${SONOBUOY_TIMEOUT_SECONDS:-7200}"
-if ! timeout "${SONOBUOY_TIMEOUT_SECONDS}" ./sonobuoy run --mode=certified-conformance --wait
-then
-  echo "ERROR: Sonobuoy run did not complete within ${SONOBUOY_TIMEOUT_SECONDS} seconds or failed"
-  ./sonobuoy status || true
-  exit 1
-fi
-RESULTS=$(./sonobuoy retrieve)
-./sonobuoy delete --all --wait
-./sonobuoy results "${RESULTS}" | tee sonobuoy-results.txt
+tar -czvf /tmp/results.tar.gz -C /tmp/results .
+mv /tmp/results.tar.gz /tmp/results/
