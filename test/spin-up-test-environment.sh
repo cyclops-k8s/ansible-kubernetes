@@ -3,6 +3,7 @@
 usage()
 {
   echo "Usage: $0 [options]
+  -c | --conformance          Build the environment for running conformance tests
   -d | --domain               The domain to use for the VMs.
                               Default is k8s.local
                               Environment variable: DOMAIN
@@ -196,8 +197,8 @@ function create_vm() {
 function get_options() {
   # Store the command line arguments as a variable
   PARSED_ARGUMENTS=$(getopt -a -n "$0" \
-                     -o o:s:t:d:p:u:v:h \
-                     --long os-image:,ssh-public-key-file:,temp-dir:,domain:,ip-prefix:,url:,ovmf-file:,help \
+                     -o o:s:t:d:p:u:v:h:c \
+                     --long os-image:,ssh-public-key-file:,temp-dir:,domain:,ip-prefix:,url:,ovmf-file:,help,conformance \
                      -- "$@")
   VALID_ARGUMENTS=$?
 
@@ -213,6 +214,7 @@ function get_options() {
   while :
   do
     case "$1" in
+      -c | --conformance)         CONFORMANCE=true; shift ;;
       -d | --domain)              DOMAIN="$2"; shift 2 ;;
       -p | --ip-prefix)           IP_PREFIX="$2"; shift 2 ;;
       -o | --os-image)            OS_IMAGE="$2"; shift 2 ;;
@@ -226,6 +228,7 @@ function get_options() {
     esac
   done
 
+  CONFORMANCE=${CONFORMANCE:-false}
   SSH_PUBLIC_KEY_FILE=${SSH_PUBLIC_KEY_FILE:-~/.ssh/devcontainer.id_rsa.pub}
   TEMP_DIR=${TEMP_DIR:-.temp}
   DOMAIN=${DOMAIN:-k8s.local}
@@ -307,6 +310,20 @@ function wait_for_ssh() {
   echo "cloud-init has finished on ${host}"
 }
 
+if [[ "${CONFORMANCE}" = "true" ]]
+then
+  echo "Building environment for running conformance tests"
+
+  PROXY_VM_CPU=2
+  PROXY_VM_MEMORY=2
+  CONTROL_PLANE_VM_CPU=4
+  CONTROL_PLANE_VM_MEMORY=8
+  WORKER_VM_CPU=4
+  WORKER_VM_MEMORY=4
+fi
+
+[ -f ./.local/spin-up.env ] && echo "Sourcing ./.local/spin-up.env" && source ./.local/spin-up.env
+
 get_options "$@"
 
 # Create a directory to hold temporary files
@@ -334,12 +351,12 @@ pkill ssh -x || true
 sudo pkill -f qemu-system-x86_64 || true
 
 # Create the virtual machines
-create_vm px  2021 11 2 2 10 ",hostfwd=tcp::6443-:6443"
-create_vm cp1 2022 12 2 4 20
-create_vm cp2 2023 13 2 4 20
-create_vm cp3 2024 14 2 4 20
-create_vm w1  2025 15 2 4 20
-create_vm w2  2026 16 2 4 20
+create_vm px  2021 11 ${PROXY_VM_CPU:-2} ${PROXY_VM_MEMORY:-2} 10 ",hostfwd=tcp::6443-:6443"
+create_vm cp1 2022 12 ${CONTROL_PLANE_VM_CPU:-2} ${CONTROL_PLANE_VM_MEMORY:-4} 20
+create_vm cp2 2023 13 ${CONTROL_PLANE_VM_CPU:-2} ${CONTROL_PLANE_VM_MEMORY:-4} 20
+create_vm cp3 2024 14 ${CONTROL_PLANE_VM_CPU:-2} ${CONTROL_PLANE_VM_MEMORY:-4} 20
+create_vm w1  2025 15 ${WORKER_VM_CPU:-2} ${WORKER_VM_MEMORY:-2} 20
+create_vm w2  2026 16 ${WORKER_VM_CPU:-2} ${WORKER_VM_MEMORY:-2} 20
 
 echo "Waiting for VMs to boot...this will take a few minutes."
 echo "If it seems stuck, please check the ${TEMP_DIR}/<host>.stderr.log file for any errors."

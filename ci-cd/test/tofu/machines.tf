@@ -26,8 +26,8 @@ module "vm-controlplanes" {
   cpu_limit             = "4"
   cpu_request           = "100m"
   disk_size             = "30Gi"
-  memory_size           = "4Gi"
-  memory_size_request   = "4Gi"
+  memory_size           = "${var.control_plane_memory_size}Gi"
+  memory_size_request   = "${var.control_plane_memory_size}Gi"
   hugepages_page_size   = "2Mi"
   namespace_name        = var.namespace_name
   networkdata_filename  = "/tmp/cloud-init/network.tpl"
@@ -45,8 +45,8 @@ module "vm-workers" {
   cpu_limit             = "4"
   cpu_request           = "100m"
   disk_size             = "30Gi"
-  memory_size           = "2Gi"
-  memory_size_request   = "2Gi"
+  memory_size           = "${var.worker_memory_size}Gi"
+  memory_size_request   = "${var.worker_memory_size}Gi"
   namespace_name        = var.namespace_name
   networkdata_filename  = "/tmp/cloud-init/network.tpl"
   userdata_filename     = "/tmp/cloud-init/user-data.tpl"
