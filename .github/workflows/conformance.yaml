@@ -36,6 +36,9 @@ jobs:
         run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
         env:
           GITHUB_RUN_NUMBER: conf-${{ github.run_number }}
+          TF_VAR_control_plane_memory_size: 8
+          TF_VAR_worker_memory_size: 8
+
 
       - name: Install Kubernetes cluster
         run: ./install.sh -v ${{ env.KUBERNETES_VERSION }}

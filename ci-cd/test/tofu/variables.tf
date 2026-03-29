@@ -1,3 +1,8 @@
+variable "control_plane_memory_size" {
+  type        = string
+  description = "The memory size for the control plane virtual machines in Gi"
+  default     = "4"
+}
 
 variable "disk_size" {
   type        = string
@@ -36,4 +41,10 @@ variable "namespace_name" {
   type        = string
   description = "The namespace in which to create the virtual machines"
   default     = "cyclops-vms"
+}
+
+variable "worker_memory_size" {
+  type        = string
+  description = "The memory size for the worker virtual machines in Gi"
+  default     = "2"
 }

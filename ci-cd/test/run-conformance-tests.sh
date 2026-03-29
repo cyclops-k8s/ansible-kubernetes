@@ -17,7 +17,7 @@ if [ "$EXIT_CODE" -ne 0 ]; then
   exit "$EXIT_CODE"
 else
   echo "Successfully installed hydrophone"
-  bin/hydrophone --conformance -v 6 --parallel 10 --output-dir /tmp/results
+  bin/hydrophone --conformance -v 6 --parallel 20 --output-dir /tmp/results
   EXIT_CODE=$?
 fi
 
