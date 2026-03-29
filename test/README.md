@@ -66,3 +66,6 @@ Each VM is given 4 GB of memory and 2 cpu's.
 ### `install.sh`
 
 The install script will execute Terraform to configure the playbook. It will then run the `install.yaml` playbook and install Kubernetes.
+
+## Local Configuration
+Please look at the [.lookup/README.md](.lookup/README.md) file for information about local configuration.
