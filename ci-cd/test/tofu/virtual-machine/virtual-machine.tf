@@ -1,10 +1,13 @@
-resource "kubernetes_manifest" "virtual-machine" {
-  manifest = {
+locals {
+  virtual_machine_manifest = {
     apiVersion = "kubevirt.io/v1"
     kind       = "VirtualMachine"
     metadata = {
       name      = var.hostname
       namespace = var.namespace_name
+      labels = {
+        "cyclops.io/cluster-instance" = var.base_data_volume_name
+      }
     }
     spec = {
       dataVolumeTemplates = [
@@ -80,7 +83,6 @@ resource "kubernetes_manifest" "virtual-machine" {
                   disk = {
                     bus = "virtio"
                   }
-                  volumeName = "cloudinitdisk"
                 }
               ]
               interfaces = [
@@ -152,16 +154,44 @@ resource "kubernetes_manifest" "virtual-machine" {
       }
     }
   }
-  computed_fields = [
-    "metadata.annotations",
-    "metadata.labels",
-    "spec.dataVolumeTemplates.metadata.creationTimestamp",
-    "spec.template.metadata.creationTimestamp",
-    "spec.template.spec.domain.devices.interfaces.macAddress",
-  ]
-  wait {
-    fields = {
-      "status.printableStatus" = "Running"
-    }
+}
+
+resource "null_resource" "vm" {
+  triggers = {
+    namespace_name = var.namespace_name
+    virtual_machine_name = var.hostname
   }
+  provisioner "local-exec" {
+    command = "kubectl apply -f - <<< $manifest"
+    environment = {
+      manifest = yamlencode(local.virtual_machine_manifest)
+    }
+    interpreter = ["/bin/bash", "-c"]
+    when        = create
+  }
+
+  provisioner "local-exec" {
+    command = "kubectl delete -n \"$namespace_name\" virtualmachine \"$virtual_machine_name\""
+    environment = {
+      namespace_name       = self.triggers.namespace_name
+      virtual_machine_name = self.triggers.virtual_machine_name
+    }
+
+    interpreter = ["/bin/bash", "-c"]
+    when        = destroy
+  }
+}
+
+resource "null_resource" "vm-wait" {
+  provisioner "local-exec" {
+    command     = "kubectl wait --for=jsonpath='{.status.printableStatus}'=Running virtualmachine -n \"$namespace_name\" --timeout=2m \"$virtual_machine_name\""
+    interpreter = ["/bin/bash", "-c"]
+    environment = {
+      namespace_name       = var.namespace_name
+      virtual_machine_name = var.hostname
+    }
+    when = create
+  }
+
+  depends_on = [ null_resource.vm ]
 }
