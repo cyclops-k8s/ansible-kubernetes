@@ -98,5 +98,5 @@ output "ssh-service" {
 }
 
 output "virtual-machine" {
-  value = kubernetes_manifest.virtual-machine.object
+  value = local.virtual_machine_manifest
 }

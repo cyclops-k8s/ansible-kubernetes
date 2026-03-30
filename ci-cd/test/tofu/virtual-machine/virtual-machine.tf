@@ -83,7 +83,6 @@ locals {
                   disk = {
                     bus = "virtio"
                   }
-                  volumeName = "cloudinitdisk"
                 }
               ]
               interfaces = [
@@ -158,6 +157,10 @@ locals {
 }
 
 resource "null_resource" "vm" {
+  triggers = {
+    namespace_name = var.namespace_name
+    virtual_machine_name = var.hostname
+  }
   provisioner "local-exec" {
     command = "kubectl apply -f - <<< $manifest"
     environment = {
@@ -168,10 +171,12 @@ resource "null_resource" "vm" {
   }
 
   provisioner "local-exec" {
-    command = "kubectl delete -f - <<< $manifest"
+    command = "kubectl delete -n \"$namespace_name\" virtualmachine \"$virtual_machine_name\""
     environment = {
-      manifest = yamlencode(local.virtual_machine_manifest)
+      namespace_name       = self.triggers.namespace_name
+      virtual_machine_name = self.triggers.virtual_machine_name
     }
+
     interpreter = ["/bin/bash", "-c"]
     when        = destroy
   }
@@ -179,7 +184,7 @@ resource "null_resource" "vm" {
 
 resource "null_resource" "vm-wait" {
   provisioner "local-exec" {
-    command     = "kubectl wait --for=jsonpath='{.status.printableStatus}'=Running virtualmachine -n \"$namespace_name\" \"$virtual_machine_name\""
+    command     = "kubectl wait --for=jsonpath='{.status.printableStatus}'=Running virtualmachine -n \"$namespace_name\" --timeout=2m \"$virtual_machine_name\""
     interpreter = ["/bin/bash", "-c"]
     environment = {
       namespace_name       = var.namespace_name
