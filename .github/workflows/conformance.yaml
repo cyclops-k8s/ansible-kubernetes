@@ -4,8 +4,9 @@ on:
   workflow_dispatch:
 
 env:
-  WORKING_DIR: ci-cd/test
+  IS_CI: "true"
   KUBERNETES_VERSION: 1.35
+  WORKING_DIR: ci-cd/test
 
 jobs:
   install-cluster:
