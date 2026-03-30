@@ -5,7 +5,7 @@ resource "kubernetes_service_v1" "ssh_service" {
   }
   spec {
     selector = {
-      "vm.kubevirt.io/name" = kubernetes_manifest.virtual-machine.object.metadata.name
+      "vm.kubevirt.io/name" = local.virtual_machine_manifest.metadata.name
     }
     session_affinity = "ClientIP"
     ip_families      = ["IPv4"]
