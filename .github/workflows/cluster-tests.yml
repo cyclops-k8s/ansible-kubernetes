@@ -12,6 +12,7 @@ on:
   workflow_dispatch:
 
 env:
+  IS_CI: "true"
   WORKING_DIR: ci-cd/test
 
 jobs:

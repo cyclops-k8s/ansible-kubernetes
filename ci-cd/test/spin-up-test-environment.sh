@@ -150,7 +150,7 @@ fi
 # set tfvars file for future use
 cat << EOF > tofu/vars.tfvars
 image_url = "${IMAGE_URL}"
-hostname_prefix = "gh-${GITHUB_RUN_NUMBER:--vm}"
+hostname_prefix = "gh-${GITHUB_RUN_NUMBER:-vm}"
 EOF
 
 cd tofu
