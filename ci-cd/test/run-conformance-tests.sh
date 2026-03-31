@@ -18,7 +18,7 @@ if [ "$EXIT_CODE" -ne 0 ]; then
 else
   echo "Successfully installed hydrophone"
   bin/hydrophone --conformance -v 6 --parallel 10 --output-dir /tmp/results  2>&1 | grep "\[Conformance\]"
-  EXIT_CODE=$?
+  EXIT_CODE=${PIPESTATUS[0]}
 fi
 
 tar -czvf /tmp/results.tar.gz -C /tmp/results .
