@@ -22,7 +22,7 @@ then
   done
 fi
 
-kubectl get all -A > "${LOG_ROOT}/kubectl-get-all.log" 2>&1 || true
+kubectl get all -A -o wide > "${LOG_ROOT}/kubectl-get-all.log" 2>&1 || true
 kubectl get nodes -o wide > "${LOG_ROOT}/kubectl-nodes.log" 2>&1 || true
-kubectl get events -A --sort-by='.lastTimestamp' > "${LOG_ROOT}/kubectl-events.log" 2>&1 || true
+kubectl get events -A --sort-by='.lastTimestamp' -o wide > "${LOG_ROOT}/kubectl-events.log" 2>&1 || true
 kubectl version --output=yaml > "${LOG_ROOT}/kubectl-version.log" 2>&1 || true
