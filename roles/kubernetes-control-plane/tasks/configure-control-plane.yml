@@ -2,6 +2,16 @@
 # It is included by both the install (main.yml) and upgrade roles.
 # These tasks push version-specific configuration files that may change between Kubernetes versions.
 
+- name: Create kubeadm file
+  register: kubeadm_file
+  ansible.builtin.template:
+    backup: false
+    dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
+    group: root
+    mode: '0600'
+    owner: root
+    src: kubeadm-init-{{ kubernetes_version }}.yaml.j2
+
 - name: Create kubernetes/config/patches directory
   loop:
   - "{{ kubernetes_config_directory }}/patches"
@@ -45,13 +55,18 @@
     owner: root
     src: "{{ file.file }}"
 
+- name: Set autorenewal for Kubernetes certificates
+  ansible.builtin.set_fact:
+    kubernetes_autorenewal_files:
+    - {file: "k8s-certs-renew.sh.j2", destination: "{{ kubernetes_scripts_directory }}/k8s-certs-renew.sh", mode: "0755"}
+    - {file: "k8s-certs-renew.service.j2", destination: "/etc/systemd/system/k8s-certs-renew.service", mode: "0644"}
+    - {file: "k8s-certs-renew.timer.j2", destination: "/etc/systemd/system/k8s-certs-renew.timer", mode: "0644"}
+
 - name: Create kubernetes automatic certificate renewal scripts and service files
-  loop:
-  - {file: "k8s-certs-renew.sh.j2", destination: "{{ kubernetes_scripts_directory }}/k8s-certs-renew.sh", mode: "0755"}
-  - {file: "k8s-certs-renew.service.j2", destination: "/etc/systemd/system/k8s-certs-renew.service", mode: "0644"}
-  - {file: "k8s-certs-renew.timer.j2", destination: "/etc/systemd/system/k8s-certs-renew.timer", mode: "0644"}
+  loop: "{{ kubernetes_autorenewal_files }}"
   loop_control:
     loop_var: file
+  register: create_autorenewal_files
   when: kubernetes_manage_cert_renewal
   ansible.builtin.template:
     backup: false
@@ -60,6 +75,32 @@
     mode: "{{ file.mode | default('0600') }}"
     owner: root
     src: "{{ file.file }}"
+
+- name: Remove automatic certificate renewal scripts and service files
+  register: remove_autorenewal_files
+  loop: "{{ kubernetes_autorenewal_files }}"
+  loop_control:
+    loop_var: file
+  when: not kubernetes_manage_cert_renewal
+  ansible.builtin.file:
+    path: "{{ file.destination }}"
+    state: absent
+
+- name: Reload systemd daemon  # noqa: no-handler
+  when:
+  - create_autorenewal_files.changed | default(false) or
+    remove_autorenewal_files.changed | default(false)
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start automatic certificate renewal timer
+  when:
+  - kubernetes_manage_cert_renewal
+  - create_autorenewal_files.changed
+  ansible.builtin.systemd:
+    enabled: true
+    name: k8s-certs-renew.timer
+    state: started
 
 - name: Copy additional control plane files
   loop: "{{ kubernetes_control_plane_additional_files }}"
