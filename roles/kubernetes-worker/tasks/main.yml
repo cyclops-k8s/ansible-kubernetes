@@ -27,7 +27,6 @@
       join_token: "{{ temp_token.stdout }}"
 
   - name: Create kubeadm file
-    register: kubeadm_file
     when:
     - kubernetes_needs_to_join_cluster
     ansible.builtin.template:
