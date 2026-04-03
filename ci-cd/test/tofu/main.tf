@@ -57,6 +57,12 @@ locals {
             }
           ]
         }]
+        kubernetes_etcd_extra_args = [
+          {
+            name  = "unsafe-no-fsync"
+            value = "true"
+          }
+        ]
       })
     }
     proxies = {

@@ -1,16 +1,6 @@
 - name: Initialize the Kubernetes cluster
   block:
 
-  - name: Create kubeadm file
-    register: kubeadm_file
-    ansible.builtin.template:
-      backup: false
-      dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
-      group: root
-      mode: '0600'
-      owner: root
-      src: kubeadm-init-{{ kubernetes_version }}.yaml.j2
-
   - name: Stop kubelet
     when:
     - not kubernetes_already_installed
