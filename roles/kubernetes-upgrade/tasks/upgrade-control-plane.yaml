@@ -1,7 +1,14 @@
-- name: Update control plane configuration files for new version
+- name: Update control plane configuration files
   ansible.builtin.include_role:
     name: kubernetes-control-plane
     tasks_from: configure-control-plane.yml
+
+- name: Upgrade control plane kubeadm configuration file
+  changed_when: false
+  when: first_kube_control_plane == inventory_hostname
+  ansible.builtin.command:
+    cmd: |
+      kubeadm init phase upload-config all --config {{ kubernetes_config_directory }}/kubeadm.yaml
 
 - name: Workaround for etcd membership store inconsistency
   when: first_kube_control_plane == inventory_hostname
