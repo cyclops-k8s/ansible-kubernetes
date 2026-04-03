@@ -25,6 +25,7 @@
   delay: 5
   register: kubernetes_pull_certs
   retries: 5
+  until: kubernetes_pull_certs.rc == 0
   when: kubernetes_needs_to_join_cluster
   ansible.builtin.command:
     cmd: kubeadm join phase control-plane-prepare download-certs --config {{ kubernetes_config_directory }}/kubeadm.yaml -v5

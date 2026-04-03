@@ -17,11 +17,11 @@
       kubeadm_init_command: >-
         kubeadm init
           --config={{ kubernetes_config_directory }}/kubeadm.yaml
-          --ignore-preflight-errors={{ _ignore_errors | flatten | join(',') }}
+          {% if _ignore_errors | length > 0 %}--ignore-preflight-errors={{ _ignore_errors | flatten | join(',') }}{% endif %}
           --upload-certs
           -v5
           {{ kubernetes_kubeadm_init_extra_args }}
-      _ignore_errors: ""
+      _ignore_errors: []
     block:
 
     - name: Initialize Kubernetes Cluster - first attempt
@@ -35,8 +35,8 @@
 
     # Retry is because different areas of the kubeadm init sometimes fails, especially on centos 9
     - name: Initialize Kubernetes Cluster - retry
-      changed_when: kubeadm_init.rc == 0
-      failed_when: kubeadm_init.rc != 0
+      changed_when: kubeadm_init_retry.rc == 0
+      failed_when: kubeadm_init_retry.rc != 0
       register: kubeadm_init_retry
       retries: 2
       until: kubeadm_init_retry is succeeded
