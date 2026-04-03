@@ -1,7 +1,10 @@
 - name: "Get certificate signing requests as JSON - pass {{ csr_pass }}"
+  delay: 5
   changed_when: false
   delegate_to: "{{ first_kube_control_plane }}"
   register: csr_json
+  retries: 5
+  until: csr_json.rc == 0
   ansible.builtin.command:
     cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get csr -o json
 
@@ -25,6 +28,10 @@
   loop: "{{ pending_csrs }}"
   loop_control:
     loop_var: csr_name
+  register: csr_approved
+  retries: 5
+  delay: 5
+  until: csr_approved.rc == 0
   when:
   - pending_csrs | length > 0
   ansible.builtin.command:

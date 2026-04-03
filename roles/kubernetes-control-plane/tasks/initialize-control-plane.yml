@@ -9,15 +9,54 @@
       name: kubelet
       state: stopped
 
-  - name: Run kubeadm init
-    changed_when: kubeadm_init_output.rc == 0
-    register: kubeadm_init_output
+  - name: Initialize Kubernetes Cluster
     when:
+    - inventory_hostname == first_kube_control_plane
     - not kubernetes_already_installed
-    ansible.builtin.command:
-      cmd: >-
-        kubeadm init --config {{ kubernetes_config_directory }}/kubeadm.yaml
-        {{ kubernetes_kubeadm_init_extra_args }}
+    vars:
+      kubeadm_init_command: >-
+        kubeadm init
+          --config={{ kubernetes_config_directory }}/kubeadm.yaml
+          --ignore-preflight-errors={{ _ignore_errors | flatten | join(',') }}
+          --upload-certs
+          -v5
+          {{ kubernetes_kubeadm_init_extra_args }}
+      _ignore_errors: ""
+    block:
+
+    - name: Initialize Kubernetes Cluster - first attempt
+      changed_when: kubeadm_init.rc == 0
+      failed_when: kubeadm_init.rc != 0
+      register: kubeadm_init
+      ansible.builtin.command:
+        cmd: "{{ kubeadm_init_command }}"
+
+    rescue:
+
+    # Retry is because different areas of the kubeadm init sometimes fails, especially on centos 9
+    - name: Initialize Kubernetes Cluster - retry
+      changed_when: kubeadm_init.rc == 0
+      failed_when: kubeadm_init.rc != 0
+      register: kubeadm_init_retry
+      retries: 2
+      until: kubeadm_init_retry is succeeded
+      vars:
+        # we can safely ignore these preflight errors on retry of an init
+        _ignore_errors:
+        - DirAvailable--var-lib-etcd
+        - FileAvailable--etc-kubernetes-manifests-etcd.yaml
+        - FileAvailable--etc-kubernetes-manifests-kube-controller-manager.yaml
+        - FileAvailable--etc-kubernetes-manifests-kube-scheduler.yaml
+        - FileAvailable--etc-kubernetes-manifests-kube-apiserver.yaml
+        # TODO: make all of these different ports configurable, they're health checks and metrics ports mostly
+        - Port-10250
+        - Port-{{ kubernetes_api_server_port }}
+        - Port-10257
+        - Port-10259
+        - Port-2379
+        - Port-2380
+      ansible.builtin.command:
+        cmd: "{{ kubeadm_init_command }}"
 
   - name: Start kubelet
     when:
@@ -213,46 +252,39 @@
   rescue:
 
   - name: Write kubeadm init output to stdout
-    when: kubeadm_init_output.stdout_lines is defined
+    when: kubeadm_init is defined
     ansible.builtin.debug:
-      msg: |
-        {{ kubeadm_init_output.stdout_lines }}
-        {{ kubeadm_init_output.stderr_lines }}
+      msg: "{{ kubeadm_init }}"
+
+  - name: Write kubeadm init retry output to stdout
+    when: kubeadm_init_retry is defined
+    ansible.builtin.debug:
+      msg: "{{ kubeadm_init_retry }}"
 
   - name: Write admin_namespace_set init output to stdout
-    when: admin_namespace_set.stdout_lines is defined
+    when: admin_namespace_set is defined
     ansible.builtin.debug:
-      msg: |
-        {{ admin_namespace_set.stdout_lines }}
-        {{ admin_namespace_set.stderr_lines }}
+      msg: "{{ admin_namespace_set }}"
 
   - name: Write kube_scheduler_rolebinding init output to stdout
-    when: kube_scheduler_rolebinding.stdout_lines is defined
+    when: kube_scheduler_rolebinding is defined
     ansible.builtin.debug:
-      msg: |
-        {{ kube_scheduler_rolebinding.stdout_lines }}
-        {{ kube_scheduler_rolebinding.stderr_lines }}
+      msg: "{{ kube_scheduler_rolebinding }}"
 
   - name: Write copy_admin_conf init output to stdout
-    when: copy_admin_conf.stdout_lines is defined
+    when: copy_admin_conf is defined
     ansible.builtin.debug:
-      msg: |
-        {{ copy_admin_conf.stdout_lines }}
-        {{ copy_admin_conf.stderr_lines }}
+      msg: "{{ copy_admin_conf }}"
 
   - name: Write crb_kubeletcerts init output to stdout
-    when: crb_kubeletcerts.stdout_lines is defined
+    when: crb_kubeletcerts is defined
     ansible.builtin.debug:
-      msg: |
-        {{ crb_kubeletcerts.stdout_lines }}
-        {{ crb_kubeletcerts.stderr_lines }}
+      msg: "{{ crb_kubeletcerts }}"
 
   - name: Output serviceaccount_patch error
-    when: serviceaccount_patch.stdout_lines is defined
+    when: serviceaccount_patch is defined
     ansible.builtin.debug:
-      msg: |
-        {{ serviceaccount_patch.stdout_lines }}
-        {{ serviceaccount_patch.stderr_lines }}
+      msg: "{{ serviceaccount_patch }}"
 
   - name: Fail kubeadm init
     ansible.builtin.fail:

@@ -22,13 +22,12 @@
 
 - name: Pull control plane certs down
   changed_when: kubernetes_pull_certs.rc == 0
+  delay: 5
   register: kubernetes_pull_certs
+  retries: 5
   when: kubernetes_needs_to_join_cluster
-  ansible.builtin.shell:
-    cmd: |
-      set -eo pipefail
-      kubeadm join phase control-plane-prepare download-certs --config {{ kubernetes_config_directory }}/kubeadm.yaml -v5 2>&1
-    executable: /bin/bash
+  ansible.builtin.command:
+    cmd: kubeadm join phase control-plane-prepare download-certs --config {{ kubernetes_config_directory }}/kubeadm.yaml -v5
 
 - name: Stop kubelet
   when: kubernetes_needs_to_join_cluster
@@ -39,7 +38,9 @@
 
 - name: Add the control plane node
   changed_when: kubeadm_join_output.rc == 0
+  delay: 5
   register: kubeadm_join_output
+  retries: 5
   when: kubernetes_needs_to_join_cluster
   ansible.builtin.shell:
     cmd: |
