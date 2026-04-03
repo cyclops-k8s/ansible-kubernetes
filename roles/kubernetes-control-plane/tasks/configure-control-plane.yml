@@ -3,7 +3,6 @@
 # These tasks push version-specific configuration files that may change between Kubernetes versions.
 
 - name: Create kubeadm file
-  register: kubeadm_file
   ansible.builtin.template:
     backup: false
     dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
@@ -87,17 +86,17 @@
     state: absent
 
 - name: Reload systemd daemon  # noqa: no-handler
-  when:
-  - create_autorenewal_files.changed | default(false) or
-    remove_autorenewal_files.changed | default(false)
+  when: remove_autorenewal_files.changed | default(false)
   ansible.builtin.systemd:
-    daemon_reload: true
+    enabled: false
+    name: k8s-certs-renew.timer
+    state: stopped
 
 - name: Enable and start automatic certificate renewal timer
   when:
   - kubernetes_manage_cert_renewal
-  - create_autorenewal_files.changed
   ansible.builtin.systemd:
+    daemon_reload: true
     enabled: true
     name: k8s-certs-renew.timer
     state: started

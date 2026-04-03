@@ -11,7 +11,6 @@
     kubernetes_needs_to_join_cluster: "{{ kubernetes_needs_to_join_cluster_cmd.rc == 0 }}"
 
 - name: Create kubeadm file
-  register: kubeadm_file
   when: kubernetes_needs_to_join_cluster
   ansible.builtin.template:
     backup: true
