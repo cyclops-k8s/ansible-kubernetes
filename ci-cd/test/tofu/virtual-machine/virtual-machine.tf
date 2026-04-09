@@ -42,6 +42,7 @@ locals {
           creationTimestamp = null
           annotations = {
             "io.cilium.no-track-port" = "all"
+            "descheduler.alpha.kubernetes.io/evict" = "true"
           }
         }
         spec = {
