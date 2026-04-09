@@ -2,6 +2,11 @@
   when: ansible_facts.os_family == "Debian"
   block:
   - name: Kubernetes - Download GPG keyring
+    delay: 5
+    register: kubernetes_download_gpg_keyring
+    retries: 2
+    timeout: 300
+    until: kubernetes_download_gpg_keyring is succeeded
     ansible.builtin.get_url:
       dest: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}
       group: root
@@ -35,6 +40,11 @@
       state: present
 
   - name: Find latest kubernetes version in apt
+    delay: 5
+    register: kubernetes_find_latest_version
+    retries: 2
+    timeout: 300
+    until: kubernetes_find_latest_version is succeeded
     ansible.builtin.apt:
       allow_change_held_packages: true
       update_cache: true
@@ -43,6 +53,11 @@
   when: ansible_facts.os_family == "RedHat"
   block:
   - name: Update Kubernetes repository
+    delay: 5
+    register: update_kubernetes_repo
+    retries: 2
+    timeout: 300
+    until: update_kubernetes_repo is succeeded
     ansible.builtin.yum_repository:
       baseurl: "{{ kubernetes_mirror }}/"
       description: Kubernetes
