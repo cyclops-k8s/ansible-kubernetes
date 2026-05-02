@@ -178,7 +178,7 @@ Testing uses Terraform/Tofu to provision infrastructure with either KubeVirt (Ku
 1. **Environment setup:** Must run inside dev container; requires host Linux with Terraform/Tofu
 2. **VM Provisioning:** `./test/spin-up-test-environment.sh [--os-image VARIANT]`
    - Creates QEMU VMs via cloud-init with user-mode networking (no bridge required)
-   - Supports OS variants: ubuntu-24.04 (default), ubuntu-25.10, centos9, centos10
+   - Supports OS variants: ubuntu-24.04 (default), ubuntu-26.04, centos9, centos10
    - Override image URL: `UBUNTU_IMAGE_URL=http://custom-mirror/ubuntu.img ./test/spin-up-test-environment.sh`
 3. **Cluster Installation:** `./test/install.sh`
    - Runs Terraform/Tofu `init` and `apply` to generate inventory
@@ -189,7 +189,7 @@ Testing uses Terraform/Tofu to provision infrastructure with either KubeVirt (Ku
 GitHub Actions workflows in [.github/workflows/](/.github/workflows/) provide automated testing on each PR:
 - **cluster-tests.yml** - Parametrized workflow testing multiple Kubernetes versions and OS distributions
   - Runs on self-hosted KubeVirt-enabled runners (VMs provisioned in Kubernetes cluster)
-  - Parallel matrix: Kubernetes 1.33, 1.34, 1.35 × Ubuntu 24.04, Ubuntu 25.10, CentOS Stream 9
+  - Parallel matrix: Kubernetes 1.33, 1.34, 1.35 × Ubuntu 24.04, Ubuntu 26.04, CentOS Stream 9
   - Performs cluster install, smoke tests, and upgrade verification
 - **Related scripts:**
   - [ci-cd/test/verify-cluster-health.sh](ci-cd/test/verify-cluster-health.sh) - Validates node readiness, pod status, API health

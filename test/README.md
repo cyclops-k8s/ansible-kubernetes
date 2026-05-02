@@ -25,7 +25,7 @@ Once that script exits, you will have the required VMs. Then run install.sh
 
 ### Choosing the OS Distribution
 
-By default, the test environment uses Ubuntu 26.04. You can test with CentOS Stream 9/10 or Ubuntu 24.04 by using the `--os-image` parameter:
+By default, the test environment uses Ubuntu 26.04. You can also test with CentOS Stream 9/10 or Ubuntu 24.04 by using the `--os-image` parameter:
 
 ```bash
 # Use Ubuntu 24.04
