@@ -19,7 +19,7 @@ It is tested on the following:
 
 **Debian-based:**
 * Ubuntu 24.04 LTS
-* Ubuntu 25.10
+* Ubuntu 26.04
 
 **RPM-based:**
 * CentOS Stream 9 <- stability issues when installing a new installation of version 1.35.
