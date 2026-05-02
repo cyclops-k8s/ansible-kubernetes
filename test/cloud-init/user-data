@@ -19,16 +19,27 @@ write_files:
 - path: /etc/ssh/sshd_config.d/00-nopassword.conf
   content: |
     PasswordAuthentication no
+- path: /opt/firstboot.sh
+  permissions: '0755'
+  content: |
+    #!/bin/bash
+    set -e
 
-# Conditional package installation
-# systemd-timesyncd only exists on Debian/Ubuntu
-# CentOS/RHEL uses chrony which is already installed by default
+    . /etc/os-release
+    # Only deal with systemd-timesyncd on Ubuntu before 26.04, later versions have chrony pre-installed
+    [ "${ID}" = "ubuntu" ] && (( $(echo "${VERSION_ID} < 26.04" | bc -l) )) && apt-get install -y systemd-timesyncd
+
+    # Reboot the machine if ubuntu 26.04 and later due to a bug in cloud-init that prevents the network interface
+    # from renaming on first boot with a race condition with the systemd-networkd-wait-online.service
+    [ "${ID}" = "ubuntu" ] && (( $(echo "${VERSION_ID} == 26.04" | bc -l) )) && sudo reboot
+
+    exit 0
+
 runcmd:
-- |
-  if [ -f /etc/debian_version ]
-  then
-    apt-get install -y systemd-timesyncd
-  fi
-- mkdir /var/lib/etcd && mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
+- /opt/firstboot.sh
+
+bootcmd:
+- mkdir -p /var/lib/etcd
+- mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
 
 package_update: true

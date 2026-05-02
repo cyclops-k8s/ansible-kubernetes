@@ -8,12 +8,12 @@ usage()
                               Default is k8s.local
                               Environment variable: DOMAIN
   -o | --os-image             The OS image to use for the VMs.
-                              Default is 'ubuntu-24.04'.
+                              Default is 'ubuntu-26.04'.
                               Valid values are:
                                 centos9
                                 centos10
                                 ubuntu-24.04
-                                ubuntu-25.10
+                                ubuntu-26.04
                               Environment variable: OS_IMAGE
   -v | --ovmf-file            The OVMF file to use for UEFI booting.
                               Default is /usr/share/OVMF/OVMF_CODE_4M.fd
@@ -54,6 +54,16 @@ Examples:
     export URL=https://example.com/custom-centos-image.qcow2
     export OVMF_FILE=~/ovmf.fd
     $0
+
+  .local directory:
+  This is a directory that is excluded from the git repository and can be used to provide additional configuration for the VMs or playbook.
+  Examples of things you can put in there are things like additional configuration for the playbook when ran or local overrides for
+  environment specific value, like apt repositories url's.
+  You can also place a user-data.txt and network.txt files in there to have additional cloud-init user data and network configuration applied
+  to the VMs when they are created.
+  The configured user-data and network cloud init files are piped through the contents of those files in the yq command that configures them.
+  This is useful for adding additional users, packages, or network interfaces to the VMs without having to modify this script or anything that
+  would be checked in to the git repository.
 "
   exit 2
 }
@@ -101,8 +111,8 @@ function create_vm() {
   echo "#cloud-config" > "${TEMP_DIR}/${name}.network"
   echo "" >> "${TEMP_DIR}/${name}.network"
 
-  ADDITIONAL_USERDATA_CONFIG=""
-  ADDITIONAL_NETWORK_CONFIG=""
+  ADDITIONAL_USERDATA_CONFIG="."
+  ADDITIONAL_NETWORK_CONFIG="."
   if [ -f .local/user-data.txt ]
   then
     ADDITIONAL_USERDATA_CONFIG=" | $(cat .local/user-data.txt)"
@@ -118,7 +128,8 @@ function create_vm() {
     yq --yaml-output \
       ".hostname = \"${name}\" | \
        .fqdn = \"${name}.${DOMAIN}\" | \
-       .users[0].ssh_authorized_keys = [\"${SSH_PUBLIC_KEY}\"]${ADDITIONAL_USERDATA_CONFIG}" \
+       .users[0].ssh_authorized_keys = [\"${SSH_PUBLIC_KEY}\"] | \
+       ${ADDITIONAL_USERDATA_CONFIG}" \
     >> "${TEMP_DIR}/${name}.user-data"
 
   # Set MAC addresses and IP configuration in network config
@@ -131,7 +142,8 @@ function create_vm() {
        .network.ethernets.eth0.nameservers.addresses = [\"${LOCAL_IP}\"] | \
        .network.ethernets.eth0.mtu = ${MTU} | \
        .network.ethernets.eth1.match.macaddress = \"${MAC1}\" | \
-       .network.ethernets.eth1.addresses += [\"${IP_PREFIX}.${ip}/24\"]${ADDITIONAL_NETWORK_CONFIG}" \
+       .network.ethernets.eth1.addresses += [\"${IP_PREFIX}.${ip}/24\"] | \
+       ${ADDITIONAL_NETWORK_CONFIG}" \
     >> "${TEMP_DIR}/${name}.network"
 
   # Create the cloud-init iso
@@ -260,7 +272,7 @@ function get_options() {
   done
 
   # Download cloud image if not already present
-  OS_IMAGE=${OS_IMAGE:-ubuntu-24.04}
+  OS_IMAGE=${OS_IMAGE:-ubuntu-26.04}
   if [ "${OS_IMAGE}" = "centos9" ]
   then
     IMAGE_URL="${URL:-https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2}"
@@ -276,10 +288,10 @@ function get_options() {
     IMAGE_URL="${URL:-https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img}"
     IMAGE_FILE="${TEMP_DIR}/ubuntu-24.04.img"
     USE_UEFI=true
-  elif [ "${OS_IMAGE}" = "ubuntu-25.10" ]
+  elif [ "${OS_IMAGE}" = "ubuntu-26.04" ]
   then
-    IMAGE_URL="${URL:-https://cloud-images.ubuntu.com/questing/current/questing-server-cloudimg-amd64.img}"
-    IMAGE_FILE="${TEMP_DIR}/ubuntu-25.10.img"
+    IMAGE_URL="${URL:-https://cloud-images.ubuntu.com/resolute/current/resolute-server-cloudimg-amd64v3.img}"
+    IMAGE_FILE="${TEMP_DIR}/ubuntu-26.04.img"
     USE_UEFI=true
   else
     echo "Unsupported os-image: ${OS_IMAGE}"
@@ -293,16 +305,8 @@ function get_options() {
 function wait_for_ssh() {
   local host=$1
 
-  echo "Waiting for SSH on ${host}..."
-  while ! ssh "${host}" -o ConnectTimeout=1s -- exit 0 2> /dev/null
-  do
-    sleep 2
-    echo -n "."
-  done
-  echo "SSH is available on ${host}"
-
   echo "Waiting on cloud-init to finish on ${host}..."
-  while ! ssh "${host}" 'sudo cloud-init status --wait' 2> /dev/null
+  while ! ssh "${host}" -o ConnectTimeout=1s -- 'sudo cloud-init status --wait' 2> /dev/null
   do
     sleep 2
     echo -n "."

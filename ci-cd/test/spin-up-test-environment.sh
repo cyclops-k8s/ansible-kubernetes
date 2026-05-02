@@ -6,12 +6,12 @@ usage()
 {
   echo "Usage: $0 [options] [-- tfvar files]
   -o | --os-image             The OS image to use for the VMs.
-                              Default is 'ubuntu-24.04'.
+                              Default is 'ubuntu-26.04'.
                               Valid values are:
                                 centos9
                                 centos10
                                 ubuntu-24.04
-                                ubuntu-25.10
+                                ubuntu-26.04
                               Environment variable: OS_IMAGE
   -u | --url                  The URL to download the OS image from.
                               Default is the official cloud image URL.
@@ -77,7 +77,7 @@ function get_options() {
 
   # Download cloud image if not already present
   OS_TYPE=ubuntu
-  OS_IMAGE=${OS_IMAGE:-ubuntu-24.04}
+  OS_IMAGE=${OS_IMAGE:-ubuntu-26.04}
   if [ "${OS_IMAGE}" = "centos9" ]
   then
     IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2}"
@@ -90,9 +90,9 @@ function get_options() {
   then
     IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/noble-server-cloudimg-amd64.img}"
     OS_TYPE=ubuntu
-  elif [ "${OS_IMAGE}" = "ubuntu-25.10" ]
+  elif [ "${OS_IMAGE}" = "ubuntu-26.04" ]
   then
-    IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/questing-server-cloudimg-amd64.img}"
+    IMAGE_URL="${URL:-http://assets.cyclops-assets/os-images/resolute-server-cloudimg-amd64v3.img}"
     OS_TYPE=ubuntu
   else
     echo "Unsupported os-image: ${OS_IMAGE}"
