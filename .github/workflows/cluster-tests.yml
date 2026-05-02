@@ -31,7 +31,7 @@ jobs:
         - "1.35"
         os_image:
         - ubuntu-24.04
-        - ubuntu-25.10
+        - ubuntu-26.04
         - centos9
         - centos10
 
