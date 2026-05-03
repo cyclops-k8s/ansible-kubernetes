@@ -38,10 +38,10 @@
 
   - name: Set crun name regex
     ansible.builtin.set_fact:
-      crun_name_regex: 'crun-\d+\.\d+-linux-{{ crun_arch }}$'
+      crun_name_regex: 'crun-\d+(\.\d+)+-linux-{{ crun_arch }}$'
 
   - name: Extract crun download url and name from GitHub API response
-    failed_when: crun_download_url is not defined
+    failed_when: crun_name is not defined or crun_download_url is not defined
     ansible.builtin.set_fact:
       crun_name: "{{ crun_release.json.assets | selectattr('name', 'match', crun_name_regex) | map(attribute='name') | list | first }}"
       crun_download_url: "{{ crun_release.json.assets | selectattr('name', 'match', crun_name_regex) | map(attribute='browser_download_url') | list | first }}"

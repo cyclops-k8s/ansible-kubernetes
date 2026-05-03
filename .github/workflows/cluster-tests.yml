@@ -31,7 +31,7 @@ jobs:
         - "1.35"
         os_image:
         - ubuntu-24.04
-        - ubuntu-25.10
+        - ubuntu-26.04
         - centos9
         - centos10
 
@@ -92,7 +92,7 @@ jobs:
             end: "1.35"
         os_image:
           - ubuntu-24.04
-          - ubuntu-25.10
+          - ubuntu-26.04
           - centos9
           - centos10
 
@@ -171,7 +171,7 @@ jobs:
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Spin up test environment
-        run: ./spin-up-test-environment.sh --os-image ubuntu-24.04
+        run: ./spin-up-test-environment.sh --os-image ubuntu-26.04
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
 

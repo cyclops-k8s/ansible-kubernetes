@@ -91,7 +91,7 @@ locals {
   }
   special_config = {
     kubernetes = {
-      vars = merge(var.extra_kubernetes_configuration, {
+      vars = merge({
         kubernetes_hookfiles = {
           post_cluster_init = [
             "{{ inventory_dir }}/../example-hooks/install-calico/post-cluster-init/install-calico.yaml",
@@ -101,13 +101,13 @@ locals {
             "{{ inventory_dir }}/../example-hooks/install-calico/pre-prerequisites/configure-rhel-for-calico.yaml"
           ]
         }
-      })
+      }, var.extra_kubernetes_configuration)
     }
     proxies = {
-      vars = merge(var.extra_proxy_configuration, {
+      vars = merge({
         kubernetes_proxy_enable_keepalived = false
         kubernetes_proxy_bind_address      = "0.0.0.0"
-      })
+      }, var.extra_proxy_configuration)
     }
   }
 }
