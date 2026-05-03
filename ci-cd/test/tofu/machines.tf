@@ -8,8 +8,8 @@ module "vm-proxy" {
   cpu_limit             = "1"
   cpu_request           = "100m"
   disk_size             = "20Gi"
-  memory_size           = "1Gi"
-  memory_size_request   = "1Gi"
+  memory_size           = "6Gi"
+  memory_size_request   = "6Gi"
   namespace_name        = var.namespace_name
   networkdata_filename  = "/tmp/cloud-init/network.tpl"
   userdata_filename     = "/tmp/cloud-init/user-data.tpl"
