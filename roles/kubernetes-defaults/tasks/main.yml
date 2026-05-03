@@ -18,3 +18,8 @@
     - kubernetes_oidc_client_id != None
     - kubernetes_encryption_key != None
     - kubernetes_cloud_provider == 'external' or kubernetes_cloud_provider == None
+
+- name: Set Kubernetes admission plugins if not set
+  when: kubernetes_admission_control_plugins == None
+  ansible.builtin.set_fact:
+    kubernetes_admission_control_plugins: "{{ kubernetes_admission_control_plugins_versioned[kubernetes_version] }}"

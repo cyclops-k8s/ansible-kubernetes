@@ -36,7 +36,7 @@ All roles are sourced from [roles/](roles/) directory. Each role is **independen
 | `containerd` | Container runtime setup with credential injection support | kubernetes-defaults |
 | `kubernetes` | Base Kubernetes prerequisites (kubeadm, kubelet, kubectl, system tuning) | kubernetes-defaults |
 | `pre-kubernetes-control-plane` | Pre-init hooks before first control plane bootstrap | kubernetes-defaults |
-| `kubernetes-control-plane` | kubeadm init, RBAC, encryption, audit policies; manages version-specific templates (1.33-1.35+) | kubernetes-defaults |
+| `kubernetes-control-plane` | kubeadm init, RBAC, encryption, audit policies; manages version-specific templates (1.34-1.36+) | kubernetes-defaults |
 | `post-kubernetes-control-plane` | Per-node hooks after control plane joins (certificate renewal services, cluster config distribution) | kubernetes-defaults |
 | `kubernetes-worker` | Worker node join via kubeadm | kubernetes-defaults |
 | `post-kubernetes-worker` | Post-worker-join hooks (apps, monitoring agents) | kubernetes-defaults |
@@ -92,7 +92,7 @@ kubernetes_hookfiles:
 ### Variable Resolution Hierarchy
 1. **Defaults:** [roles/kubernetes-defaults/defaults/main.yml](roles/kubernetes-defaults/defaults/main.yml) - 445 lines with CIS/STIG annotations
 2. **Inventory/group_vars:** Override defaults (node-specific tuning, hook paths, OIDC client IDs)
-3. **Ad-hoc:** `ansible-playbook -e kubernetes_version=1.35` (highest priority)
+3. **Ad-hoc:** `ansible-playbook -e kubernetes_version=1.36` (highest priority)
 
 ### Key Required Variables
 - `kubernetes_control_plane_ip` - IP proxies listen on (kubeadm will bind APIs here)
@@ -106,7 +106,7 @@ kubernetes_hookfiles:
 
 ### Template Versioning
 Control plane role uses **version-specific templates** for kubeadm configurations:
-- `encryption-1.33.yaml.j2`, `encryption-1.34.yaml.j2`, `encryption-1.35.yaml.j2` (file name must match `kubernetes_version`)
+- `encryption-1.34.yaml.j2`, `encryption-1.35.yaml.j2`, `encryption-1.36.yaml.j2` (file name must match `kubernetes_version`)
 - Audit, authorization, admission templates similarly versioned
 - When adding new versions: copy prior version template, update content (API group changes, feature additions)
 
@@ -189,7 +189,7 @@ Testing uses Terraform/Tofu to provision infrastructure with either KubeVirt (Ku
 GitHub Actions workflows in [.github/workflows/](/.github/workflows/) provide automated testing on each PR:
 - **cluster-tests.yml** - Parametrized workflow testing multiple Kubernetes versions and OS distributions
   - Runs on self-hosted KubeVirt-enabled runners (VMs provisioned in Kubernetes cluster)
-  - Parallel matrix: Kubernetes 1.33, 1.34, 1.35 × Ubuntu 24.04, Ubuntu 26.04, CentOS Stream 9
+  - Parallel matrix: Kubernetes 1.34, 1.35, 1.36 × Ubuntu 24.04, Ubuntu 26.04, CentOS Stream 9
   - Performs cluster install, smoke tests, and upgrade verification
 - **Related scripts:**
   - [ci-cd/test/verify-cluster-health.sh](ci-cd/test/verify-cluster-health.sh) - Validates node readiness, pod status, API health
@@ -227,7 +227,7 @@ GitHub Actions workflows in [.github/workflows/](/.github/workflows/) provide au
   - [ci-cd/test/tofu/ansible-stuff.tf](ci-cd/test/tofu/ansible-stuff.tf) - Ansible inventory generation (cloud.terraform plugin)
   - [ci-cd/test/tofu/variables.tf](ci-cd/test/tofu/variables.tf) - Module variables (kubernetes_version, storage_class, image URL)
 - **Inventory generation:** Terraform generates Ansible inventory via cloud.terraform provider; template at [ci-cd/test/inventory_terraform.yaml](ci-cd/test/inventory_terraform.yaml)
-- **Variable overrides:** Pass via environment (`TF_VAR_kubernetes_version=1.35`) or `-var` flag
+- **Variable overrides:** Pass via environment (`TF_VAR_kubernetes_version=1.36`) or `-var` flag
 
 ### Key Test Files & Scripts
 - [ci-cd/test/install.sh](ci-cd/test/install.sh) - Orchestrates Terraform provisioning and Ansible playbook execution
@@ -303,9 +303,9 @@ This consistent ordering aids readability and is enforced during reviews. Follow
 ## Common Development Tasks
 
 ### Adding a new Kubernetes version
-1. Copy prior version templates: `cp roles/kubernetes-control-plane/templates/*-1.34.yaml.j2 roles/kubernetes-control-plane/templates/*-1.35.yaml.j2`
+1. Copy prior version templates: `cp roles/kubernetes-control-plane/templates/*-1.35.yaml.j2 roles/kubernetes-control-plane/templates/*-1.36.yaml.j2`
 2. Update template content (API changes, feature additions) using kubeadm docs
-3. Test with `kubernetes_version: 1.35` in vars
+3. Test with `kubernetes_version: 1.36` in vars
 4. Run full test harness: `cd ci-cd/test && ./spin-up-test-environment.sh && ./install.sh` (or `cd test` for legacy testing)
 
 ### Adding a new hardening control

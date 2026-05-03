@@ -12,7 +12,7 @@ variable "disk_size" {
 
 variable "kubernetes_version" {
   type    = string
-  default = "1.35"
+  default = "1.36"
 }
 
 variable "extra_proxy_configuration" {
