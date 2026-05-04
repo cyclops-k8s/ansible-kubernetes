@@ -1,7 +1,7 @@
 variable "control_plane_memory_size" {
   type        = string
   description = "The memory size for the control plane virtual machines in Gi"
-  default     = "4"
+  default     = "6"
 }
 
 variable "disk_size" {
@@ -12,7 +12,7 @@ variable "disk_size" {
 
 variable "kubernetes_version" {
   type    = string
-  default = "1.35"
+  default = "1.36"
 }
 
 variable "extra_proxy_configuration" {
@@ -46,5 +46,5 @@ variable "namespace_name" {
 variable "worker_memory_size" {
   type        = string
   description = "The memory size for the worker virtual machines in Gi"
-  default     = "2"
+  default     = "6"
 }

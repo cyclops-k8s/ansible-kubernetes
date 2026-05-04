@@ -22,12 +22,12 @@ It is tested on the following:
 * Ubuntu 26.04
 
 **RPM-based:**
-* CentOS Stream 9 <- stability issues when installing a new installation of version 1.35.
+* CentOS Stream 9 <- stability issues when installing a new installation of version 1.36.
 * CentOS Stream 10
 
 The playbook automatically detects the OS family and uses the appropriate package manager (apt for Debian-based, dnf/yum for RPM-based distributions).
 
-As of February 2026, CentOS Stream 9 has stability issues with the Kubernetes components, likely ETCD, when starting from 1.35. Upgrading from an earlier version to 1.35 works fine.
+As of February 2026, CentOS Stream 9 has stability issues with the Kubernetes components, likely ETCD, when starting from 1.36. Upgrading from an earlier version to 1.36 works fine.
 
 ## Purpose
 

@@ -41,8 +41,11 @@ locals {
         metadata = {
           creationTimestamp = null
           annotations = {
-            "io.cilium.no-track-port" = "all"
+            "io.cilium.no-track-port"               = "all"
             "descheduler.alpha.kubernetes.io/evict" = "true"
+          }
+          labels = {
+            "cyclops.io/cluster-instance" = var.base_data_volume_name
           }
         }
         spec = {
@@ -59,6 +62,26 @@ locals {
                         values   = ["amd64"]
                       }
                     ]
+                  }
+                }
+
+              ]
+            }
+            podAntiAffinity = {
+              preferredDuringSchedulingIgnoredDuringExecution = [
+                {
+                  weight = 100
+                  podAffinityTerm = {
+                    labelSelector = {
+                      matchExpressions = [
+                        {
+                          key      = "cyclops.io/cluster-instance"
+                          operator = "In"
+                          values   = [var.base_data_volume_name]
+                        }
+                      ]
+                    }
+                    topologyKey = "kubernetes.io/hostname"
                   }
                 }
               ]
@@ -159,7 +182,7 @@ locals {
 
 resource "null_resource" "vm" {
   triggers = {
-    namespace_name = var.namespace_name
+    namespace_name       = var.namespace_name
     virtual_machine_name = var.hostname
   }
   provisioner "local-exec" {
@@ -194,5 +217,5 @@ resource "null_resource" "vm-wait" {
     when = create
   }
 
-  depends_on = [ null_resource.vm ]
+  depends_on = [null_resource.vm]
 }
