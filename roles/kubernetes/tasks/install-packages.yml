@@ -121,7 +121,7 @@
     - name: Install cri-tools, kubeadm, kubelet, kubectl
       vars:
         packages:
-        - cri-tools={{ kubernetes_version }}.*
+        - cri-tools-{{ kubernetes_version }}.*
         - kubeadm-{{ k8s_version }}
         - kubelet-{{ k8s_version }}
         - kubectl-{{ k8s_version }}
