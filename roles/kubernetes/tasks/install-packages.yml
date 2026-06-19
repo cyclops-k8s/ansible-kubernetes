@@ -55,7 +55,7 @@
       ansible.builtin.set_fact:
         k8s_version: "{{ kubernetes_version_temp.stdout }}"
 
-    - name: Install cri-tools,kubeadm, kubelet, kubectl
+    - name: Install cri-tools, kubeadm, kubelet, kubectl
       vars:
         packages:
         - cri-tools={{ kubernetes_version }}.*
@@ -67,7 +67,7 @@
         state: present
         update_cache: true
 
-    - name: Hold cri-tools,kubeadm, kubelet and kubectl
+    - name: Hold cri-tools, kubeadm, kubelet and kubectl
       with_items:
       - cri-tools
       - kubeadm
