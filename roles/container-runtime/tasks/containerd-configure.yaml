@@ -144,52 +144,36 @@
   # Fix containerd 2.x RLIMIT_NOFILE regression: containers get a soft limit of 1024
   # instead of inheriting the host value, causing socket exhaustion in .NET workloads.
   # https://github.com/containerd/containerd/issues/10298
-  - name: Ensure python3 is installed for OCI spec patching
+  - name: Apply containerd 2.x RLIMIT_NOFILE fix to base OCI runtime spec
     when:
     - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "ge")) or
       ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "ge"))
-    ansible.builtin.package:
-      name: python3
-      state: present
+    block:
+    - name: Get base OCI runtime spec
+      ansible.builtin.command:
+        cmd: ctr oci spec
+      changed_when: false
+      register: oci_spec_raw
 
-  - name: Generate base OCI runtime spec with corrected RLIMIT_NOFILE limits
-    when:
-    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "ge")) or
-      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "ge"))
-    changed_when: true
-    ansible.builtin.shell:
-      cmd: |
-        ctr oci spec | python3 -c "
-        import sys, json
-        spec = json.load(sys.stdin)
-        for rlimit in spec.get('process', {}).get('rlimits', []):
-            if rlimit.get('type') == 'RLIMIT_NOFILE':
-                rlimit['soft'] = 65536
-                rlimit['hard'] = 524288
-        print(json.dumps(spec, indent=2))
-        " > /etc/containerd/cri-base.json
-      executable: /usr/bin/bash
+    - name: Write base OCI runtime spec with corrected RLIMIT_NOFILE limits
+      vars:
+        _spec: "{{ oci_spec_raw.stdout | from_json }}"
+        _nofile_patched: "{{ _spec.process.rlimits | selectattr('type', 'equalto', 'RLIMIT_NOFILE') | list | first | combine({'soft': kubernetes_containerd_rlimit_nofile_soft, 'hard': kubernetes_containerd_rlimit_nofile_hard}) }}"
+        _other_rlimits: "{{ _spec.process.rlimits | rejectattr('type', 'equalto', 'RLIMIT_NOFILE') | list }}"
+        _patched_spec: "{{ _spec | combine({'process': _spec.process | combine({'rlimits': _other_rlimits + [_nofile_patched]})}, recursive=True) }}"
+      ansible.builtin.copy:
+        content: "{{ _patched_spec | to_nice_json }}\n"
+        dest: /etc/containerd/cri-base.json
+        owner: root
+        group: root
+        mode: '0600'
 
-  - name: Set permissions on /etc/containerd/cri-base.json
-    when:
-    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "ge")) or
-      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "ge"))
-    ansible.builtin.file:
-      dest: /etc/containerd/cri-base.json
-      group: root
-      mode: '0600'
-      owner: root
-
-  - name: Set base_runtime_spec in containerd config to use corrected RLIMIT_NOFILE spec
-    when:
-    - ("containerd.io" in ansible_facts.packages and ansible_facts.packages["containerd.io"][0].version is version("2.0.0", "ge")) or
-      ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "ge"))
-    ansible.builtin.lineinfile:
-      dest: /etc/containerd/config.toml
-      regexp: '^\s*base_runtime_spec\s*='
-      line: '        base_runtime_spec = "/etc/containerd/cri-base.json"'
-      insertafter: '^\s*\[plugins\."io\.containerd\.grpc\.v1\.cri"\.containerd\.runtimes\.runc\]'
-      validate: containerd --config "%s" config dump
+    - name: Set base_runtime_spec in containerd config to use corrected RLIMIT_NOFILE spec
+      ansible.builtin.lineinfile:
+        dest: /etc/containerd/config.toml
+        regexp: '^\s*base_runtime_spec\s*='
+        line: '        base_runtime_spec = "/etc/containerd/cri-base.json"'
+        insertafter: '^\[plugins\."io\.containerd\.grpc\.v1\.cri"\.containerd\.runtimes\.runc\]'
 
   - name: Restart containerd service
     ansible.builtin.service:
