@@ -58,6 +58,7 @@
     - name: Install kubeadm, kubelet, kubectl
       vars:
         packages:
+        - cri-tools={{ kubernetes_version }}.*
         - kubeadm={{ k8s_version }}
         - kubelet={{ k8s_version }}
         - kubectl={{ k8s_version }}
@@ -71,6 +72,7 @@
       - kubeadm
       - kubelet
       - kubectl
+      - cri-tools
       ansible.builtin.dpkg_selections:
         name: "{{ item }}"
         selection: hold
@@ -119,6 +121,7 @@
     - name: Install kubeadm, kubelet, kubectl
       vars:
         packages:
+        - cri-tools={{ kubernetes_version }}.*
         - kubeadm-{{ k8s_version }}
         - kubelet-{{ k8s_version }}
         - kubectl-{{ k8s_version }}
@@ -129,6 +132,7 @@
     - name: Hold kubeadm, kubelet and kubectl
       changed_when: true
       with_items:
+      - cri-tools
       - kubeadm
       - kubelet
       - kubectl

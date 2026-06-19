@@ -18,6 +18,7 @@ listen stats
     stats uri /haproxy?stats
     http-request use-service prometheus-exporter if { path /metrics }
     monitor-uri /healthz
+    no log
 
 listen kubernetes-controlplane
     mode tcp
