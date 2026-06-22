@@ -71,6 +71,12 @@ kubernetes_containerd_version: "latest"
 #   server:
 kubernetes_containerd_registry_mirrors: []
 
+# Fix for containerd 2.x RLIMIT_NOFILE regression (https://github.com/containerd/containerd/issues/10298)
+# Sets the soft and hard RLIMIT_NOFILE limits in the base OCI runtime spec.
+# Only applied when containerd >= 2.0.0 is installed.
+kubernetes_containerd_rlimit_nofile_soft: 65536
+kubernetes_containerd_rlimit_nofile_hard: 524288
+
 # CIS 1.1.12 - Ensure that the etcd data directory ownership is set to etcd:etcd
 kubernetes_etcd_init_container_image: alpine:latest
 
