@@ -150,10 +150,10 @@
       ("containerd" in ansible_facts.packages and ansible_facts.packages["containerd"][0].version is version("2.0.0", "ge"))
     block:
     - name: Get base OCI runtime spec
-      ansible.builtin.command:
-        cmd: ctr oci spec
       changed_when: false
       register: oci_spec_raw
+      ansible.builtin.command:
+        cmd: ctr oci spec
 
     - name: Write base OCI runtime spec with corrected RLIMIT_NOFILE limits
       vars:
