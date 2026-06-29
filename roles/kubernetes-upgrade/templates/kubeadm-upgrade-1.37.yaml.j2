@@ -1,0 +1,10 @@
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: UpgradeConfiguration
+apply:
+  allowExperimentalUpgrades: {{ kubernetes_upgrade_allow_experimental_upgrades }}
+  allowRCUpgrades: {{ kubernetes_upgrade_allow_release_candidate_upgrades }}
+  patches:
+    directory: {{ kubernetes_config_directory }}/patches
+node:
+  patches:
+    directory: {{ kubernetes_config_directory }}/patches
