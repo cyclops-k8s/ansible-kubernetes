@@ -139,3 +139,9 @@ The Stig viewer can be found here: [Stig Viewer](https://public.cyber.mil/stigs/
 ## Adding nodes
 
 Just add the new nodes to your inventory and re-run the install playbook. It will automatically add the node without disrupting anything. Your hooks should check to see if they are already installed and if so, don't do anything.
+
+## Pre-release versions
+
+To install a pre-release version you will need to change at least one value, the `kubernetes_mirror_channel` fact needs to be set to `prerelease`.
+
+Another thing you may need to set is the `kubernetes_cri_tools_version` fact. The cri-tools does not always match the Kubernetes version in prerelease package repository. You will want to set that to an empty string or the exact version number in the package repository.
