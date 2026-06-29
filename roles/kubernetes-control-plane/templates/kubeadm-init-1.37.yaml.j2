@@ -27,6 +27,7 @@ memorySwap:
 ---
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
+kubernetesVersion: "{{ kubernetes_full_version_override if kubernetes_full_version_override is defined else kubeadm_version }}"
 controlPlaneEndpoint: "{{ kubernetes_api_endpoint }}:{{ kubernetes_api_port }}"
 controllerManager:
   extraArgs:

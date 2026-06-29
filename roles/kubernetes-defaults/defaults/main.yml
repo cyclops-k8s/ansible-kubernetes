@@ -1,5 +1,9 @@
 container_runtime: containerd
 
+# Whether or not to allow swap on the system. If false, swap will be disabled and the swap partition will be removed and Kubernetes will not be configured to allow it
+# If true, swap will be left alone and Kubernetes will be configured to allow it.
+kubernetes_allow_swap: false
+
 # Required
 # This is the IP address of the Kubernetes control plane. This is the IP address that the proxies will bind to.
 kubernetes_control_plane_ip: null
@@ -87,6 +91,34 @@ kubernetes_etcd_group_id: 500
 kubernetes_etcd_user_id: 500
 
 kubernetes_admission_control_plugins_versioned:
+  "1.37":
+  # CIS 1.2.11 - Ensure that the admission control plugin AlwaysPullImages is set)
+  - AlwaysPullImages
+
+  # CIS 1.2.14 - Ensure that the admission control plugin NodeRestriction is set (included by default)
+  - NodeRestriction
+
+  # Defaults as of 1.37
+  - CertificateApproval
+  - CertificateSigning
+  - CertificateSubjectRestriction
+  - DefaultIngressClass
+  - DefaultStorageClass
+  - DefaultTolerationSeconds
+  - LimitRanger
+  - MutatingAdmissionWebhook
+  - NamespaceLifecycle
+  - PersistentVolumeClaimResize
+  - PodSecurity
+  - Priority
+  - ResourceQuota
+  - RuntimeClass
+  - ServiceAccount
+  - StorageObjectInUseProtection
+  - TaintNodesByCondition
+  - ValidatingAdmissionPolicy
+  - ValidatingAdmissionWebhook
+
   "1.36":
   # CIS 1.2.11 - Ensure that the admission control plugin AlwaysPullImages is set)
   - AlwaysPullImages
@@ -114,6 +146,7 @@ kubernetes_admission_control_plugins_versioned:
   - TaintNodesByCondition
   - ValidatingAdmissionPolicy
   - ValidatingAdmissionWebhook
+
   "1.35":
   # CIS 1.2.11 - Ensure that the admission control plugin AlwaysPullImages is set)
   - AlwaysPullImages
@@ -335,6 +368,11 @@ kubernetes_cluster_name: cluster
 # Set to false if you manage SELinux policy externally
 kubernetes_configure_selinux: true
 
+# The version of cri-tools to install. Defaults to the version of Kubernetes you are installing.
+# On prerelease installs, this may be different than the version of Kubernetes you are installing
+# which will fail, to make it "just work" set this to an empty string when doing a pre-release.
+kubernetes_cri_tools_version: ~
+
 # The domain name for the cluster, this is used in-cluster to resolve things like services and pods
 kubernetes_dns_domain: cluster.local
 
@@ -459,9 +497,10 @@ kubernetes_kubelet_config_dropin_directory: /var/lib/kubelet/conf.d
 kubernetes_manage_cert_renewal: true
 
 # Apt/Yum mirror to pull the Kubernetes packages from
-kubernetes_mirror_apt: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb"
+kubernetes_mirror_channel: stable  # for official mirrors, this is the channel to use, can be stable or prerelease.
+kubernetes_mirror_apt: "https://pkgs.k8s.io/core:/{{ kubernetes_mirror_channel }}:/v{{ kubernetes_version }}/deb"
 kubernetes_mirror_gpgkey_apt: "{{ kubernetes_mirror_apt }}/Release.key"
-kubernetes_mirror_rpm: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm"
+kubernetes_mirror_rpm: "https://pkgs.k8s.io/core:/{{ kubernetes_mirror_channel }}:/v{{ kubernetes_version }}/rpm"
 kubernetes_mirror_gpgkey_rpm: "{{ kubernetes_mirror_rpm }}/repodata/repomd.xml.key"
 kubernetes_mirror_gpgkey: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_mirror_gpgkey_apt }}{% else %}{{ kubernetes_mirror_gpgkey_rpm }}{% endif %}"
 kubernetes_mirror: "{% if ansible_facts.os_family == 'Debian' %}{{ kubernetes_mirror_apt }}{% else %}{{ kubernetes_mirror_rpm }}{% endif %}"
@@ -526,6 +565,7 @@ kubernetes_supported_versions:
 - "1.34"
 - "1.35"
 - "1.36"
+- "1.37"
 
 # CIS 4.2.5 - Ensure that the --streaming-connection-idle-timeout argument is not set to 0
 # STIG V-245541 - States this should be 5 minutes
@@ -591,6 +631,12 @@ kubernetes_strong_cypher_suites:
 - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
 - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
 - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+
+# Allows for experimental upgrades to be performed. This is not recommended unless you know what you are doing.
+kubernetes_upgrade_allow_experimental_upgrades: false
+
+# Allows for release candidate upgrades to be performed. This is not recommended unless you know what you are doing.
+kubernetes_upgrade_allow_release_candidate_upgrades: false
 
 # The minor version of Kubernetes to install. Do not include the patch version, like 1.31.2. Just do the minor, like 1.31.
 kubernetes_version: "1.36"
