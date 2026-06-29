@@ -21,6 +21,10 @@ podPidsLimit: {{ kubernetes_podpidslimit }}
 protectKernelDefaults: true
 # CIS 4.2.14
 seccompDefault: {{ kubernetes_seccomp_default }}
+failSwapOn: {{ 'false' if kubernetes_allow_swap else 'true' }}
+memorySwap:
+  swapBehavior: {{ 'LimitedSwap' if kubernetes_allow_swap else 'NoSwap' }}
+
 ---
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
 kind: KubeProxyConfiguration
