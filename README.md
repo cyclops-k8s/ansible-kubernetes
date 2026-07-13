@@ -1,6 +1,6 @@
 # Ansible-Kubernetes - CIS hardened
 
-This project is an infrastructure automation project that builds production-ready, CIS/STIG-hardened Kubernetes clusters with kubeadm, primarily targeting Ubuntu 22.04+ environments. It uses a phased Ansible orchestration model (proxies, runtime, control planes, workers, upgrades) plus an extensible hook framework so teams can plug in cluster-specific components like CNI/CSI/CPI, OIDC, and operational tooling at defined lifecycle points. Overall, it’s designed for repeatable, idempotent cluster provisioning and day-2 operations (node adds/upgrades) with strong security and compliance defaults.
+This project is an infrastructure automation project that builds production-ready, CIS/STIG-hardened Kubernetes clusters with kubeadm, primarily targeting Ubuntu 24.04+ environments. It uses a phased Ansible orchestration model (proxies, runtime, control planes, workers, upgrades) plus an extensible hook framework so teams can plug in cluster-specific components like CNI/CSI/CPI, OIDC, and operational tooling at defined lifecycle points. Overall, it’s designed for repeatable, idempotent cluster provisioning and day-2 operations (node adds/upgrades) with strong security and compliance defaults.
 
 ## Pre-requisites
 
