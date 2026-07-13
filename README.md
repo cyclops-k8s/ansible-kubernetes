@@ -1,5 +1,7 @@
 # Ansible-Kubernetes - CIS hardened
 
+This project is an infrastructure automation project that builds production-ready, CIS/STIG-hardened Kubernetes clusters with kubeadm, primarily targeting Ubuntu 22.04+ environments. It uses a phased Ansible orchestration model (proxies, runtime, control planes, workers, upgrades) plus an extensible hook framework so teams can plug in cluster-specific components like CNI/CSI/CPI, OIDC, and operational tooling at defined lifecycle points. Overall, it’s designed for repeatable, idempotent cluster provisioning and day-2 operations (node adds/upgrades) with strong security and compliance defaults.
+
 ## Pre-requisites
 
 ### Collections
@@ -18,10 +20,12 @@ This playbook supports both Debian-based and RPM-based Linux distributions:
 It is tested on the following:
 
 **Debian-based:**
+
 * Ubuntu 24.04 LTS
-* Ubuntu 26.04
+* Ubuntu 26.04 LTS
 
 **RPM-based:**
+
 * CentOS Stream 9 <- stability issues when installing a new installation of version 1.36.
 * CentOS Stream 10
 
@@ -46,38 +50,42 @@ You will probably need to add some hooks to create a fully working cluster, at a
 You will need to create 3 inventory groups.
 
 | Group | Purpose |
-|-|-|
+| ----- | ------- |
 | `proxies` | These nodes will get `keepalived` and `haproxy` on them and configured to load balance the control plane nodes. This is what your clients will connect to, by default, port 6443 |
 | `kubernetes` | This will contain all of your kubernetes worker and control plane nodes |
 | `control_planes` | This will contain all of your control plane nodes |
 | `worker_nodes` | This will contain all of your worker nodes |
 
 **Notes for RPM-based systems:**
+
 * The playbook automatically installs `python3-dnf-plugin-versionlock` to enable package version pinning, which is used to prevent accidental upgrades of Kubernetes and container runtime components.
 * SELinux is configured automatically on proxy nodes to allow HAProxy to connect to any port (1936 and 6443 by default). You can disable this by setting `kubernetes_configure_selinux` to `false`. Currently, no SELinux configuration is applied to Kubernetes nodes.
 
 ## Hooks
+
 To install different pieces of the cluster, things like the CNI, CPI or CSI you can use the different hook entry points. There is a number of example hooks in the [example-hooks](example-hooks) directory.
 
 Hooks are tasks that are imported in the different stages of the cluster.
 
 The different hooks are as follows
+
 * Before the control planes are configured, but after software is installed
-    * One example would be to configure the proxies to run on the control planes so you don't need to have additional infrastructure.
+  * One example would be to configure the proxies to run on the control planes so you don't need to have additional infrastructure.
 * After the cluster is initialized
-    * This is where you would install the CPI and CNI.
-    * You can also use the example `add-adminbinding.yaml` hook to setup the oidc:Admins binding so members of the Admin role in your application client can fully access the cluster.
+  * This is where you would install the CPI and CNI.
+  * You can also use the example `add-adminbinding.yaml` hook to setup the oidc:Admins binding so members of the Admin role in your application client can fully access the cluster.
 * After each control plane is added to the cluster
-    * This is where you would do things that would be specific to a control plane. These tasks run on the control plane that was just added
+  * This is where you would do things that would be specific to a control plane. These tasks run on the control plane that was just added
 * After all control planes are added
-    * This is where you run tasks that would run on the control plane nodes. These tasks run on each of the control plane nodes.
-    * If you want to run the tasks only once you can set the `run_once`.
-    * If you want to use `helm` or `kustomize`, those are installed on the `first_kube_control_plane` so you can use `delegate_to` and have those run on that node.
-    * A good use for this hook is setting up your local kubeconfig.
+  * This is where you run tasks that would run on the control plane nodes. These tasks run on each of the control plane nodes.
+  * If you want to run the tasks only once you can set the `run_once`.
+  * If you want to use `helm` or `kustomize`, those are installed on the `first_kube_control_plane` so you can use `delegate_to` and have those run on that node.
+  * A good use for this hook is setting up your local kubeconfig.
 * After all worker nodes are added
-    * This would be a good spot to install other applications, like bootstrapping `argocd` or installing `kubevip`.
+  * This would be a good spot to install other applications, like bootstrapping `argocd` or installing `kubevip`.
 
 ## Configuration
+
 I'm not going to cover every option in this section as it is vast, the name of what they do is pretty self explanatory and many comments have been added. There are a few that are required and they are noted in the default options file along with their purpose.
 
 Each option, if it is related to a CIS benchmark or STIG, is noted in the defaults main.yml file and respective tasks in the roles.
@@ -89,7 +97,7 @@ You can see all of the different options in [roles/kubernetes-defaults/defaults/
 Before running the playbook, you **must** configure the following required variables. These can be set in your inventory file, group_vars, or passed via `-e` flag:
 
 | Variable | Type | Description | Example |
-|----------|------|-------------|---------|
+| -------- | ---- | ----------- | ------- |
 | `kubernetes_control_plane_ip` | IP address | The IP address that the proxies will bind to for load balancing the Kubernetes control plane. This is the IP that HAProxy/Keepalived will listen on and kubeadm will bind the API server to. | `192.168.1.100` |
 | `kubernetes_api_endpoint` | FQDN | The fully qualified domain name (FQDN) of the control plane API endpoint. Your clients will use this endpoint to interface with the cluster. **This DNS entry must already be configured and resolving before running the playbook.** | `k8s-api.example.com` |
 | `kubernetes_encryption_key` | Base64 string | A 32-byte base64-encoded key used to encrypt etcd data at rest. Generate with: `head -c 32 /dev/urandom \| base64` | `xyzABC123...` (44 chars) |

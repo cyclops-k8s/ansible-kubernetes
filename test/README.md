@@ -1,17 +1,19 @@
 # Test Environment
+
 ## Requirements
 
 * Docker Desktop will install everything you need to run.
-    * If you don't want Docker Desktop you'll need Docker and Docker Compose.
+  * If you don't want Docker Desktop you'll need Docker and Docker Compose.
 * Devcontainer extension in VSCode
 * Host requires QEMU. This is already included in WSL2. Be sure to turn on nested virtualization for WSL2 for better performance.
 * Host must be x86/64. Arm (Apple Silicon) is not supported yet, we'll need someone with an Apple device to make that work.
 * Must be ran through the dev container. It may work outside of the dev container, but no guarantees and issues arising from such a scenario will likely not be resolved. Too many variables.
 * The dev container needs at least 24 GB available memory to run the VMs.
-    * This can be provided via swap, it'll be slower, but it'll work.
+  * This can be provided via swap, it'll be slower, but it'll work.
 * Each disk (6 of them) can get up to 20 GB which means up to 120 GB disk space. However, a basic install with no additional options is only about 6 GB.
 
 ## Purpose
+
 This will spin up 6 VMs for testing the playbook.
 
 * 1 proxy, px.k8s.local
@@ -19,6 +21,7 @@ This will spin up 6 VMs for testing the playbook.
 * 2 worker nodes, w(1|2).k8s.local
 
 ## Usage
+
 To use the test harness, execute the `spin-up-test-environment.sh` file.
 
 Once that script exits, you will have the required VMs. Then run install.sh
@@ -49,6 +52,7 @@ By default, the test environment uses Ubuntu 26.04. You can also test with CentO
 ```
 
 ## How it works
+
 ### `spin-up-test-environment.sh`
 
 The script will download the latest Ubuntu image (or CentOS Stream if `OS_IMAGE=centos9` or `OS_IMAGE=centos10`) and build VMs from that.
@@ -72,4 +76,5 @@ The install script will execute Terraform to configure the playbook. It will the
 Either set the `.local/spin-up.env` file for adaquent memory size or pass `--conformance` to the `spin-up-test-environment.sh` file. That will default the memory sizes to 8 gigabytes on the control planes and 4 gigs on the worker nodes.
 
 ## Local Configuration
+
 Please look at the [.local/README.md](.local/README.md) file for information about local configuration.
