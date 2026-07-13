@@ -56,7 +56,7 @@ We set the auth mode to RBAC,Node by default with the ability to add webhooks
 
 ### 1.2.9 - Ensure that the admission control plugin EventRateLimit is set (Manual)
 
-**Not implemented yet**
+Not implemented yet
 
 ### 1.2.10
 
