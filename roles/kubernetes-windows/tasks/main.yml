@@ -22,7 +22,6 @@
 - name: Resolve the latest patch version for kubernetes_version
   delegate_to: localhost
   become: false
-  run_once: true
   register: kubernetes_windows_latest_patch
   ansible.builtin.uri:
     return_content: true
