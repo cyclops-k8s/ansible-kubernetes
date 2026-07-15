@@ -1,11 +1,12 @@
-# Purpose
+# Registry Mirrors Hook
+
 This hook will install registry mirrors on the proxy servers.
 
 It can be used for authenticating to upstream registries since containerd 2.2.0 no longer supports authenticating to registries via the config file.
 
 Include the `add-containerd-mirrors.yaml` to your hook list.
 
-# Usage
+## Usage
 
 You will need to use the included `haproxy.cfg` instead of the default HAProxy config file issued by the playbook to determine which proxy to go to.
 You can do that by overriding the `kubernetes_proxy_haproxy_config_file` variable.
@@ -39,15 +40,16 @@ This is a full path to the directory where the configuration files will be store
 The `registry_mirror_port` which defaults to `5000` can be set to customize the port that you pass to the mirrors.
 
 ## TODO
+
 The `registry_mirror_certificate_file` is a path to a PEM containing the certificate to use for the registries.
 If left empty it will be exposed over HTTP, which most runtimes won't support.
 
-# Hooks
+### post-proxies Hook
 
-## post-proxies
 The hook in `post-proxies` is to be used when running the proxy servers on their own dedicated hardware.
 
 The file to include is `add-containerd-mirrors.yaml`.
 
-## TODO pre-control-planes
+### pre-control-plane Hook
+
 The hook in `pre-control-planes` is designed to run in tandem (but after) with the `proxy-on-control-planes` hook.
