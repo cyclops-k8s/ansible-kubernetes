@@ -1,0 +1,26 @@
+# Managed by ansible - do not edit by hand.
+#
+# nssm wraps this script (rather than kubelet.exe directly) because the dynamic flags kubeadm
+# generates at join time (--node-ip, --hostname-override, --config) are only known after
+# `kubeadm join` runs and are written to kubeadm-flags.env. This mirrors the approach used by the
+# upstream kubernetes-sigs/sig-windows-tools PrepareNode.ps1 script.
+$ErrorActionPreference = 'Stop'
+
+$FileContent = Get-Content -Path 'C:\var\lib\kubelet\kubeadm-flags.env'
+$KubeadmArgs = ($FileContent -replace '^KUBELET_KUBEADM_ARGS=', '').Trim('"')
+
+$KubeletArgs = @(
+    '--bootstrap-kubeconfig="C:\etc\kubernetes\bootstrap-kubelet.conf"',
+    '--kubeconfig="C:\etc\kubernetes\kubelet.conf"',
+    '--cert-dir="{{ kubernetes_windows_pki_directory }}"',
+    '--enable-debugging-handlers',
+    '--cgroups-per-qos=false',
+    '--enforce-node-allocatable=""',
+    '--resolv-conf=""'
+{% for extra_arg in kubernetes_windows_kubelet_extra_args %}
+    ,'--{{ extra_arg.name }}="{{ extra_arg.value }}"'
+{% endfor %}
+) -join ' '
+
+$cmd = '& "{{ kubernetes_windows_bin_directory }}\kubelet.exe" ' + $KubeadmArgs + ' ' + $KubeletArgs
+Invoke-Expression $cmd

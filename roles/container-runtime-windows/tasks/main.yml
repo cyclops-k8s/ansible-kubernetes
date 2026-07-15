@@ -1,0 +1,156 @@
+# Mirrors roles/container-runtime for Windows Server 2025 worker nodes.
+# Only runs on hosts in the windows_worker_nodes group (see install.yaml).
+# NOTE: this role intentionally does NOT reuse the Linux-oriented pre_prerequisites/
+# post_install_packages hooks - those hook files are written assuming a Linux host and
+# ansible.builtin.* modules. Use pre_windows_workers/post_configure_windows_workers instead.
+
+- name: Pre Windows workers hooks
+  when:
+  - kubernetes_hookfiles.pre_windows_workers is defined
+  with_items: "{{ kubernetes_hookfiles.pre_windows_workers }}"
+  ansible.builtin.include_tasks: "{{ item }}"
+
+- name: Ensure Windows Containers feature is enabled
+  register: kubernetes_windows_containers_feature
+  ansible.windows.win_optional_feature:
+    name: Containers
+    state: present
+
+- name: Reboot if the Containers feature requires it
+  when:
+  - kubernetes_windows_containers_feature.reboot_required
+  ansible.windows.win_reboot:
+
+- name: Create containerd install directory
+  ansible.windows.win_file:
+    path: "{{ kubernetes_windows_containerd_directory }}"
+    state: directory
+
+- name: Create CNI bin/conf directories
+  loop:
+  - "{{ kubernetes_windows_cni_bin_directory }}"
+  - "{{ kubernetes_windows_cni_conf_directory }}"
+  loop_control:
+    loop_var: cni_directory
+  ansible.windows.win_file:
+    path: "{{ cni_directory }}"
+    state: directory
+
+- name: Download containerd for Windows
+  ansible.windows.win_get_url:
+    dest: "{{ kubernetes_windows_containerd_directory }}\\containerd-{{ kubernetes_windows_containerd_version }}-windows-amd64.tar.gz"
+    url: "https://github.com/containerd/containerd/releases/download/v{{ kubernetes_windows_containerd_version }}/containerd-{{ kubernetes_windows_containerd_version }}-windows-amd64.tar.gz"
+
+- name: Extract containerd archive
+  ansible.windows.win_shell: |
+    tar.exe -xzf "{{ kubernetes_windows_containerd_directory }}\containerd-{{ kubernetes_windows_containerd_version }}-windows-amd64.tar.gz" -C "{{ kubernetes_windows_containerd_directory }}"
+  args:
+    creates: "{{ kubernetes_windows_containerd_directory }}\\bin\\containerd.exe"
+
+- name: Add containerd bin directory to the machine PATH
+  ansible.windows.win_path:
+    elements:
+    - "{{ kubernetes_windows_containerd_directory }}\\bin"
+    scope: machine
+
+- name: Generate default containerd configuration
+  ansible.windows.win_shell: |
+    & "{{ kubernetes_windows_containerd_directory }}\bin\containerd.exe" config default | Out-File -Encoding ascii "{{ kubernetes_windows_containerd_directory }}\config.toml"
+  args:
+    creates: "{{ kubernetes_windows_containerd_directory }}\\config.toml"
+
+# containerd.exe's own compiled-in default CNI bin_dir/conf_dir point at
+# "C:\Program Files\containerd\cni\{bin,conf}", which do NOT match where this role actually
+# installs CNI plugins/config (kubernetes_windows_cni_bin_directory/
+# kubernetes_windows_cni_conf_directory, e.g. Calico's install-cni init container writes there).
+# Without this fix containerd never sees the cluster's CNI plugin config, and kubelet reports
+# "network plugin returns error: cni plugin not initialized" forever (node never goes Ready).
+# TOML literal (single-quoted) strings are used so Windows backslash paths don't need escaping.
+- name: Point containerd's CNI bin_dir at the CNI plugin directory this role actually uses
+  community.windows.win_lineinfile:
+    path: "{{ kubernetes_windows_containerd_directory }}\\config.toml"
+    regexp: '^\s*bin_dir\s*='
+    line: "      bin_dir = '{{ kubernetes_windows_cni_bin_directory }}'"
+  notify: restart-containerd-windows
+
+- name: Point containerd's CNI conf_dir at the CNI config directory this role actually uses
+  community.windows.win_lineinfile:
+    path: "{{ kubernetes_windows_containerd_directory }}\\config.toml"
+    regexp: '^\s*conf_dir\s*='
+    line: "      conf_dir = '{{ kubernetes_windows_cni_conf_directory }}'"
+  notify: restart-containerd-windows
+
+# STIG (Windows) - restrict access to the containerd config/binaries to SYSTEM and Administrators only
+- name: Restrict ACLs on the containerd directory
+  loop: "{{ kubernetes_windows_acl_principals }}"
+  loop_control:
+    loop_var: acl_principal
+  ansible.windows.win_acl:
+    path: "{{ kubernetes_windows_containerd_directory }}"
+    rights: FullControl
+    state: present
+    type: allow
+    user: "{{ acl_principal }}"
+
+- name: Disable ACL inheritance on the containerd directory
+  ansible.windows.win_acl_inheritance:
+    path: "{{ kubernetes_windows_containerd_directory }}"
+    reorganize: true
+    state: absent
+
+- name: Register containerd as a Windows service
+  ansible.windows.win_shell: |
+    & "{{ kubernetes_windows_containerd_directory }}\bin\containerd.exe" --register-service --log-level info --service-name containerd --config "{{ kubernetes_windows_containerd_directory }}\config.toml"
+  register: kubernetes_windows_containerd_register
+  changed_when: kubernetes_windows_containerd_register.rc == 0
+  failed_when:
+  - kubernetes_windows_containerd_register.rc != 0
+  - "'already exists' not in kubernetes_windows_containerd_register.stderr"
+
+- name: Ensure containerd service is running
+  ansible.windows.win_service:
+    name: containerd
+    start_mode: auto
+    state: started
+
+- name: Download CNI plugin binaries
+  ansible.windows.win_get_url:
+    dest: "{{ kubernetes_windows_cni_bin_directory }}\\cni-plugins-windows-amd64-v{{ kubernetes_windows_cni_plugin_version }}.tgz"
+    url: "https://github.com/containernetworking/plugins/releases/download/v{{ kubernetes_windows_cni_plugin_version }}/cni-plugins-windows-amd64-v{{ kubernetes_windows_cni_plugin_version }}.tgz"
+
+- name: Extract CNI plugin binaries
+  ansible.windows.win_shell: |
+    tar.exe -xzf "{{ kubernetes_windows_cni_bin_directory }}\cni-plugins-windows-amd64-v{{ kubernetes_windows_cni_plugin_version }}.tgz" -C "{{ kubernetes_windows_cni_bin_directory }}"
+  args:
+    creates: "{{ kubernetes_windows_cni_bin_directory }}\\host-local.exe"
+
+# STIG (Windows) - only allow the ports required for kubelet and the chosen CNI overlay
+- name: Configure Windows Defender Firewall rules for Kubernetes
+  loop:
+  - name: Kubernetes kubelet
+    port: 10250
+    protocol: tcp
+  - name: Kubernetes NodePort range (TCP)
+    port: "{{ kubernetes_windows_firewall_nodeport_range }}"
+    protocol: tcp
+  - name: Kubernetes NodePort range (UDP)
+    port: "{{ kubernetes_windows_firewall_nodeport_range }}"
+    protocol: udp
+  - name: Calico VXLAN overlay
+    port: "{{ kubernetes_windows_firewall_vxlan_port }}"
+    protocol: udp
+  loop_control:
+    loop_var: firewall_rule
+  when:
+  - firewall_rule.name != 'Calico VXLAN overlay' or (kubernetes_windows_cni == 'calico' and kubernetes_windows_cni_calico_mode == 'vxlan')
+  community.windows.win_firewall_rule:
+    action: allow
+    direction: in
+    enabled: true
+    localport: "{{ firewall_rule.port }}"
+    name: "{{ firewall_rule.name }}"
+    profiles:
+    - domain
+    - private
+    protocol: "{{ firewall_rule.protocol }}"
+    state: present

@@ -1,0 +1,132 @@
+# Mirrors roles/kubernetes-upgrade for Windows Server 2025 worker nodes. There is no package
+# manager on Windows, so unlike the Linux role (which resolves+installs an exact patch version via
+# apt/dnf), this role resolves the latest patch release for kubernetes_version from Kubernetes'
+# own release discovery endpoint (https://dl.k8s.io/release/stable-X.Y.txt) and re-downloads the
+# kubeadm.exe/kubelet.exe binaries directly, the same way roles/kubernetes-windows does at install
+# time.
+#
+# kubelet.exe is not a native Windows service (see roles/kubernetes-windows) - it runs wrapped by
+# nssm via StartKubelet.ps1, which is unaffected by a kubelet.exe/kubeadm.exe binary swap, so the
+# service registration itself does not need to change during an upgrade - only the binaries and
+# our own rendered kubelet config.yaml.
+
+- name: Ensure version variable is set
+  when: version is not defined
+  ansible.builtin.fail:
+    msg: "version variable is not set"
+
+# first_kube_control_plane is normally set via roles/kubernetes/tasks/define-first-kube-control.yml
+# during the Linux-only upgrade play. set_fact + run_once propagates that fact to every host IN
+# THAT SAME PLAY, but Windows worker nodes are upgraded in a separate play, so the fact never
+# reaches them - same fallback used in kubernetes-worker-windows.
+- name: Set fact first_kube_control_plane to the first control plane node if not already defined
+  run_once: true
+  when: first_kube_control_plane is not defined
+  ansible.builtin.set_fact:
+    first_kube_control_plane: "{{ groups['control_planes'] | first }}"
+
+- name: Pre Windows worker upgrade hooks
+  loop: "{{ kubernetes_hookfiles.pre_upgrade_windows_workers }}"
+  loop_control:
+    loop_var: hook
+  when: kubernetes_hookfiles.pre_upgrade_windows_workers is defined
+  ansible.builtin.include_tasks: "{{ hook }}"
+
+- name: Drain Windows node
+  become: true
+  changed_when: true
+  delegate_to: "{{ first_kube_control_plane }}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  ansible.builtin.command:
+    cmd: kubectl drain {{ inventory_hostname_short }} --ignore-daemonsets --delete-emptydir-data --force --grace-period=30
+
+# Windows binaries aren't available via apt/dnf (unlike the Linux roles, which install the latest
+# patch release automatically), so the latest patch for kubernetes_version is resolved from
+# Kubernetes' own release discovery endpoint instead of hardcoding patch .0 forever.
+- name: Resolve the latest patch version for kubernetes_version
+  delegate_to: localhost
+  become: false
+  run_once: true
+  register: kubernetes_windows_latest_patch
+  ansible.builtin.uri:
+    return_content: true
+    url: "https://dl.k8s.io/release/stable-{{ kubernetes_version }}.txt"
+
+- name: Set fact for the Windows binary version to install
+  ansible.builtin.set_fact:
+    kubernetes_windows_binary_version: "{{ kubernetes_windows_latest_patch.content | trim }}"
+
+- name: Download the target kubeadm.exe version
+  ansible.windows.win_get_url:
+    dest: "{{ kubernetes_windows_bin_directory }}\\kubeadm.exe"
+    force: true
+    url: "https://dl.k8s.io/{{ kubernetes_windows_binary_version }}/bin/windows/amd64/kubeadm.exe"
+
+- name: Create kubeadm upgrade node config file
+  ansible.windows.win_template:
+    dest: "{{ kubernetes_windows_config_directory }}\\kubeadm-upgrade.yaml"
+    src: kubeadm-upgrade-windows-{{ kubernetes_version }}.yaml.j2
+
+- name: Run kubeadm upgrade node
+  changed_when: true
+  ansible.windows.win_command:
+    cmd: >-
+      "{{ kubernetes_windows_bin_directory }}\kubeadm.exe" upgrade node
+      --config "{{ kubernetes_windows_config_directory }}\kubeadm-upgrade.yaml"
+
+- name: Stop the kubelet service
+  ansible.windows.win_service:
+    name: kubelet
+    state: stopped
+
+- name: Download the target kubelet.exe version
+  ansible.windows.win_get_url:
+    dest: "{{ kubernetes_windows_bin_directory }}\\kubelet.exe"
+    force: true
+    url: "https://dl.k8s.io/{{ kubernetes_windows_binary_version }}/bin/windows/amd64/kubelet.exe"
+
+# Re-render our own kubelet config.yaml for the target version (reusing kubernetes-windows'
+# template include, single source of truth for the 3 version-specific templates) - kubeadm
+# upgrade node's automatic kubelet-config sync writes to C:\var\lib\kubelet\config.yaml, which is
+# NOT the file our nssm service points kubelet at (--config=C:\k\config.yaml, rendered by
+# roles/kubernetes-windows), so that sync has no effect on the running kubelet and this re-render
+# is required instead.
+- name: Re-render Windows kubelet configuration for the target version
+  ansible.builtin.include_role:
+    name: kubernetes-windows
+    tasks_from: render-kubelet-config.yaml
+
+- name: Start the kubelet service
+  ansible.windows.win_service:
+    name: kubelet
+    state: started
+
+- name: Post Windows worker upgrade hooks
+  loop: "{{ kubernetes_hookfiles.post_upgrade_windows_workers }}"
+  loop_control:
+    loop_var: hook
+  when: kubernetes_hookfiles.post_upgrade_windows_workers is defined
+  ansible.builtin.include_tasks: "{{ hook }}"
+
+- name: Uncordon Windows node
+  become: true
+  changed_when: true
+  delay: 5
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: uncordon_result
+  retries: 60
+  until: uncordon_result.rc == 0
+  ansible.builtin.command:
+    cmd: kubectl uncordon {{ inventory_hostname_short }} --kubeconfig /etc/kubernetes/admin.conf
+
+- name: Wait for Windows node to be ready
+  become: true
+  changed_when: false
+  delay: 5
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: node_ready
+  retries: 60
+  until: node_ready.rc == 0
+  ansible.builtin.command:
+    cmd: kubectl wait --for=condition=Ready node/{{ inventory_hostname_short }} --timeout=30s --kubeconfig /etc/kubernetes/admin.conf

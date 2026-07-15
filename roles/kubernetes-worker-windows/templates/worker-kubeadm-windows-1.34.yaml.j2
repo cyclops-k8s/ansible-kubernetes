@@ -1,0 +1,20 @@
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: "{{ kubernetes_api_endpoint }}:{{ kubernetes_api_port }}"
+    token: "{{ join_token }}"
+    caCertHashes:
+    - "{{ cluster_ca_cert_hash }}"
+nodeRegistration:
+  name: "{{ inventory_hostname_short }}"
+  criSocket: "npipe:////./pipe/containerd-containerd"
+  kubeletExtraArgs:
+  - name: node-ip
+    value: "{{ kubernetes_kubelet_node_ip | default(ansible_facts['ip_addresses'] | reject('match', '^(127\\.|169\\.254\\.|fe80:)') | list | first) }}"
+  - name: config
+    value: '{{ kubernetes_windows_bin_directory }}\config.yaml'
+{% for extra_arg in kubernetes_windows_kubelet_extra_args %}
+  - name: {{ extra_arg.name }}
+    value: "{{ extra_arg.value }}"
+{% endfor %}

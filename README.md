@@ -139,3 +139,50 @@ The Stig viewer can be found here: [Stig Viewer](https://public.cyber.mil/stigs/
 ## Adding nodes
 
 Just add the new nodes to your inventory and re-run the install playbook. It will automatically add the node without disrupting anything. Your hooks should check to see if they are already installed and if so, don't do anything.
+
+## Windows worker nodes (experimental)
+
+Windows Server worker nodes are supported as an **opt-in, additive** feature - if you don't
+define the `windows_worker_nodes` group, nothing about your existing Linux-only cluster changes.
+
+**Supported configuration:**
+* **Windows Server 2025 (LTSC) only.**
+* Container runtime: `containerd` (Docker EE is not supported - dockershim was removed from
+  upstream Kubernetes).
+* CNI: **Calico** (VXLAN overlay), matching the [`example-hooks/install-calico`](example-hooks/install-calico)
+  Linux hook. The CNI must match on both operating systems for pod networking to work across the
+  hybrid cluster - see [`example-hooks/install-calico-windows`](example-hooks/install-calico-windows).
+* Control plane, etcd and proxies remain Linux-only; Windows can only ever be a worker node.
+
+**Connecting to Windows hosts:** the recommended transport is SSH via Win32-OpenSSH (installed
+as a Windows feature), with PowerShell as the shell:
+
+```yaml
+# group_vars/windows_worker_nodes.yml
+ansible_connection: ssh
+ansible_shell_type: powershell
+ansible_user: <windows-admin-user>
+```
+
+WinRM (`ansible_connection: winrm`) is also supported by the underlying `ansible.windows`/
+`community.windows` collections if you prefer it, but is not the default in examples here.
+
+**New inventory group:** add hosts to `windows_worker_nodes` alongside your existing `proxies`,
+`kubernetes`, `control_planes` and `worker_nodes` groups.
+
+**New roles:** `container-runtime-windows`, `kubernetes-windows`, `kubernetes-worker-windows` -
+these mirror the Linux `container-runtime`, `kubernetes` and `kubernetes-worker` roles but use
+`ansible.windows`/`community.windows` modules throughout.
+
+**New hook points** (all additive, empty by default, only fired for Windows hosts):
+`pre_windows_workers`, `post_configure_windows_workers`, `pre_windows_worker_join`, `post_windows_worker_join`, `post_windows_workers`.
+Existing Linux-oriented hook points (`post_install_packages`, `post_security`, etc.) are
+intentionally **not** reused for Windows nodes, since hook files written for Linux use
+`ansible.builtin.*` modules that don't work against a Windows host.
+
+**Compliance:** see the new "Windows Worker Nodes" section in [CIS hardening.md](CIS%20hardening.md)
+for the CIS Kubernetes Benchmark mapping and the DISA Microsoft Windows Server STIG controls applied.
+
+**Manual validation:** a scratch inventory for testing against real VMs (as opposed to the
+Terraform-managed `test/`/`ci-cd/test/` harnesses) is provided in [`manual-test/`](manual-test).
+

@@ -1,0 +1,8 @@
+# containerd has kubelet registered as a dependent service (nssm sets DependOnService containerd
+# in roles/kubernetes-windows), so a plain win_service restart fails with "Cannot stop service
+# because it has dependent services" - Restart-Service -Force (which also restarts the dependent
+# kubelet service) is required.
+- name: Restart containerd (and dependent kubelet service)
+  listen: restart-containerd-windows
+  ansible.windows.win_shell: |
+    Restart-Service containerd -Force

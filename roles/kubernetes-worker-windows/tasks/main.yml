@@ -1,0 +1,133 @@
+# Mirrors roles/kubernetes-worker for Windows Server 2025 worker nodes.
+# Reuses the same token-generation / first_kube_control_plane delegation pattern as the
+# Linux kubernetes-worker role - those tasks run against the Linux control plane and are
+# OS-agnostic, so ansible.builtin modules are correct there even though this play targets Windows.
+
+# first_kube_control_plane is normally set via roles/kubernetes/tasks/define-first-kube-control.yml
+# during the Linux-only "Install kubernetes pre-requisites" play. set_fact + run_once propagates
+# that fact to every host IN THAT SAME PLAY, but Windows worker nodes are never part of it (they
+# have their own separate plays), so the fact never reaches them. Define the same fallback here.
+# noqa: var-naming[no-role-prefix]
+- name: Set fact first_kube_control_plane to the first control plane node if not already defined
+  run_once: true
+  when: first_kube_control_plane is not defined
+  ansible.builtin.set_fact:
+    first_kube_control_plane: "{{ groups['control_planes'] | first }}"
+
+- name: Get nodes in the cluster
+  # The Windows plays don't set become at the play level (Windows has no sudo), but this task
+  # delegates to the Linux control plane and needs root there to read /etc/kubernetes/admin.conf.
+  become: true
+  changed_when: false
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: kubernetes_nodes
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o custom-columns=NAME:.metadata.name --no-headers
+
+- name: Check if the Windows node needs to join the cluster
+  ansible.builtin.set_fact:
+    kubernetes_needs_to_join_cluster: "{% if inventory_hostname in kubernetes_nodes.stdout_lines or inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ 'false' | bool }}{% else %}{{ 'true' | bool }}{% endif %}"
+
+- name: Join Windows workers to the cluster
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  block:
+  - name: Generate Join token
+    become: true
+    changed_when: true
+    delegate_to: "{{ first_kube_control_plane }}"
+    register: temp_token
+    ansible.builtin.command:
+      cmd: kubeadm token create --ttl 30m
+
+  - name: Set facts
+    ansible.builtin.set_fact:
+      cluster_ca_cert_hash: "{{ hostvars[first_kube_control_plane].cluster_ca_cert_hash }}"
+      join_token: "{{ temp_token.stdout }}"
+
+  - name: Create kubeadm join file
+    when:
+    - kubernetes_needs_to_join_cluster
+    ansible.windows.win_template:
+      backup: true
+      dest: "{{ kubernetes_windows_config_directory }}\\kubeadm.yaml"
+      src: worker-kubeadm-windows-{{ kubernetes_version }}.yaml.j2
+
+  - name: Pre Windows worker join hooks
+    when:
+    - kubernetes_hookfiles.pre_windows_worker_join is defined
+    with_items: "{{ kubernetes_hookfiles.pre_windows_worker_join }}"
+    ansible.builtin.include_tasks: "{{ item }}"
+
+  - name: Add the Windows worker node
+    changed_when: kubernetes_windows_join_output.rc == 0
+    register: kubernetes_windows_join_output
+    when:
+    - kubernetes_needs_to_join_cluster
+    ansible.windows.win_command:
+      cmd: >-
+        "{{ kubernetes_windows_bin_directory }}\kubeadm.exe" join
+        --config "{{ kubernetes_windows_config_directory }}\kubeadm.yaml"
+        {{ kubernetes_kubeadm_join_extra_args | default('') }}
+
+  - name: Expire join token
+    become: true
+    changed_when: true
+    delegate_to: "{{ first_kube_control_plane }}"
+    when: join_token is defined
+    ansible.builtin.command:
+      cmd: kubeadm token delete "{{ join_token }}"
+
+  rescue:
+  - name: Expire join token
+    become: true
+    changed_when: true
+    delegate_to: "{{ first_kube_control_plane }}"
+    when: join_token is defined
+    ansible.builtin.command:
+      cmd: kubeadm token delete "{{ join_token }}"
+
+  - name: Fail Windows worker node join
+    ansible.builtin.fail:
+      msg: >-
+        Joining Windows worker node {{ inventory_hostname }} to the cluster failed.
+
+- name: Ensure kubelet Windows service is set to start automatically
+  when:
+  - kubernetes_needs_to_join_cluster
+  ansible.windows.win_service:
+    name: kubelet
+    start_mode: auto
+    state: started
+
+- name: Post Windows worker node join hooks
+  loop: "{{ kubernetes_hookfiles.post_windows_worker_join }}"
+  loop_control:
+    loop_var: post_windows_worker_node_join_hook
+  when:
+  - kubernetes_hookfiles.post_windows_worker_join is defined
+  ansible.builtin.include_tasks:
+    file: "{{ post_windows_worker_node_join_hook }}"
+
+# Get an updated list of nodes in the cluster
+- name: Wait for Windows node to appear in cluster
+  become: true
+  changed_when: false
+  delay: 2
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: kubernetes_nodes
+  retries: 15
+  until: inventory_hostname in kubernetes_nodes.stdout_lines or inventory_hostname_short in kubernetes_nodes.stdout_lines
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o custom-columns=NAME:.metadata.name --no-headers
+
+- name: Set the Windows node name fact
+  ansible.builtin.set_fact:
+    kubernetes_node_name: "{% if inventory_hostname in kubernetes_nodes.stdout_lines %}{{ inventory_hostname }}{% elif inventory_hostname_short in kubernetes_nodes.stdout_lines %}{{ inventory_hostname_short }}{% endif %}"
+
+- name: Approve certificate signing requests
+  loop: "{{ range(1, 7) | list }}"
+  loop_control:
+    loop_var: csr_pass
+  ansible.builtin.include_tasks:
+    file: approve-csr-loop.yaml

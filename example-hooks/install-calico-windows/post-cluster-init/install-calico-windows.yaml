@@ -1,0 +1,122 @@
+# Configures the Tigera Operator's "Installation" custom resource for Windows node (HNS
+# dataplane) support, and deploys kube-proxy for Windows nodes as a HostProcess DaemonSet (the
+# operator manages the Windows CNI/calico-node-windows components itself once windowsDataplane is
+# set, but kube-proxy for Windows is not part of the operator and must be deployed separately -
+# see https://docs.tigera.io/calico/latest/getting-started/kubernetes/windows-calico/operator).
+#
+# NOTE: Calico no longer ships a standalone calico-windows-vxlan.yaml manifest (removed upstream);
+# the Tigera Operator (installed by example-hooks/install-calico) is now the only supported way to
+# run Calico on Windows nodes.
+#
+# This hook must be combined with the existing example-hooks/install-calico Linux hook (the
+# Tigera operator and the "default" Installation custom resource must already exist before this
+# hook runs) and both should be listed under kubernetes_hookfiles.post_cluster_init, install-calico
+# first.
+- name: Configure Calico for Windows nodes (Tigera Operator)
+  delegate_to: "{{ first_kube_control_plane }}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  run_once: true
+  block:
+  - name: Check for the Windows kube-proxy DaemonSet
+    register: calico_windows_installed_cmd
+    ansible.builtin.shell:
+      cmd: |
+        kubectl get daemonset kube-proxy-windows --namespace kube-system 2> /dev/null > /dev/null && echo "Installed" || echo "Not installed"
+
+  - name: Set install_calico_windows fact
+    ansible.builtin.set_fact:
+      install_calico_windows: "{{ 'Not installed' in calico_windows_installed_cmd.stdout }}"
+
+  # NOTE: uses argv: (a list) rather than cmd: (a string) - ansible.builtin.command parses a
+  # string cmd via Python's shlex.split(), which silently STRIPS quote characters (treating them
+  # as shell-style grouping quotes), corrupting the embedded JSON (e.g. {"spec":...} becomes
+  # {spec:...}). argv: passes each element literally with no shell-style parsing.
+  - name: Enable the Windows (HNS) dataplane on the Calico Installation resource
+    when: install_calico_windows
+    ansible.builtin.command:
+      argv:
+      - kubectl
+      - patch
+      - installation
+      - default
+      - --type=merge
+      - --patch={"spec":{"serviceCIDRs":["{{ kubernetes_service_subnet }}"],"calicoNetwork":{"windowsDataplane":"HNS"}}}
+
+  # Required so Linux nodes don't borrow IP addresses out of the Windows nodes' per-node IP pool
+  # blocks (see the "strict affinity" note in the Tigera Windows operator install guide). Retries
+  # because the aggregated Calico API server (created by the APIServer custom resource in
+  # example-hooks/install-calico) can take a few seconds to become available after Calico is first
+  # installed.
+  - name: Configure strict IPAM affinity (required for hybrid Linux/Windows clusters)
+    when: install_calico_windows
+    changed_when: true
+    delay: 5
+    register: calico_strict_affinity
+    retries: 12
+    until: calico_strict_affinity.rc == 0
+    ansible.builtin.command:
+      argv:
+      - kubectl
+      - patch
+      - ipamconfigurations
+      - default
+      - --type=merge
+      - --patch={"spec":{"strictAffinity":true}}
+
+  # KUBERNETES_SERVICE_HOST must be a raw IP, not the kubernetes_api_endpoint DNS name - that
+  # name only resolves via /etc/hosts on the real VMs, and this ConfigMap's values are injected
+  # into ALL calico-system pods cluster-wide (not just Windows HostProcess ones), so regular Linux
+  # pods (calico-apiserver, calico-kube-controllers) which only have CoreDNS resolution available
+  # would crash-loop on "no such host" trying to reach it. kubernetes_control_plane_ip (the
+  # HAProxy VIP) is used directly since it needs no name resolution at all.
+  - name: Create the kubernetes-services-endpoint ConfigMap for Calico for Windows
+    when: install_calico_windows
+    ansible.builtin.shell:
+      cmd: |
+        kubectl apply -f - <<EOF
+        kind: ConfigMap
+        apiVersion: v1
+        metadata:
+          name: kubernetes-services-endpoint
+          namespace: tigera-operator
+        data:
+          KUBERNETES_SERVICE_HOST: "{{ kubernetes_control_plane_ip }}"
+          KUBERNETES_SERVICE_PORT: "{{ kubernetes_api_server_port }}"
+        EOF
+
+  # kube-proxy for Windows is not managed by the Tigera operator - deployed from the same
+  # upstream manifest used by kubernetes-sigs/sig-windows-tools' own Windows install docs.
+  # KUBE_PROXY_VERSION must match the full kubelet/kubeadm version installed on the Windows
+  # nodes (roles/kubernetes-windows downloads v{{ kubernetes_version }}.0 binaries).
+  - name: Install kube-proxy for Windows nodes (HostProcess DaemonSet)
+    when: install_calico_windows
+    register: calico_windows
+    ansible.builtin.shell:
+      cmd: >-
+        curl -sSL {{ kube_proxy_windows_manifest_url | default('https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/calico/kube-proxy/kube-proxy.yml', true) }}
+        | sed "s/KUBE_PROXY_VERSION/v{{ kubernetes_version }}.0/g" | kubectl apply -f -
+
+  # No Windows worker nodes exist yet at this point in the lifecycle (post_cluster_init runs
+  # during control plane initialization, long before any Windows worker join play runs) - the
+  # DaemonSet will have 0 desired/ready pods until a Windows node actually joins later, so
+  # waiting for a Ready pod here would never succeed. Just confirm the DaemonSet object itself
+  # was created; actual pod readiness is validated later when a Windows node joins.
+  - name: Confirm the kube-proxy-windows DaemonSet was created
+    changed_when: false
+    when: install_calico_windows
+    ansible.builtin.command:
+      cmd: kubectl get daemonset kube-proxy-windows --namespace kube-system
+
+  rescue:
+  - name: Calico Windows variable contents
+    ansible.builtin.debug:
+      msg:
+        calico_windows_installed_cmd: '{{ calico_windows_installed_cmd | default("Not ran") }}'
+        install_calico_windows: '{{ install_calico_windows | default("Not ran") }}'
+        calico_strict_affinity: '{{ calico_strict_affinity | default("Not ran") }}'
+        calico_windows: '{{ calico_windows | default("Not ran") }}'
+
+  - name: Calico Windows failed
+    ansible.builtin.fail:
+      msg: Calico Windows components failed to install

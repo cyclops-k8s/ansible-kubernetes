@@ -23,7 +23,19 @@
     state: directory
 
 # CIS 1.2.27
+# This task is guarded to only run once (when the file doesn't already exist) - it previously
+# ran unconditionally on every install/upgrade invocation, silently overwriting a real encryption
+# key with whatever kubernetes_encryption_key currently resolves to (the group_vars placeholder if
+# not passed via -e that run, or even a different-but-valid key), instantly breaking the
+# apiserver (invalid placeholder) or making existing encrypted secrets undecryptable (key
+# replaced, not rotated - this template does not support safe key rotation).
+- name: Check if the encryption configuration file already exists
+  register: kubernetes_encryption_file_stat
+  ansible.builtin.stat:
+    path: "{{ kubernetes_config_directory }}/encryption.yaml"
+
 - name: Copy Kubernetes encryption configuration file
+  when: not kubernetes_encryption_file_stat.stat.exists
   ansible.builtin.template:
     backup: true
     dest: "{{ kubernetes_config_directory }}/encryption.yaml"

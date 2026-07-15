@@ -1,25 +1,70 @@
-- name: Install Cilium
+# Installs Calico via the Tigera Operator (the current officially supported install method -
+# see https://docs.tigera.io/calico/latest/getting-started/kubernetes/quickstart). The older
+# standalone calico.yaml manifest install still works for Linux-only clusters, but Calico for
+# Windows requires an operator-managed "Installation" custom resource to already exist (see
+# example-hooks/install-calico-windows), so the operator is used here even for Linux-only
+# clusters for consistency and to keep both code paths identical.
+- name: Install Calico (Tigera Operator)
   delegate_to: "{{ first_kube_control_plane }}"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   run_once: true
   block:
-  - name: Check for Calico
+  - name: Check for the Tigera operator
     register: calico_installed_cmd
     ansible.builtin.shell:
       cmd: |
-        kubectl get pods --namespace kube-system 2> /dev/null | grep calico > /dev/null 2> /dev/null || echo "Not installed"
-        echo "Installed"
+        kubectl get namespace tigera-operator 2> /dev/null > /dev/null && echo "Installed" || echo "Not installed"
 
   - name: Set install_calico fact
     ansible.builtin.set_fact:
-      install_calico: "{{ calico_installed_cmd.stdout_lines[0] == 'Not installed' }}"
+      install_calico: "{{ 'Not installed' in calico_installed_cmd.stdout }}"
 
-  - name: Install Calico
-    register: calico
+  - name: Install the Tigera operator and CRDs
+    register: calico_operator
     when: install_calico
     ansible.builtin.command:
-      cmd: "kubectl apply -f {{ calico_manifest_url | default('https://raw.githubusercontent.com/projectcalico/calico/v3.31.3/manifests/calico.yaml', true) }}"
+      cmd: "kubectl apply -f {{ calico_operator_manifest_url | default('https://raw.githubusercontent.com/projectcalico/calico/v3.31.3/manifests/tigera-operator.yaml', true) }}"
+
+  # CRD registration with the API server is asynchronous - applying the Installation/APIServer
+  # custom resources immediately after the line above can race ahead of the CRDs actually being
+  # established, failing with "no matches for kind ... ensure CRDs are installed first".
+  - name: Wait for the Installation CRD to be established
+    delay: 1
+    register: calico_installation_crd
+    retries: 60
+    until: calico_installation_crd.rc == 0
+    when: install_calico
+    ansible.builtin.command:
+      cmd: kubectl wait --for=condition=Established crd/installations.operator.tigera.io --timeout=1s
+
+  # bgp is explicitly disabled here (rather than relying on the operator's default and patching
+  # it afterwards) because Calico for Windows requires VXLAN encapsulation with BGP disabled -
+  # see example-hooks/install-calico-windows.
+  - name: Create the Calico Installation and APIServer custom resources
+    when: install_calico
+    ansible.builtin.shell:
+      cmd: |
+        kubectl apply -f - <<'EOF'
+        apiVersion: operator.tigera.io/v1
+        kind: Installation
+        metadata:
+          name: default
+        spec:
+          calicoNetwork:
+            bgp: Disabled
+            ipPools:
+            - cidr: {{ kubernetes_pod_subnet }}
+              encapsulation: VXLAN
+          serviceCIDRs:
+          - {{ kubernetes_service_subnet }}
+        ---
+        apiVersion: operator.tigera.io/v1
+        kind: APIServer
+        metadata:
+          name: default
+        spec: {}
+        EOF
 
   - name: Wait for Calico to be ready
     delay: 1
@@ -28,7 +73,7 @@
     until: calico_pods.rc == 0
     when: install_calico
     ansible.builtin.command:
-      cmd: kubectl wait --for=condition=Ready pod -l k8s-app=calico-node --timeout=1s --namespace kube-system
+      cmd: kubectl wait --for=condition=Ready pod -l k8s-app=calico-node --timeout=1s --namespace calico-system
 
   rescue:
   - name: Calico variable contents
@@ -36,7 +81,7 @@
       msg:
         calico_installed_cmd: '{{ calico_installed_cmd | default("Not ran") }}'
         install_calico: '{{ install_calico | default("Not ran") }}'
-        calico: '{{ calico | default("Not ran") }}'
+        calico_operator: '{{ calico_operator | default("Not ran") }}'
         calico_pods: '{{ calico_pods | default("Not ran") }}'
 
   - name: Calico failed
