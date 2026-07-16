@@ -118,7 +118,9 @@ apiServer:
 {% endif %}
   certSANs:
   - "{{ kubernetes_api_endpoint }}"
+{% if kubernetes_control_plane_ip is defined and kubernetes_control_plane_ip != None %}
   - "{{ kubernetes_control_plane_ip }}"
+{% endif %}
   extraVolumes:
 {% for volume in kubernetes_api_server_additional_mounts %}
     - name: {{ volume.name }}
