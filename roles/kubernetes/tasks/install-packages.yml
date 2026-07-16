@@ -85,6 +85,20 @@
         name: python3-dnf-plugin-versionlock
         state: present
 
+    # check for br_netfilter module
+    - name: Check if br_netfilter module is loaded
+      changed_when: false
+      failed_when: false
+      register: kubernetes_br_netfilter_check
+      ansible.builtin.command:
+        cmd: modprobe --dry-run br_netfilter
+
+    - name: Install kernel-modules-extra package if br_netfilter module is not loaded
+      when: kubernetes_br_netfilter_check.rc != 0
+      ansible.builtin.dnf:
+        name: kernel-modules-extra
+        state: present
+
     - name: Add Kubernetes repository
       ansible.builtin.yum_repository:
         baseurl: "{{ kubernetes_mirror }}"
