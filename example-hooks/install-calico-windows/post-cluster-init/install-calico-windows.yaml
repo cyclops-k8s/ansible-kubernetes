@@ -19,6 +19,7 @@
   run_once: true
   block:
   - name: Check for the Windows kube-proxy DaemonSet
+    changed_when: false
     register: calico_windows_installed_cmd
     ansible.builtin.shell:
       cmd: |
@@ -28,41 +29,66 @@
     ansible.builtin.set_fact:
       install_calico_windows: "{{ 'Not installed' in calico_windows_installed_cmd.stdout }}"
 
-  # NOTE: uses argv: (a list) rather than cmd: (a string) - ansible.builtin.command parses a
-  # string cmd via Python's shlex.split(), which silently STRIPS quote characters (treating them
-  # as shell-style grouping quotes), corrupting the embedded JSON (e.g. {"spec":...} becomes
-  # {spec:...}). argv: passes each element literally with no shell-style parsing.
+  # Standard hook paradigm (see example-hooks/argocd, example-hooks/add-adminrolebinding): author
+  # manifests/patches as templates, copy them onto the first control plane, then run kubectl
+  # against the resulting file - rather than embedding JSON/YAML inline in a shell command. This
+  # also sidesteps the shlex.split() quote-stripping problem that inline `--patch={json}` /
+  # heredoc arguments have with ansible.builtin.command/shell.
+  - name: Create Calico Windows config directory
+    when: install_calico_windows
+    ansible.builtin.file:
+      path: "{{ kubernetes_config_directory }}/calico-windows"
+      state: directory
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Copy Calico Windows templates
+    loop_control:
+      loop_var: file
+    when: install_calico_windows
+    with_items:
+    - {name: calico-windows-hns-patch.json, src: calico-windows-hns-patch.json.j2}
+    - {name: ipam-strict-affinity-patch.json, src: ipam-strict-affinity-patch.json.j2}
+    - {name: kubernetes-services-endpoint-configmap.yaml, src: kubernetes-services-endpoint-configmap.yaml.j2}
+    ansible.builtin.template:
+      src: "{{ file.src }}"
+      dest: "{{ kubernetes_config_directory }}/calico-windows/{{ file.name }}"
+      owner: root
+      group: root
+      mode: '0600'
+
   - name: Enable the Windows (HNS) dataplane on the Calico Installation resource
     when: install_calico_windows
     ansible.builtin.command:
-      argv:
-      - kubectl
-      - patch
-      - installation
-      - default
-      - --type=merge
-      - --patch={"spec":{"serviceCIDRs":["{{ kubernetes_service_subnet }}"],"calicoNetwork":{"windowsDataplane":"HNS"}}}
+      cmd: >-
+        kubectl patch installation default --type=merge
+        --patch-file={{ kubernetes_config_directory }}/calico-windows/calico-windows-hns-patch.json
 
   # Required so Linux nodes don't borrow IP addresses out of the Windows nodes' per-node IP pool
-  # blocks (see the "strict affinity" note in the Tigera Windows operator install guide). Retries
-  # because the aggregated Calico API server (created by the APIServer custom resource in
-  # example-hooks/install-calico) can take a few seconds to become available after Calico is first
-  # installed.
-  - name: Configure strict IPAM affinity (required for hybrid Linux/Windows clusters)
-    when: install_calico_windows
-    changed_when: true
+  # blocks (see the "strict affinity" note in the Tigera Windows operator install guide). Waits
+  # for the resource to actually be served first (rather than retrying the patch itself) because
+  # the aggregated Calico API server (created by the APIServer custom resource in
+  # example-hooks/install-calico) can take a few seconds to become available after Calico is
+  # first installed - retrying the patch directly would mask a real patch failure (bad JSON,
+  # wrong field, RBAC, etc.) as just another "not ready yet" retry attempt.
+  - name: Wait for the IPAMConfiguration resource to be available
+    changed_when: false
     delay: 5
-    register: calico_strict_affinity
+    register: calico_ipamconfiguration_check
     retries: 12
-    until: calico_strict_affinity.rc == 0
+    until: calico_ipamconfiguration_check.rc == 0
+    when: install_calico_windows
     ansible.builtin.command:
-      argv:
-      - kubectl
-      - patch
-      - ipamconfigurations
-      - default
-      - --type=merge
-      - --patch={"spec":{"strictAffinity":true}}
+      cmd: kubectl get ipamconfigurations default
+
+  - name: Configure strict IPAM affinity (required for hybrid Linux/Windows clusters)
+    register: calico_strict_affinity
+    when: install_calico_windows
+    ansible.builtin.command:
+      cmd: >-
+        kubectl patch ipamconfigurations default --type=merge
+        --patch-file={{ kubernetes_config_directory }}/calico-windows/ipam-strict-affinity-patch.json
 
   # KUBERNETES_SERVICE_HOST must be a raw IP, not the kubernetes_api_endpoint DNS name - that
   # name only resolves via /etc/hosts on the real VMs, and this ConfigMap's values are injected
@@ -72,30 +98,40 @@
   # HAProxy VIP) is used directly since it needs no name resolution at all.
   - name: Create the kubernetes-services-endpoint ConfigMap for Calico for Windows
     when: install_calico_windows
-    ansible.builtin.shell:
-      cmd: |
-        kubectl apply -f - <<EOF
-        kind: ConfigMap
-        apiVersion: v1
-        metadata:
-          name: kubernetes-services-endpoint
-          namespace: tigera-operator
-        data:
-          KUBERNETES_SERVICE_HOST: "{{ kubernetes_control_plane_ip }}"
-          KUBERNETES_SERVICE_PORT: "{{ kubernetes_api_server_port }}"
-        EOF
+    ansible.builtin.command:
+      cmd: kubectl apply -f {{ kubernetes_config_directory }}/calico-windows/kubernetes-services-endpoint-configmap.yaml
 
   # kube-proxy for Windows is not managed by the Tigera operator - deployed from the same
   # upstream manifest used by kubernetes-sigs/sig-windows-tools' own Windows install docs.
-  # KUBE_PROXY_VERSION must match the full kubelet/kubeadm version installed on the Windows
-  # nodes (roles/kubernetes-windows downloads v{{ kubernetes_version }}.0 binaries).
-  - name: Install kube-proxy for Windows nodes (HostProcess DaemonSet)
+  # KUBE_PROXY_VERSION is resolved the same way roles/kubernetes-windows resolves the kubelet/
+  # kubeadm binary version (latest patch via stable-X.Y.txt) to avoid a version-skew mismatch -
+  # hardcoding v{{ kubernetes_version }}.0 here would not match the actually-installed kubelet.
+  - name: Resolve the latest patch version for kubernetes_version
+    register: kube_proxy_windows_latest_patch
     when: install_calico_windows
+    ansible.builtin.uri:
+      return_content: true
+      url: "https://dl.k8s.io/release/stable-{{ kubernetes_version }}.txt"
+
+  - name: Download the kube-proxy for Windows manifest
+    when: install_calico_windows
+    ansible.builtin.get_url:
+      dest: "{{ kubernetes_config_directory }}/calico-windows/kube-proxy-windows.yaml"
+      mode: '0600'
+      url: "{{ kube_proxy_windows_manifest_url | default('https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/calico/kube-proxy/kube-proxy.yml', true) }}"
+
+  - name: Set the kube-proxy for Windows version in the downloaded manifest
+    when: install_calico_windows
+    ansible.builtin.replace:
+      path: "{{ kubernetes_config_directory }}/calico-windows/kube-proxy-windows.yaml"
+      regexp: KUBE_PROXY_VERSION
+      replace: "{{ kube_proxy_windows_latest_patch.content | trim }}"
+
+  - name: Install kube-proxy for Windows nodes (HostProcess DaemonSet)
     register: calico_windows
-    ansible.builtin.shell:
-      cmd: >-
-        curl -sSL {{ kube_proxy_windows_manifest_url | default('https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/calico/kube-proxy/kube-proxy.yml', true) }}
-        | sed "s/KUBE_PROXY_VERSION/v{{ kubernetes_version }}.0/g" | kubectl apply -f -
+    when: install_calico_windows
+    ansible.builtin.command:
+      cmd: kubectl apply -f {{ kubernetes_config_directory }}/calico-windows/kube-proxy-windows.yaml
 
   # No Windows worker nodes exist yet at this point in the lifecycle (post_cluster_init runs
   # during control plane initialization, long before any Windows worker join play runs) - the
@@ -114,6 +150,7 @@
       msg:
         calico_windows_installed_cmd: '{{ calico_windows_installed_cmd | default("Not ran") }}'
         install_calico_windows: '{{ install_calico_windows | default("Not ran") }}'
+        calico_ipamconfiguration_check: '{{ calico_ipamconfiguration_check | default("Not ran") }}'
         calico_strict_affinity: '{{ calico_strict_affinity | default("Not ran") }}'
         calico_windows: '{{ calico_windows | default("Not ran") }}'
 

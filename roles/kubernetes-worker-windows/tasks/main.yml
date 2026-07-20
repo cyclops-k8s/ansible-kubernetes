@@ -46,15 +46,27 @@
       join_token: "{{ temp_token.stdout }}"
 
   - name: Create kubeadm join file
-    when:
-    - kubernetes_needs_to_join_cluster
+    when: kubernetes_needs_to_join_cluster
     ansible.windows.win_template:
       backup: true
       dest: "{{ kubernetes_windows_config_directory }}\\kubeadm.yaml"
       src: worker-kubeadm-windows-{{ kubernetes_version }}.yaml.j2
 
+  # Matches roles/kubernetes-worker's "Create kubeadm patches directory" - the join template
+  # below references this same path via its own patches.directory setting.
+  - name: Create kubeadm patches directory
+    when: kubernetes_needs_to_join_cluster
+    ansible.windows.win_file:
+      path: "{{ kubernetes_windows_config_directory }}\\patches"
+      state: directory
+
   - name: Pre Windows worker join hooks
+    # List (AND) form is required: kubernetes_needs_to_join_cluster is a templated "True"/"False"
+    # STRING - Ansible only coerces that to a real bool for a bare variable in list/scalar form.
+    # A compound `x and y` when would evaluate the non-empty string "False" as truthy, defeating
+    # this gate on already-joined nodes.
     when:
+    - kubernetes_needs_to_join_cluster
     - kubernetes_hookfiles.pre_windows_worker_join is defined
     with_items: "{{ kubernetes_hookfiles.pre_windows_worker_join }}"
     ansible.builtin.include_tasks: "{{ item }}"
@@ -62,8 +74,7 @@
   - name: Add the Windows worker node
     changed_when: kubernetes_windows_join_output.rc == 0
     register: kubernetes_windows_join_output
-    when:
-    - kubernetes_needs_to_join_cluster
+    when: kubernetes_needs_to_join_cluster
     ansible.windows.win_command:
       cmd: >-
         "{{ kubernetes_windows_bin_directory }}\kubeadm.exe" join
@@ -93,21 +104,11 @@
         Joining Windows worker node {{ inventory_hostname }} to the cluster failed.
 
 - name: Ensure kubelet Windows service is set to start automatically
-  when:
-  - kubernetes_needs_to_join_cluster
+  when: kubernetes_needs_to_join_cluster
   ansible.windows.win_service:
     name: kubelet
     start_mode: auto
     state: started
-
-- name: Post Windows worker node join hooks
-  loop: "{{ kubernetes_hookfiles.post_windows_worker_join }}"
-  loop_control:
-    loop_var: post_windows_worker_node_join_hook
-  when:
-  - kubernetes_hookfiles.post_windows_worker_join is defined
-  ansible.builtin.include_tasks:
-    file: "{{ post_windows_worker_node_join_hook }}"
 
 # Get an updated list of nodes in the cluster
 - name: Wait for Windows node to appear in cluster
@@ -131,3 +132,18 @@
     loop_var: csr_pass
   ansible.builtin.include_tasks:
     file: approve-csr-loop.yaml
+
+# Moved to run after the node has actually appeared in the cluster and its CSRs are approved -
+# previously this ran right after the join call, even for nodes that were already joined (didn't
+# actually join this run), which could fire join-only hooks on already-joined nodes.
+# List (AND) form is required: kubernetes_needs_to_join_cluster is a templated "True"/"False"
+# STRING - a compound `x and y` when would evaluate the non-empty "False" as truthy.
+- name: Post Windows worker node join hooks
+  loop: "{{ kubernetes_hookfiles.post_windows_worker_join }}"
+  loop_control:
+    loop_var: post_windows_worker_node_join_hook
+  when:
+  - kubernetes_needs_to_join_cluster
+  - kubernetes_hookfiles.post_windows_worker_join is defined
+  ansible.builtin.include_tasks:
+    file: "{{ post_windows_worker_node_join_hook }}"

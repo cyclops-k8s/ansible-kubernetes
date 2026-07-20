@@ -20,13 +20,18 @@ the Tigera Operator is now the only officially supported way to run Calico on Wi
 
 ## Usage
 
-Reference both hooks under the same `post_cluster_init` hook point, Linux hook first:
+Reference both hooks under the same `post_cluster_init` hook point, Linux hook first. Also
+reference the Calico VXLAN firewall rule hook under `post_configure_windows_workers` - it's kept
+separate from `roles/container-runtime-windows` since that role has no guarantee about which CNI
+a given cluster uses:
 
 ```yaml
 kubernetes_hookfiles:
   post_cluster_init:
     - /path/to/example-hooks/install-calico/post-cluster-init/install-calico.yaml
     - /path/to/example-hooks/install-calico-windows/post-cluster-init/install-calico-windows.yaml
+  post_configure_windows_workers:
+    - /path/to/example-hooks/install-calico-windows/post_configure_windows_workers/configure-calico-vxlan-firewall.yaml
 ```
 
 This is idempotent - it checks for the `kube-proxy-windows` DaemonSet before applying changes.

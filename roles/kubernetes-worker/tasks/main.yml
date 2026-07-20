@@ -164,15 +164,6 @@
   ansible.builtin.include_tasks:
     file: "{{ post_security_hook }}"
 
-- name: Post worker node join hooks
-  loop: "{{ kubernetes_hookfiles.post_worker_join }}"
-  loop_control:
-    loop_var: post_worker_node_join_hook
-  when:
-  - kubernetes_hookfiles.post_worker_join is defined
-  ansible.builtin.include_tasks:
-    file: "{{ post_worker_node_join_hook }}"
-
 # Get an updated list of nodes in the cluster
 - name: Wait for node to appear in cluster
   changed_when: false
@@ -194,3 +185,20 @@
     loop_var: csr_pass
   ansible.builtin.include_tasks:
     file: approve-csr-loop.yaml
+
+# Moved to run after the node has actually appeared in the cluster and its CSRs are approved -
+# previously this ran unconditionally right after the join call, even for nodes that were already
+# joined (didn't actually join this run), which could re-fire join-only hooks on already-joined
+# nodes. Mirrors the same fix applied to roles/kubernetes-worker-windows/tasks/main.yml.
+# List (AND) form is required: kubernetes_needs_to_join_cluster is a templated "True"/"False"
+# STRING - a compound `x and y` when would evaluate the non-empty "False" as truthy, defeating
+# this gate on already-joined nodes.
+- name: Post worker node join hooks
+  loop: "{{ kubernetes_hookfiles.post_worker_join }}"
+  loop_control:
+    loop_var: post_worker_node_join_hook
+  when:
+  - kubernetes_needs_to_join_cluster
+  - kubernetes_hookfiles.post_worker_join is defined
+  ansible.builtin.include_tasks:
+    file: "{{ post_worker_node_join_hook }}"

@@ -11,6 +11,7 @@
   run_once: true
   block:
   - name: Check for the Tigera operator
+    changed_when: false
     register: calico_installed_cmd
     ansible.builtin.shell:
       cmd: |
@@ -24,7 +25,7 @@
     register: calico_operator
     when: install_calico
     ansible.builtin.command:
-      cmd: "kubectl apply -f {{ calico_operator_manifest_url | default('https://raw.githubusercontent.com/projectcalico/calico/v3.31.3/manifests/tigera-operator.yaml', true) }}"
+      cmd: "kubectl apply -f {{ calico_operator_manifest_url | default('https://raw.githubusercontent.com/projectcalico/calico/v3.32.1/manifests/tigera-operator.yaml', true) }}"
 
   # CRD registration with the API server is asynchronous - applying the Installation/APIServer
   # custom resources immediately after the line above can race ahead of the CRDs actually being
@@ -41,30 +42,31 @@
   # bgp is explicitly disabled here (rather than relying on the operator's default and patching
   # it afterwards) because Calico for Windows requires VXLAN encapsulation with BGP disabled -
   # see example-hooks/install-calico-windows.
+  # Standard hook paradigm (see example-hooks/argocd, example-hooks/add-adminrolebinding): author
+  # manifests as templates, copy them onto the first control plane, then run kubectl against the
+  # resulting file - rather than embedding YAML inline in a shell heredoc.
+  - name: Create Calico config directory
+    when: install_calico
+    ansible.builtin.file:
+      path: "{{ kubernetes_config_directory }}/calico"
+      state: directory
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Copy the Calico Installation and APIServer template
+    when: install_calico
+    ansible.builtin.template:
+      src: calico-installation-apiserver.yaml.j2
+      dest: "{{ kubernetes_config_directory }}/calico/calico-installation-apiserver.yaml"
+      owner: root
+      group: root
+      mode: '0600'
+
   - name: Create the Calico Installation and APIServer custom resources
     when: install_calico
-    ansible.builtin.shell:
-      cmd: |
-        kubectl apply -f - <<'EOF'
-        apiVersion: operator.tigera.io/v1
-        kind: Installation
-        metadata:
-          name: default
-        spec:
-          calicoNetwork:
-            bgp: Disabled
-            ipPools:
-            - cidr: {{ kubernetes_pod_subnet }}
-              encapsulation: VXLAN
-          serviceCIDRs:
-          - {{ kubernetes_service_subnet }}
-        ---
-        apiVersion: operator.tigera.io/v1
-        kind: APIServer
-        metadata:
-          name: default
-        spec: {}
-        EOF
+    ansible.builtin.command:
+      cmd: kubectl apply -f {{ kubernetes_config_directory }}/calico/calico-installation-apiserver.yaml
 
   - name: Wait for Calico to be ready
     delay: 1

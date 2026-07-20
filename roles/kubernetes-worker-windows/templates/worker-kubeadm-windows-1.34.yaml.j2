@@ -18,3 +18,5 @@ nodeRegistration:
   - name: {{ extra_arg.name }}
     value: "{{ extra_arg.value }}"
 {% endfor %}
+patches:
+  directory: '{{ kubernetes_windows_config_directory }}\patches'

@@ -1,0 +1,11 @@
+# KUBERNETES_SERVICE_HOST must be a raw IP, not the kubernetes_api_endpoint DNS name - see the
+# comment on the task that applies this file in ../install-calico-windows.yaml for the full
+# explanation.
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: kubernetes-services-endpoint
+  namespace: tigera-operator
+data:
+  KUBERNETES_SERVICE_HOST: "{{ kubernetes_control_plane_ip }}"
+  KUBERNETES_SERVICE_PORT: "{{ kubernetes_api_server_port }}"

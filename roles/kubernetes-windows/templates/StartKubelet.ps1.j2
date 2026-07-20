@@ -6,9 +6,14 @@
 # upstream kubernetes-sigs/sig-windows-tools PrepareNode.ps1 script.
 $ErrorActionPreference = 'Stop'
 
-$FileContent = Get-Content -Path 'C:\var\lib\kubelet\kubeadm-flags.env'
+$FileContent = Get-Content -Path '{{ kubernetes_windows_kubelet_directory }}\kubeadm-flags.env'
 $KubeadmArgs = ($FileContent -replace '^KUBELET_KUBEADM_ARGS=', '').Trim('"')
 
+# bootstrap-kubelet.conf and kubelet.conf below are NOT kubernetes_windows_config_directory -
+# kubeadm.exe writes these to a fixed C:\etc\kubernetes\ location on Windows unconditionally,
+# the same way it always writes to /etc/kubernetes/ on Linux regardless of other path settings.
+# There is no kubeadm flag to relocate them, so they are intentionally hardcoded here rather than
+# tied to a variable that would imply they're actually configurable.
 $KubeletArgs = @(
     '--bootstrap-kubeconfig="C:\etc\kubernetes\bootstrap-kubelet.conf"',
     '--kubeconfig="C:\etc\kubernetes\kubelet.conf"',

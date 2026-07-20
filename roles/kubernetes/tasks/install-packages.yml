@@ -63,6 +63,7 @@
         - kubelet={{ k8s_version }}
         - kubectl={{ k8s_version }}
       ansible.builtin.apt:
+        allow_change_held_packages: true
         name: "{{ packages }}"
         state: present
         update_cache: true

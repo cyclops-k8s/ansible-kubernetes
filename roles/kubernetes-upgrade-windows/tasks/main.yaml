@@ -10,10 +10,10 @@
 # service registration itself does not need to change during an upgrade - only the binaries and
 # our own rendered kubelet config.yaml.
 
-- name: Ensure version variable is set
-  when: version is not defined
+- name: Ensure kubernetes_version variable is set
+  when: kubernetes_version is not defined
   ansible.builtin.fail:
-    msg: "version variable is not set"
+    msg: "kubernetes_version variable is not set"
 
 # first_kube_control_plane is normally set via roles/kubernetes/tasks/define-first-kube-control.yml
 # during the Linux-only upgrade play. set_fact + run_once propagates that fact to every host IN
@@ -45,9 +45,8 @@
 # patch release automatically), so the latest patch for kubernetes_version is resolved from
 # Kubernetes' own release discovery endpoint instead of hardcoding patch .0 forever.
 - name: Resolve the latest patch version for kubernetes_version
-  delegate_to: localhost
   become: false
-  run_once: true
+  delegate_to: localhost
   register: kubernetes_windows_latest_patch
   ansible.builtin.uri:
     return_content: true
@@ -88,10 +87,10 @@
 
 # Re-render our own kubelet config.yaml for the target version (reusing kubernetes-windows'
 # template include, single source of truth for the 3 version-specific templates) - kubeadm
-# upgrade node's automatic kubelet-config sync writes to C:\var\lib\kubelet\config.yaml, which is
-# NOT the file our nssm service points kubelet at (--config=C:\k\config.yaml, rendered by
-# roles/kubernetes-windows), so that sync has no effect on the running kubelet and this re-render
-# is required instead.
+# upgrade node's automatic kubelet-config sync writes to
+# {{ kubernetes_windows_kubelet_directory }}\config.yaml, which is NOT the file our nssm service
+# points kubelet at (--config=C:\k\config.yaml, rendered by roles/kubernetes-windows), so that
+# sync has no effect on the running kubelet and this re-render is required instead.
 - name: Re-render Windows kubelet configuration for the target version
   ansible.builtin.include_role:
     name: kubernetes-windows

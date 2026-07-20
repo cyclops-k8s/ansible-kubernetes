@@ -8,8 +8,8 @@
   - "{{ kubernetes_windows_config_directory }}"
   - "{{ kubernetes_windows_pki_directory }}"
   - "{{ kubernetes_windows_output_directory }}"
-  - 'C:\var\lib\kubelet'
-  - 'C:\var\lib\kube-proxy'
+  - "{{ kubernetes_windows_kubelet_directory }}"
+  - "{{ kubernetes_windows_kubeproxy_directory }}"
   loop_control:
     loop_var: kubernetes_windows_directory
   ansible.windows.win_file:
@@ -20,8 +20,8 @@
 # patch release automatically), so the latest patch for kubernetes_version is resolved from
 # Kubernetes' own release discovery endpoint instead of hardcoding patch .0 forever.
 - name: Resolve the latest patch version for kubernetes_version
-  delegate_to: localhost
   become: false
+  delegate_to: localhost
   register: kubernetes_windows_latest_patch
   ansible.builtin.uri:
     return_content: true
@@ -86,6 +86,9 @@
 # subcategory, then apply a SACL to the kubernetes config/PKI directories so access to those
 # specific paths is actually logged (the audit subcategory alone does not generate events -
 # a SACL on the object is also required). Windows equivalent of Linux auditd/Kubernetes API audit.
+# NOTE: this is a SACL (audit rule), not a DACL/permission grant - user: Everyone + rights:
+# FullControl here means "log all access attempts by anyone", it does NOT grant access. The
+# actual access restriction to SYSTEM/Administrators is the win_acl task above.
 - name: Enable File System object access audit subcategory
   ansible.windows.win_shell: |
     auditpol /set /subcategory:"File System" /success:enable /failure:enable
@@ -98,12 +101,12 @@
   loop_control:
     loop_var: kubernetes_windows_audit_directory
   community.windows.win_audit_rule:
-    path: "{{ kubernetes_windows_audit_directory }}"
-    user: Everyone
-    rights: FullControl
-    inheritance_flags: ContainerInherit,ObjectInherit
     audit_flags: Success,Failure
+    inheritance_flags: ContainerInherit,ObjectInherit
+    path: "{{ kubernetes_windows_audit_directory }}"
+    rights: FullControl
     state: present
+    user: Everyone
 
 # CIS 4.2.x equivalent - kubelet flags. Linux-only flags (protect-kernel-defaults,
 # make-iptables-util-chains) are intentionally not set - Windows has no sysctl/iptables.
@@ -117,9 +120,9 @@
     src: StartKubelet.ps1.j2
 
 - name: Check if the kubelet Windows service is already registered
+  register: kubernetes_windows_kubelet_service_check
   ansible.windows.win_service:
     name: kubelet
-  register: kubernetes_windows_kubelet_service_check
 
 # kubelet.exe does not implement the native Windows Service Control dispatcher protocol, so it
 # cannot be registered directly via sc.exe/ansible.windows.win_service (it will always fail with
@@ -136,7 +139,7 @@
 - name: Extract nssm.exe
   when: not kubernetes_windows_kubelet_service_check.exists
   ansible.windows.win_shell: |
-    tar -C "{{ kubernetes_windows_bin_directory }}" -xf "{{ kubernetes_windows_bin_directory }}\nssm.zip" --strip-components 2 */win64/nssm.exe
+    tar.exe -C "{{ kubernetes_windows_bin_directory }}" -xf "{{ kubernetes_windows_bin_directory }}\nssm.zip" --strip-components 2 */win64/nssm.exe
   args:
     creates: "{{ kubernetes_windows_bin_directory }}\\nssm.exe"
 
@@ -156,7 +159,6 @@
     & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet Start SERVICE_DEMAND_START
 
 - name: Post configure Windows worker hooks
-  when:
-  - kubernetes_hookfiles.post_configure_windows_workers is defined
+  when: kubernetes_hookfiles.post_configure_windows_workers is defined
   with_items: "{{ kubernetes_hookfiles.post_configure_windows_workers }}"
   ansible.builtin.include_tasks: "{{ item }}"
