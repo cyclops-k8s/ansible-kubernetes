@@ -1,0 +1,31 @@
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+
+# kubelet's compiled-in default containerRuntimeEndpoint is a Linux unix socket path, which is
+# invalid on Windows ("protocol \"unix\" not supported") - it must be set explicitly here.
+containerRuntimeEndpoint: 'npipe:////./pipe/containerd-containerd'
+# CIS 4.2.5 equivalent / STIG V-245541 equivalent
+streamingConnectionIdleTimeout: {{ kubernetes_streamingconnectionidletimeout }}
+# CIS 4.2.10 equivalent / STIG V-242425 equivalent
+rotateCertificates: true
+# CIS 4.2.11 equivalent / STIG V-242425 equivalent
+serverTLSBootstrap: true
+# CIS 4.2.12 equivalent / STIG V-242418 equivalent
+tlsCipherSuites:
+{{ kubernetes_strong_cypher_suites | to_nice_yaml }}
+# CIS 4.2.15 equivalent
+podPidsLimit: {{ kubernetes_podpidslimit }}
+# NOTE: protectKernelDefaults and seccompDefault are Linux-only kubelet options (kernel
+# sysctls / seccomp are not present on Windows) and are intentionally omitted here.
+# CIS 4.2.1 equivalent / STIG - anonymous auth must be nested under `authentication`, not
+# top-level, and Webhook authorization requires webhook auth + the cluster CA to be configured.
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    enabled: true
+  x509:
+    clientCAFile: '{{ kubernetes_windows_pki_directory }}\ca.crt'
+authorization:
+  mode: Webhook
+readOnlyPort: 0

@@ -39,9 +39,16 @@
     ansible.builtin.set_fact:
       etcd_leader_host: "{% for host in groups['control_planes'] %}{% if hostvars[host].is_etcd_leader | default(false) | bool %}{{ host }}{% endif %}{% endfor %}"
 
+  - name: Identify non-leader control planes
+    ansible.builtin.set_fact:
+      non_leader_control_planes: "{{ groups['control_planes'] | reject('equalto', etcd_leader_host) | list }}"
+
+  # Falls back to the (leader) control plane itself when it's the only one in the cluster -
+  # reject('equalto', etcd_leader_host) leaves an empty list in that case, which would otherwise
+  # make `first` fail with "No first item, sequence was empty".
   - name: Set first control plane for upgrade (first etcd follower)
     ansible.builtin.set_fact:
-      first_kube_control_plane: "{{ groups['control_planes'] | reject('equalto', etcd_leader_host) | first if etcd_leader_host else groups['control_planes'] | first }}"
+      first_kube_control_plane: "{{ non_leader_control_planes | first if (etcd_leader_host and non_leader_control_planes | length > 0) else groups['control_planes'] | first }}"
 
   - name: Display upgrade order information
     run_once: true  # noqa: run-once[task]
@@ -94,3 +101,20 @@
   roles:
   - role: kubernetes-defaults
   - role: post-kubernetes-finalization
+
+# Windows worker nodes are upgraded in their own play, after all Linux nodes, mirroring how
+# install.yaml joins Windows workers only after the Linux control planes/workers are fully set up.
+# There is no package manager on Windows (kubelet.exe/kubeadm.exe are re-downloaded directly), so
+# they don't need the etcd-leader-aware ordering used above - this play is skipped entirely if the
+# windows_worker_nodes group is empty/undefined.
+- name: Upgrade Windows worker nodes
+  any_errors_fatal: true
+  become: false
+  gather_facts: true
+  hosts: windows_worker_nodes
+  serial: 1
+  vars:
+    version: "{{ kubernetes_version }}"
+  roles:
+  - role: kubernetes-defaults
+  - role: kubernetes-upgrade-windows

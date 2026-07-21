@@ -1,0 +1,242 @@
+# Mirrors roles/container-runtime for Windows Server 2025 worker nodes.
+# Only runs on hosts in the windows_worker_nodes group (see install.yaml).
+# NOTE: this role intentionally does NOT reuse the Linux-oriented pre_prerequisites/
+# post_install_packages hooks - those hook files are written assuming a Linux host and
+# ansible.builtin.* modules. Use pre_windows_workers/post_configure_windows_workers instead.
+
+- name: Pre Windows workers hooks
+  when: kubernetes_hookfiles.pre_windows_workers is defined
+  with_items: "{{ kubernetes_hookfiles.pre_windows_workers }}"
+  ansible.builtin.include_tasks: "{{ item }}"
+
+- name: Ensure Windows Containers feature is enabled
+  register: kubernetes_windows_containers_feature
+  ansible.windows.win_optional_feature:
+    name: Containers
+    state: present
+
+- name: Reboot if the Containers feature requires it
+  when: kubernetes_windows_containers_feature.reboot_required
+  ansible.windows.win_reboot:
+
+- name: Create containerd install directory
+  ansible.windows.win_file:
+    path: "{{ kubernetes_windows_containerd_directory }}"
+    state: directory
+
+- name: Create CNI bin/conf directories
+  loop:
+  - "{{ kubernetes_windows_cni_bin_directory }}"
+  - "{{ kubernetes_windows_cni_conf_directory }}"
+  loop_control:
+    loop_var: cni_directory
+  ansible.windows.win_file:
+    path: "{{ cni_directory }}"
+    state: directory
+
+# Auto-resolves to the latest containerd/CNI plugin release rather than keeping a Windows-specific
+# version pinned and manually bumped over time - mirrors how kubelet/kubeadm binaries already
+# auto-resolve via stable-X.Y.txt. Falls back to the pinned kubernetes_windows_containerd_version/
+# kubernetes_windows_cni_plugin_version default if the GitHub API is unreachable or rate-limited
+# (unauthenticated GitHub API calls are capped at 60/hour per source IP - a real risk across many
+# Windows worker nodes since these tasks are not run_once, same reasoning as the kubelet/kubeadm
+# version-resolve task above them not being run_once).
+- name: Resolve the latest containerd release
+  become: false
+  delegate_to: localhost
+  failed_when: false
+  register: kubernetes_windows_containerd_latest
+  ansible.builtin.uri:
+    return_content: true
+    url: https://api.github.com/repos/containerd/containerd/releases/latest
+
+- name: Set fact for the containerd version to install
+  ansible.builtin.set_fact:
+    kubernetes_windows_containerd_resolved_version: "{{ ((kubernetes_windows_containerd_latest.json | default({})).tag_name | default('v' ~ kubernetes_windows_containerd_version)) | regex_replace('^v', '') }}"
+
+- name: Resolve the latest CNI plugins release
+  become: false
+  delegate_to: localhost
+  failed_when: false
+  register: kubernetes_windows_cni_plugin_latest
+  ansible.builtin.uri:
+    return_content: true
+    url: https://api.github.com/repos/containernetworking/plugins/releases/latest
+
+- name: Set fact for the CNI plugin version to install
+  ansible.builtin.set_fact:
+    kubernetes_windows_cni_plugin_resolved_version: "{{ ((kubernetes_windows_cni_plugin_latest.json | default({})).tag_name | default('v' ~ kubernetes_windows_cni_plugin_version)) | regex_replace('^v', '') }}"
+
+- name: Download containerd for Windows
+  ansible.windows.win_get_url:
+    dest: "{{ kubernetes_windows_containerd_directory }}\\containerd-{{ kubernetes_windows_containerd_resolved_version }}-windows-amd64.tar.gz"
+    url: "https://github.com/containerd/containerd/releases/download/v{{ kubernetes_windows_containerd_resolved_version }}/containerd-{{ kubernetes_windows_containerd_resolved_version }}-windows-amd64.tar.gz"
+
+- name: Extract containerd archive
+  ansible.windows.win_shell: |
+    tar.exe -xzf "{{ kubernetes_windows_containerd_directory }}\containerd-{{ kubernetes_windows_containerd_resolved_version }}-windows-amd64.tar.gz" -C "{{ kubernetes_windows_containerd_directory }}"
+  args:
+    creates: "{{ kubernetes_windows_containerd_directory }}\\bin\\containerd.exe"
+
+- name: Add containerd bin directory to the machine PATH
+  ansible.windows.win_path:
+    elements:
+    - "{{ kubernetes_windows_containerd_directory }}\\bin"
+    scope: machine
+
+- name: Generate default containerd configuration
+  ansible.windows.win_shell: |
+    & "{{ kubernetes_windows_containerd_directory }}\bin\containerd.exe" config default | Out-File -Encoding ascii "{{ kubernetes_windows_containerd_directory }}\config.toml"
+  args:
+    creates: "{{ kubernetes_windows_containerd_directory }}\\config.toml"
+
+# containerd.exe's own compiled-in default CNI bin_dir/conf_dir point at
+# "C:\Program Files\containerd\cni\{bin,conf}", which do NOT match where this role actually
+# installs CNI plugins/config (kubernetes_windows_cni_bin_directory/
+# kubernetes_windows_cni_conf_directory, e.g. Calico's install-cni init container writes there).
+# Without this fix containerd never sees the cluster's CNI plugin config, and kubelet reports
+# "network plugin returns error: cni plugin not initialized" forever (node never goes Ready).
+#
+# CONFIRMED BUG (2026-07-18, live cluster): a bare `bin_dir\s*=` regex (this role's previous
+# approach) is NOT safe - containerd 2.x introduced an unrelated
+# [plugins.'io.containerd.image-verifier.v1.bindir'] plugin that also has a key literally named
+# bin_dir. ansible.windows.win_lineinfile/lineinfile only replace the LAST matching line, which
+# was that image-verifier plugin's bin_dir, not the CNI plugin's - containerd then tried to exec
+# every file in the CNI plugin directory (including the plain-text LICENSE file that ships in the
+# CNI plugins tarball) as an "image verifier" before every image pull, breaking every pod sandbox
+# creation on the node. containerd 2.x also renamed the real setting from bin_dir (a single
+# string, 1.x) to bin_dirs (a list, 2.x), so even a correct match would not have worked on 2.x.
+#
+# This PowerShell block scopes the replacement to ONLY the CRI plugin's own [plugins.<id>.cni]
+# section (matching either the containerd 1.x or 2.x plugin ID, stopping at the next section
+# header), so it can never touch the unrelated image-verifier plugin.
+#
+# SECOND CONFIRMED BUG (2026-07-18, live cluster, same day): the initial version of this section
+# boundary used lookahead `(?=\r?\n\[|\z)`, which requires the NEXT section header to have zero
+# leading whitespace. Every nested [plugins.'...'] header in containerd's generated config.toml
+# is actually indented (e.g. "  [plugins.'io.containerd.gc.v1.scheduler']"), so that lookahead
+# never matched and the "section" capture ran all the way to end-of-file - silently corrupting
+# every later section that also happened to contain a bin_dir/conf_dir/bin_dirs key (i.e. the
+# same image-verifier plugin this fix was supposed to avoid touching). Fixed by allowing optional
+# leading whitespace before the next `[` in the lookahead: `(?=\r?\n\s*\[|\z)`.
+#
+# THIRD CONFIRMED BUG (2026-07-18, live cluster, same day): setting BOTH bin_dir (1.x, single
+# string) and bin_dirs (2.x, list) unconditionally - "so it works regardless of which containerd
+# major version is installed" - is itself invalid: containerd 2.x's own plugin validation
+# rejects a config with both fields set ("invalid plugin config: `cni.bin_dir` and `cni.bin_dirs`
+# cannot be set at the same time"), which silently failed the whole io.containerd.cri.v1.runtime
+# plugin's initialization (confirmed via `ctr plugins ls -d id==runtime`) - containerd itself
+# stayed running and the CRI grpc pipe still existed, but the RuntimeService was never registered
+# on it, which is exactly the "Unimplemented" error kubeadm join's preflight CRI check reported.
+# Fixed by only setting whichever of the two keys containerd's own generated default config
+# already contains for this specific version (mutually exclusive by construction), never both.
+- name: Point containerd's CNI bin_dir/conf_dir at the directories this role actually uses
+  changed_when: kubernetes_windows_containerd_cni_config.stdout | trim == 'changed'
+  notify: restart-containerd-windows
+  register: kubernetes_windows_containerd_cni_config
+  ansible.windows.win_shell: |
+    $configPath = "{{ kubernetes_windows_containerd_directory }}\config.toml"
+    $content = Get-Content -Path $configPath -Raw
+
+    $pattern = "(?ms)(\[plugins\.[`"']io\.containerd\.(?:grpc\.v1\.cri[`"']|cri\.v1\.runtime[`"'])\.cni\]\r?\n)(.*?)(?=\r?\n\s*\[|\z)"
+    $match = [regex]::Match($content, $pattern)
+    if (-not $match.Success) {
+        throw "Could not find the CRI CNI plugin section in $configPath - containerd's config schema may have changed again."
+    }
+
+    $section = $match.Groups[2].Value
+    if ($section -match '(?m)^\s*bin_dirs\s*=') {
+        # containerd 2.x: list-based field. Explicitly blank bin_dir (rather than leaving it
+        # untouched) so this stays correct even when re-run against a config.toml a previous,
+        # buggy version of this task already set bin_dir in - containerd rejects both being set
+        # at the same time regardless of which one is "new" vs "stale".
+        $section = $section -replace '(?m)^(\s*)bin_dirs\s*=.*$', "`$1bin_dirs = ['{{ kubernetes_windows_cni_bin_directory }}']"
+        $section = $section -replace '(?m)^(\s*)bin_dir\s*=.*$', "`$1bin_dir = ''"
+    } elseif ($section -match '(?m)^\s*bin_dir\s*=') {
+        # containerd 1.x: single-string field only, bin_dirs does not exist yet.
+        $section = $section -replace '(?m)^(\s*)bin_dir\s*=.*$', "`$1bin_dir = '{{ kubernetes_windows_cni_bin_directory }}'"
+    } else {
+        throw "Could not find a bin_dir or bin_dirs key in the CRI CNI plugin section of $configPath - containerd's config schema may have changed again."
+    }
+    $section = $section -replace '(?m)^(\s*)conf_dir\s*=.*$', "`$1conf_dir = '{{ kubernetes_windows_cni_conf_directory }}'"
+
+    $newContent = $content.Substring(0, $match.Groups[2].Index) + $section + $content.Substring($match.Groups[2].Index + $match.Groups[2].Length)
+    if ($newContent -ne $content) {
+        Set-Content -Path $configPath -Value $newContent -NoNewline
+        Write-Output 'changed'
+    } else {
+        Write-Output 'unchanged'
+    }
+
+# STIG (Windows) - restrict access to the containerd config/binaries to SYSTEM and Administrators only
+- name: Restrict ACLs on the containerd directory
+  loop: "{{ kubernetes_windows_acl_principals }}"
+  loop_control:
+    loop_var: acl_principal
+  ansible.windows.win_acl:
+    path: "{{ kubernetes_windows_containerd_directory }}"
+    rights: FullControl
+    state: present
+    type: allow
+    user: "{{ acl_principal }}"
+
+- name: Disable ACL inheritance on the containerd directory
+  ansible.windows.win_acl_inheritance:
+    path: "{{ kubernetes_windows_containerd_directory }}"
+    reorganize: true
+    state: absent
+
+- name: Register containerd as a Windows service
+  ansible.windows.win_shell: |
+    & "{{ kubernetes_windows_containerd_directory }}\bin\containerd.exe" --register-service --log-level info --service-name containerd --config "{{ kubernetes_windows_containerd_directory }}\config.toml"
+  register: kubernetes_windows_containerd_register
+  changed_when: kubernetes_windows_containerd_register.rc == 0
+  failed_when:
+  - kubernetes_windows_containerd_register.rc != 0
+  - "'already exists' not in kubernetes_windows_containerd_register.stderr"
+
+- name: Ensure containerd service is running
+  ansible.windows.win_service:
+    name: containerd
+    start_mode: auto
+    state: started
+
+- name: Download CNI plugin binaries
+  ansible.windows.win_get_url:
+    dest: "{{ kubernetes_windows_cni_bin_directory }}\\cni-plugins-windows-amd64-v{{ kubernetes_windows_cni_plugin_resolved_version }}.tgz"
+    url: "https://github.com/containernetworking/plugins/releases/download/v{{ kubernetes_windows_cni_plugin_resolved_version }}/cni-plugins-windows-amd64-v{{ kubernetes_windows_cni_plugin_resolved_version }}.tgz"
+
+- name: Extract CNI plugin binaries
+  ansible.windows.win_shell: |
+    tar.exe -xzf "{{ kubernetes_windows_cni_bin_directory }}\cni-plugins-windows-amd64-v{{ kubernetes_windows_cni_plugin_resolved_version }}.tgz" -C "{{ kubernetes_windows_cni_bin_directory }}"
+  args:
+    creates: "{{ kubernetes_windows_cni_bin_directory }}\\host-local.exe"
+
+# STIG (Windows) - only allow the ports required for kubelet and NodePort traffic. CNI-specific
+# overlay ports (e.g. Calico's VXLAN encapsulation) are NOT opened here - this role has no
+# guarantee about which CNI a given cluster uses. See example-hooks/install-calico-windows for
+# the Calico VXLAN firewall rule, added via kubernetes_hookfiles.post_configure_windows_workers.
+- name: Configure Windows Defender Firewall rules for Kubernetes
+  loop:
+  - name: Kubernetes kubelet
+    port: 10250
+    protocol: tcp
+  - name: Kubernetes NodePort range (TCP)
+    port: "{{ kubernetes_windows_firewall_nodeport_range }}"
+    protocol: tcp
+  - name: Kubernetes NodePort range (UDP)
+    port: "{{ kubernetes_windows_firewall_nodeport_range }}"
+    protocol: udp
+  loop_control:
+    loop_var: firewall_rule
+  community.windows.win_firewall_rule:
+    action: allow
+    direction: in
+    enabled: true
+    localport: "{{ firewall_rule.port }}"
+    name: "{{ firewall_rule.name }}"
+    profiles:
+    - domain
+    - private
+    protocol: "{{ firewall_rule.protocol }}"
+    state: present

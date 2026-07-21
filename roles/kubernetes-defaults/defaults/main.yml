@@ -441,8 +441,103 @@ kubernetes_hookfiles:
   # During a cluster upgrade, after kubelet, kubectl and containerd have been upgraded and reconfigured
   post_upgrade: []
 
+  # Before any Windows worker nodes are configured (additive, only used if windows_worker_nodes group is non-empty)
+  pre_windows_workers: []
+
+  # After configuring a Windows worker node with the required configuration files
+  post_configure_windows_workers: []
+
+  # After the Windows kubeadm join file has been rendered, before `kubeadm join` runs
+  pre_windows_worker_join: []
+
+  # After a Windows worker node has been joined to the cluster
+  post_windows_worker_join: []
+
+  # After all Windows worker nodes have been joined to the cluster
+  post_windows_workers: []
+
+  # During a cluster upgrade, before any Windows workers are upgraded
+  pre_upgrade_windows_workers: []
+
+  # During a cluster upgrade, after a Windows worker's kubeadm upgrade/kubelet binary swap is completed
+  post_upgrade_windows_workers: []
+
 # Phases to skip in the kubeadm init process, you can view the list of phases by checking out `kubeadm init --help`
 kubernetes_init_skip_phases: []
+
+# ---- Windows worker node support (opt-in via the `windows_worker_nodes` inventory group) ----
+# All variables below are only consumed by the container-runtime-windows, kubernetes-windows and
+# kubernetes-worker-windows roles. They have no effect on Linux control planes/workers.
+# Supported Windows Server version: 2025 (LTSC) only.
+
+# Directory Windows worker nodes will store kubernetes config/kubeadm files in (mirrors kubernetes_config_directory)
+kubernetes_windows_config_directory: 'C:\etc\kubernetes\config'
+
+# Directory Windows worker nodes will store the kubelet/kubeconfig/CA certs in (mirrors kubernetes_pki_directory)
+kubernetes_windows_pki_directory: 'C:\etc\kubernetes\pki'
+
+# Base install directory for kubelet.exe, kube-proxy.exe and kubeadm.exe (sig-windows-tools convention)
+kubernetes_windows_bin_directory: 'C:\k'
+
+# CNI plugin binaries/config directories
+kubernetes_windows_cni_bin_directory: 'C:\opt\cni\bin'
+kubernetes_windows_cni_conf_directory: 'C:\etc\cni\net.d'
+
+# containerd install/config directory on Windows
+kubernetes_windows_containerd_directory: 'C:\Program Files\containerd'
+
+# Output/log directory (mirrors kubernetes_output_directory)
+kubernetes_windows_output_directory: 'C:\var\log\kubernetes'
+
+# kubelet's own default --root-dir and kube-proxy's default data directory on Windows. These
+# match kubelet.exe/kube-proxy.exe's own compiled-in defaults - changing them requires also
+# passing the corresponding --root-dir/--config flag override, which this role does not do today.
+kubernetes_windows_kubelet_directory: 'C:\var\lib\kubelet'
+kubernetes_windows_kubeproxy_directory: 'C:\var\lib\kube-proxy'
+
+# Fallback containerd version if the GitHub releases API is unreachable/rate-limited when
+# roles/container-runtime-windows tries to auto-resolve the latest release - not normally what
+# gets installed.
+kubernetes_windows_containerd_version: '1.7.27'
+
+# Fallback CNI plugin version if the GitHub releases API is unreachable/rate-limited when
+# roles/container-runtime-windows tries to auto-resolve the latest release - not normally what
+# gets installed.
+kubernetes_windows_cni_plugin_version: '1.5.1'
+
+# Version of nssm (https://nssm.cc/) used to wrap kubelet.exe as a Windows service. kubelet.exe
+# does not implement the native Windows Service Control dispatcher protocol, so it cannot be
+# registered directly via sc.exe/New-Service (it will always fail with "The service did not
+# respond to the start or control request in a timely fashion"). This is the same approach used
+# by the upstream kubernetes-sigs/sig-windows-tools PrepareNode.ps1 script.
+kubernetes_windows_nssm_version: '2.24'
+
+# kubernetes_windows_cni / kubernetes_windows_cni_calico_mode are intentionally NOT defined here -
+# they are Calico-specific and only consumed by example-hooks/install-calico-windows, which
+# defaults them itself (with the same values as before) so non-Calico clusters never see
+# Calico-specific variables in the base role defaults.
+
+# Kubelet extra args for Windows nodes. Linux-only flags (--protect-kernel-defaults, --make-iptables-util-chains)
+# are intentionally NOT included here as they have no meaning on Windows (no sysctl/iptables on Windows).
+# CIS 4.2.5 / STIG V-245541 equivalent still applies - see kubernetes_streamingconnectionidletimeout
+kubernetes_windows_kubelet_extra_args: []
+
+# STIG (Windows) - restrict the kubelet Windows service account. LocalSystem is required today for
+# HostProcess container support, tracked as a known gap versus a least-privilege service account.
+kubernetes_windows_kubelet_service_account: LocalSystem
+
+# STIG (Windows) - Windows Defender Firewall inbound rules are restricted to only these ports on
+# Windows worker nodes: kubelet (10250/tcp) and NodePort range (30000-32767/tcp+udp). The CNI
+# overlay port itself (VXLAN = 4789/udp) is opened by the CNI's own hook - see
+# example-hooks/install-calico-windows - since this role has no guarantee which CNI is used.
+kubernetes_windows_firewall_nodeport_range: '30000-32767'
+kubernetes_windows_firewall_vxlan_port: 4789
+
+# STIG (Windows) - NTFS ACLs applied to kubernetes_windows_config_directory/kubernetes_windows_pki_directory
+# restrict access to SYSTEM and Administrators only (equivalent intent to CIS 1.1.20/4.1.9 file permission controls)
+kubernetes_windows_acl_principals:
+- SYSTEM
+- Administrators
 
 # Extra arguments to add to kubeadm init. This is added verbatim to the end of the `kubeadm init` command
 kubernetes_kubeadm_init_extra_args: ""

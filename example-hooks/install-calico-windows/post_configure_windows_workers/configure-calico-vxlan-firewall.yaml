@@ -1,0 +1,31 @@
+# Moved out of roles/container-runtime-windows - that role has no guarantee about which CNI a
+# given cluster uses, so it should not hardcode a Calico-specific firewall rule. Only clusters
+# actually using Calico for Windows (kubernetes_windows_cni: calico) should reference this file,
+# via kubernetes_hookfiles.post_configure_windows_workers.
+#
+# kubernetes_windows_cni / kubernetes_windows_cni_calico_mode used to live in
+# roles/kubernetes-defaults, but were moved here since this hook is their only consumer - clusters
+# not using Calico never need to see Calico-specific variables in the base role defaults. Set via
+# `| default(...)` so they can still be overridden via inventory/group_vars as before.
+- name: Set default CNI facts for the Calico Windows firewall hook
+  ansible.builtin.set_fact:
+    kubernetes_windows_cni: "{{ kubernetes_windows_cni | default('calico') }}"
+    kubernetes_windows_cni_calico_mode: "{{ kubernetes_windows_cni_calico_mode | default('vxlan') }}"
+
+# STIG (Windows) - only opens the CNI overlay port when Calico is actually running in VXLAN mode.
+# kubernetes_windows_cni_calico_mode also supports non-VXLAN encapsulation (e.g. BGP), which needs
+# no dedicated overlay port opened here. The kubernetes_windows_cni check is a defensive guard in
+# case this hook is accidentally left configured after switching a cluster to a different CNI.
+- name: Calico VXLAN overlay
+  when: kubernetes_windows_cni == 'calico' and kubernetes_windows_cni_calico_mode == 'vxlan'
+  community.windows.win_firewall_rule:
+    action: allow
+    direction: in
+    enabled: true
+    localport: "{{ kubernetes_windows_firewall_vxlan_port }}"
+    name: Calico VXLAN overlay
+    profiles:
+    - domain
+    - private
+    protocol: udp
+    state: present

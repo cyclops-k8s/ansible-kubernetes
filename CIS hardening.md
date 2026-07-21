@@ -251,3 +251,80 @@ Fixed for initally created namespaces, it's a mnaul process to maintain the conf
 ### 5.1.6 - 5.1.13
 
 Set by default
+
+## 6 - Windows Worker Nodes (opt-in, `windows_worker_nodes` group)
+
+Windows worker node support targets **Windows Server 2025 (LTSC)** only, joined via
+`kubeadm` with `containerd` as the runtime and `Calico` (VXLAN) as the CNI. Only worker
+nodes are supported on Windows - the control plane, etcd, proxies and CNI controllers all
+remain Linux, so sections 1-3 and 5 above are unaffected and unchanged.
+
+The CIS Kubernetes Benchmark 4.x worker-node controls are mapped below. Where a control has
+no meaning on Windows (no sysctls, no iptables, no seccomp/AppArmor), it is documented as
+Not Applicable rather than silently dropped. For OS-level hardening beyond the Kubernetes
+benchmark, Windows worker nodes are additionally hardened against relevant **DISA Microsoft
+Windows Server STIG** controls (see below).
+
+### 4.1.1 (Windows) - kubelet service file permissions
+
+Not applicable as written (no systemd unit file on Windows). The kubelet Windows service
+binary path and config directory are instead locked down via NTFS ACLs restricted to
+`SYSTEM` and `Administrators` - see `roles/kubernetes-windows` (`win_acl`/`win_acl_inheritance`).
+
+### 4.1.9 (Windows) - kubelet config.yaml file permissions
+
+Fixed via NTFS ACLs (see above) applied to `kubernetes_windows_config_directory` and
+`kubernetes_windows_pki_directory`, equivalent intent to the Linux `chmod 600`/`chown root:root` controls.
+
+### 4.2.5 (Windows) - streamingConnectionIdleTimeout
+
+Fixed - same `kubernetes_streamingconnectionidletimeout` value is rendered into the Windows
+kubelet configuration (`roles/kubernetes-windows/templates/kubelet-config-*.yaml.j2`).
+
+### 4.2.10, 4.2.11 (Windows) - certificate rotation
+
+Fixed - `rotateCertificates`/`serverTLSBootstrap` are kubelet-level settings that apply
+identically on Windows.
+
+### 4.2.12 (Windows) - strong cryptographic ciphers
+
+Fixed - same `kubernetes_strong_cypher_suites` list applied to the Windows kubelet config.
+
+### 4.2.13 (Windows) - pod PIDs limit
+
+Fixed - `podPidsLimit` applies identically on Windows.
+
+### 4.2.14 (Windows) - seccomp default
+
+**Not applicable.** Windows has no seccomp; the `seccompDefault` kubelet field is Linux-only
+and is intentionally omitted from the Windows kubelet configuration.
+
+### STIG V-242434 (Windows) - protectKernelDefaults
+
+**Not applicable.** There is no Linux kernel/sysctl layer on Windows; this control is omitted
+for Windows nodes.
+
+### Not applicable controls (Linux-kernel specific)
+
+The following controls have no Windows equivalent and are intentionally not implemented for
+Windows worker nodes: `--protect-kernel-defaults`, `--make-iptables-util-chains`, AppArmor/SELinux
+profiles, seccomp profiles, and systemd service hardening (`PrivateTmp`, `NoNewPrivileges`, etc.).
+
+### DISA Microsoft Windows Server STIG controls applied
+
+* Windows Defender Firewall inbound rules restricted to only the ports required for cluster
+  operation: kubelet (10250/tcp), the configured NodePort range, and the Calico VXLAN overlay
+  port (4789/udp) - see `roles/container-runtime-windows` (`win_firewall_rule`).
+* NTFS ACLs on kubernetes config/PKI/containerd directories restricted to `SYSTEM` and
+  `Administrators`, with inheritance disabled - see `roles/kubernetes-windows` and
+  `roles/container-runtime-windows` (`win_acl`, `win_acl_inheritance`).
+* Windows Advanced Audit Policy (`auditpol`) object-access auditing enabled on the kubernetes
+  config/PKI directories, the Windows equivalent of Linux `auditd`/Kubernetes API audit logging.
+* Anonymous kubelet authentication (`anonymous.enabled: false`) and Webhook authorization are
+  enforced identically to Linux workers.
+
+**Known gap:** the kubelet Windows service currently runs as `LocalSystem`
+(`kubernetes_windows_kubelet_service_account`) because HostProcess container support requires
+it; a least-privilege dedicated service account is not yet implemented. Track this as a follow-up
+if full STIG service-account hardening is required.
+

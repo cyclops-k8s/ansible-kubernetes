@@ -1,0 +1,164 @@
+# Mirrors roles/kubernetes (prereqs) for Windows Server 2025 worker nodes.
+# Downloads kubelet/kube-proxy/kubeadm, lays out C:\k, hardens config dirs (STIG/CIS-equivalent
+# controls), and registers the kubelet Windows service (not yet started - see kubernetes-worker-windows).
+
+- name: Create kubernetes directories
+  loop:
+  - "{{ kubernetes_windows_bin_directory }}"
+  - "{{ kubernetes_windows_config_directory }}"
+  - "{{ kubernetes_windows_pki_directory }}"
+  - "{{ kubernetes_windows_output_directory }}"
+  - "{{ kubernetes_windows_kubelet_directory }}"
+  - "{{ kubernetes_windows_kubeproxy_directory }}"
+  loop_control:
+    loop_var: kubernetes_windows_directory
+  ansible.windows.win_file:
+    path: "{{ kubernetes_windows_directory }}"
+    state: directory
+
+# Windows binaries aren't available via apt/dnf (unlike the Linux roles, which install the latest
+# patch release automatically), so the latest patch for kubernetes_version is resolved from
+# Kubernetes' own release discovery endpoint instead of hardcoding patch .0 forever.
+- name: Resolve the latest patch version for kubernetes_version
+  become: false
+  delegate_to: localhost
+  register: kubernetes_windows_latest_patch
+  ansible.builtin.uri:
+    return_content: true
+    url: "https://dl.k8s.io/release/stable-{{ kubernetes_version }}.txt"
+
+- name: Set fact for the Windows binary version to install
+  ansible.builtin.set_fact:
+    kubernetes_windows_binary_version: "{{ kubernetes_windows_latest_patch.content | trim }}"
+
+- name: Download kubernetes node binaries
+  loop:
+  - kubelet
+  - kubeadm
+  loop_control:
+    loop_var: kubernetes_windows_binary
+  ansible.windows.win_get_url:
+    dest: "{{ kubernetes_windows_bin_directory }}\\{{ kubernetes_windows_binary }}.exe"
+    url: "https://dl.k8s.io/{{ kubernetes_windows_binary_version }}/bin/windows/amd64/{{ kubernetes_windows_binary }}.exe"
+
+- name: Add C:\k to the machine PATH
+  register: kubernetes_windows_path_result
+  ansible.windows.win_path:
+    elements:
+    - "{{ kubernetes_windows_bin_directory }}"
+    scope: machine
+
+# Machine PATH changes are not visible to already-running processes - sshd (and any shell it
+# spawns for subsequent ansible tasks/connections) inherits the STALE environment block it had
+# at its own startup, not a live view of the registry. Without this, kubeadm's own preflight
+# check ("cannot execute 'kubelet --version': executable file not found in %PATH%") fails
+# because it looks up kubelet via a bare PATH lookup, not the configured directory.
+- name: Reboot if C:\k was newly added to the machine PATH
+  when: kubernetes_windows_path_result.changed
+  ansible.windows.win_reboot:
+
+# CIS 1.1.20 / 4.1.9 equivalent - STIG (Windows): restrict kubernetes config/PKI directories to
+# SYSTEM and Administrators only, equivalent intent to the 0600/root:root controls on Linux.
+- name: Disable ACL inheritance on kubernetes config/PKI directories
+  loop:
+  - "{{ kubernetes_windows_config_directory }}"
+  - "{{ kubernetes_windows_pki_directory }}"
+  loop_control:
+    loop_var: kubernetes_windows_secure_directory
+  ansible.windows.win_acl_inheritance:
+    path: "{{ kubernetes_windows_secure_directory }}"
+    reorganize: true
+    state: absent
+
+- name: Grant SYSTEM/Administrators access to kubernetes config/PKI directories
+  loop: "{{ kubernetes_windows_acl_principals | product([kubernetes_windows_config_directory, kubernetes_windows_pki_directory]) | list }}"
+  loop_control:
+    loop_var: kubernetes_windows_acl_entry
+    label: "{{ kubernetes_windows_acl_entry[0] }} -> {{ kubernetes_windows_acl_entry[1] }}"
+  ansible.windows.win_acl:
+    path: "{{ kubernetes_windows_acl_entry[1] }}"
+    rights: FullControl
+    state: present
+    type: allow
+    user: "{{ kubernetes_windows_acl_entry[0] }}"
+
+# STIG (Windows) - Windows Advanced Audit Policy: enable the File System object-access
+# subcategory, then apply a SACL to the kubernetes config/PKI directories so access to those
+# specific paths is actually logged (the audit subcategory alone does not generate events -
+# a SACL on the object is also required). Windows equivalent of Linux auditd/Kubernetes API audit.
+# NOTE: this is a SACL (audit rule), not a DACL/permission grant - user: Everyone + rights:
+# FullControl here means "log all access attempts by anyone", it does NOT grant access. The
+# actual access restriction to SYSTEM/Administrators is the win_acl task above.
+- name: Enable File System object access audit subcategory
+  ansible.windows.win_shell: |
+    auditpol /set /subcategory:"File System" /success:enable /failure:enable
+  changed_when: false
+
+- name: Apply SACL audit rules to kubernetes config/PKI directories
+  loop:
+  - "{{ kubernetes_windows_config_directory }}"
+  - "{{ kubernetes_windows_pki_directory }}"
+  loop_control:
+    loop_var: kubernetes_windows_audit_directory
+  community.windows.win_audit_rule:
+    audit_flags: Success,Failure
+    inheritance_flags: ContainerInherit,ObjectInherit
+    path: "{{ kubernetes_windows_audit_directory }}"
+    rights: FullControl
+    state: present
+    user: Everyone
+
+# CIS 4.2.x equivalent - kubelet flags. Linux-only flags (protect-kernel-defaults,
+# make-iptables-util-chains) are intentionally not set - Windows has no sysctl/iptables.
+- name: Render Windows kubelet configuration
+  ansible.builtin.include_tasks:
+    file: render-kubelet-config.yaml
+
+- name: Render kubelet Windows service startup script
+  ansible.windows.win_template:
+    dest: "{{ kubernetes_windows_bin_directory }}\\StartKubelet.ps1"
+    src: StartKubelet.ps1.j2
+
+- name: Check if the kubelet Windows service is already registered
+  register: kubernetes_windows_kubelet_service_check
+  ansible.windows.win_service:
+    name: kubelet
+
+# kubelet.exe does not implement the native Windows Service Control dispatcher protocol, so it
+# cannot be registered directly via sc.exe/ansible.windows.win_service (it will always fail with
+# "The service did not respond to the start or control request in a timely fashion" as soon as
+# kubeadm or Windows tries to start it). nssm (https://nssm.cc/) is used as a service wrapper
+# instead - the same approach used by the upstream kubernetes-sigs/sig-windows-tools
+# PrepareNode.ps1 script.
+- name: Download nssm (Windows service wrapper for kubelet)
+  when: not kubernetes_windows_kubelet_service_check.exists
+  ansible.windows.win_get_url:
+    dest: "{{ kubernetes_windows_bin_directory }}\\nssm.zip"
+    url: "https://k8stestinfrabinaries.blob.core.windows.net/nssm-mirror/nssm-{{ kubernetes_windows_nssm_version }}.zip"
+
+- name: Extract nssm.exe
+  when: not kubernetes_windows_kubelet_service_check.exists
+  ansible.windows.win_shell: |
+    tar.exe -C "{{ kubernetes_windows_bin_directory }}" -xf "{{ kubernetes_windows_bin_directory }}\nssm.zip" --strip-components 2 */win64/nssm.exe
+  args:
+    creates: "{{ kubernetes_windows_bin_directory }}\\nssm.exe"
+
+- name: Register kubelet as a Windows service via nssm (not started yet)
+  when: not kubernetes_windows_kubelet_service_check.exists
+  ansible.windows.win_shell: |
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" install kubelet "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -ExecutionPolicy Bypass -NoProfile -File "{{ kubernetes_windows_bin_directory }}\StartKubelet.ps1"
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet AppDirectory "{{ kubernetes_windows_bin_directory }}"
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet AppStdout "{{ kubernetes_windows_output_directory }}\kubelet-stdout.log"
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet AppStderr "{{ kubernetes_windows_output_directory }}\kubelet-stderr.log"
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet AppRotateFiles 1
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet AppRotateOnline 1
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet AppRotateSeconds 86400
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet AppRotateBytes 10485760
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet DependOnService containerd
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet ObjectName "{{ kubernetes_windows_kubelet_service_account }}"
+    & "{{ kubernetes_windows_bin_directory }}\nssm.exe" set kubelet Start SERVICE_DEMAND_START
+
+- name: Post configure Windows worker hooks
+  when: kubernetes_hookfiles.post_configure_windows_workers is defined
+  with_items: "{{ kubernetes_hookfiles.post_configure_windows_workers }}"
+  ansible.builtin.include_tasks: "{{ item }}"

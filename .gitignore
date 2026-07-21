@@ -53,3 +53,7 @@ terraform.rc
 
 # End of https://www.toptal.com/developers/gitignore/api/ansible,terraform
 !test.tfvars
+
+# Manual scratch test inventory - contains real secrets (e.g. encryption keys) generated locally,
+# must never be committed. See manual-test/README.md.
+manual-test/

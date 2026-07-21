@@ -192,3 +192,57 @@
       connect_timeout: 10
       msg: Reboot host to complete Kubernetes reset
       reboot_timeout: 300
+
+# Windows worker nodes are cleaned up in their own play - entirely different mechanics to the
+# Linux play above (no apt/systemd, no sudo). Skipped entirely if the windows_worker_nodes group
+# is empty/undefined. Paths are hardcoded to match this repo's kubernetes_windows_* defaults
+# (see roles/kubernetes-defaults/defaults/main.yml), same style as the hardcoded Linux paths
+# above - this play does not include the kubernetes-defaults role.
+- name: Cleanup Windows worker nodes
+  become: false
+  hosts: windows_worker_nodes
+  serial: 100
+  tasks:
+
+  - name: Reset kubeadm
+    failed_when: false
+    ansible.windows.win_command:
+      cmd: >-
+        "C:\k\kubeadm.exe" reset --force
+        --cri-socket "npipe:////./pipe/containerd-containerd"
+
+  - name: Stop and remove the kubelet service
+    failed_when: false
+    ansible.windows.win_service:
+      name: kubelet
+      state: absent
+
+  - name: Stop and remove the containerd service
+    failed_when: false
+    ansible.windows.win_service:
+      name: containerd
+      state: absent
+
+  - name: Remove containerd/CNI bin directories from the machine PATH
+    ansible.windows.win_path:
+      elements:
+      - C:\k
+      - C:\Program Files\containerd\bin
+      state: absent
+
+  - name: Remove Kubernetes/containerd/CNI directories and files
+    failed_when: false
+    loop:
+    - C:\k
+    - C:\etc\kubernetes
+    - C:\etc\cni
+    - C:\opt\cni
+    - C:\Program Files\containerd
+    - C:\var\log\kubernetes
+    - C:\var\lib\kubelet
+    - C:\var\lib\kube-proxy
+    loop_control:
+      loop_var: windows_reset_path
+    ansible.windows.win_file:
+      path: "{{ windows_reset_path }}"
+      state: absent
