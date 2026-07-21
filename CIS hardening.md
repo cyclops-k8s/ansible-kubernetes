@@ -47,14 +47,16 @@ Set by default
 Fixed using automatic certificate renewal and issuing to kubelets
 
 ### 1.2.6 - Ensure that the --authorization-mode argument is not set to AlwaysAllow
+
 ### 1.2.7 - Ensure that the --authorization-mode argument includes Node
+
 ### 1.2.8 - Ensure that the --authorization-mode argument includes RBAC
 
 We set the auth mode to RBAC,Node by default with the ability to add webhooks
 
 ### 1.2.9 - Ensure that the admission control plugin EventRateLimit is set (Manual)
 
-**Not implemented yet**
+Not implemented yet
 
 ### 1.2.10
 

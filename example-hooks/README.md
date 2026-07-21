@@ -1,4 +1,4 @@
-# Examples
+# Example Hooks
 
 These are some example hooks you can put into the ansible playbook in order to kustomize your Kubernetes cluster.
 
