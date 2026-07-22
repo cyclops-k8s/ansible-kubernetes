@@ -44,7 +44,11 @@
 
           if [[ "$CURRENT_VERSION" != "" ]]
           then
-            REQUESTED_VERSION="$(sed 's/v//' <<< $CURRENT_VERSION)-"
+            # replace any '-' with '~' to match the apt versioning scheme for pre-release versions
+            REQUESTED_VERSION="$(sed 's/-/~/g' <<< $CURRENT_VERSION)"
+
+            # remove the leading 'v' from the current version and append a '-' to match the apt versioning scheme
+            REQUESTED_VERSION="$(sed 's/v//' <<< $REQUESTED_VERSION)-"
           fi
 
           apt-cache madison kubeadm | grep "$REQUESTED_VERSION" | head -n 1 | awk '{print $3}'
@@ -58,7 +62,7 @@
     - name: Install cri-tools, kubeadm, kubelet, kubectl
       vars:
         packages:
-        - cri-tools={{ kubernetes_version }}.*
+        - cri-tools{{ kubernetes_cri_tools_version if kubernetes_cri_tools_version is not none else '=' ~ kubernetes_version ~ '.*' }}
         - kubeadm={{ k8s_version }}
         - kubelet={{ k8s_version }}
         - kubectl={{ k8s_version }}
@@ -135,7 +139,7 @@
     - name: Install cri-tools, kubeadm, kubelet, kubectl
       vars:
         packages:
-        - cri-tools-{{ kubernetes_version }}.*
+        - cri-tools{{ kubernetes_cri_tools_version if kubernetes_cri_tools_version is not none else '-' ~ kubernetes_version ~ '.*' }}
         - kubeadm-{{ k8s_version }}
         - kubelet-{{ k8s_version }}
         - kubectl-{{ k8s_version }}
@@ -164,6 +168,17 @@
       enabled: true
       name: kubelet
       state: started
+
+  # noqa: var-naming[no-role-prefix]
+  - name: Get kubeadm version
+    changed_when: false
+    register: kubeadm_version_output
+    ansible.builtin.command: kubeadm version -o short
+
+  # noqa: var-naming[no-role-prefix]
+  - name: Set kubeadm_version fact
+    ansible.builtin.set_fact:
+      kubeadm_version: "{{ kubeadm_version_output.stdout }}"
 
   rescue:
 
