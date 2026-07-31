@@ -3,14 +3,16 @@
 # actually using Calico for Windows (kubernetes_windows_cni: calico) should reference this file,
 # via kubernetes_hookfiles.post_configure_windows_workers.
 #
-# kubernetes_windows_cni / kubernetes_windows_cni_calico_mode used to live in
-# roles/kubernetes-defaults, but were moved here since this hook is their only consumer - clusters
-# not using Calico never need to see Calico-specific variables in the base role defaults. Set via
-# `| default(...)` so they can still be overridden via inventory/group_vars as before.
+# kubernetes_windows_cni / kubernetes_windows_cni_calico_mode / kubernetes_windows_firewall_vxlan_port
+# used to live in roles/kubernetes-defaults, but were moved here since this hook is their only
+# consumer - clusters not using Calico never need to see Calico-specific variables in the base
+# role defaults. Set via `| default(...)` so they can still be overridden via inventory/group_vars
+# as before.
 - name: Set default CNI facts for the Calico Windows firewall hook
   ansible.builtin.set_fact:
     kubernetes_windows_cni: "{{ kubernetes_windows_cni | default('calico') }}"
     kubernetes_windows_cni_calico_mode: "{{ kubernetes_windows_cni_calico_mode | default('vxlan') }}"
+    kubernetes_windows_firewall_vxlan_port: "{{ kubernetes_windows_firewall_vxlan_port | default(4789) }}"
 
 # STIG (Windows) - only opens the CNI overlay port when Calico is actually running in VXLAN mode.
 # kubernetes_windows_cni_calico_mode also supports non-VXLAN encapsulation (e.g. BGP), which needs

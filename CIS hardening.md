@@ -313,8 +313,10 @@ profiles, seccomp profiles, and systemd service hardening (`PrivateTmp`, `NoNewP
 ### DISA Microsoft Windows Server STIG controls applied
 
 * Windows Defender Firewall inbound rules restricted to only the ports required for cluster
-  operation: kubelet (10250/tcp), the configured NodePort range, and the Calico VXLAN overlay
-  port (4789/udp) - see `roles/container-runtime-windows` (`win_firewall_rule`).
+  operation: kubelet (10250/tcp) and the configured NodePort range - see
+  `roles/container-runtime-windows` (`win_firewall_rule`). The CNI overlay port (e.g. Calico's
+  VXLAN, 4789/udp) is opened by the CNI's own hook instead, since this role has no guarantee
+  which CNI a given cluster uses - see `example-hooks/install-calico-windows`.
 * NTFS ACLs on kubernetes config/PKI/containerd directories restricted to `SYSTEM` and
   `Administrators`, with inheritance disabled - see `roles/kubernetes-windows` and
   `roles/container-runtime-windows` (`win_acl`, `win_acl_inheritance`).

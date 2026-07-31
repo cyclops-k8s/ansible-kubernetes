@@ -43,16 +43,20 @@
 
 # Windows binaries aren't available via apt/dnf (unlike the Linux roles, which install the latest
 # patch release automatically), so the latest patch for kubernetes_version is resolved from
-# Kubernetes' own release discovery endpoint instead of hardcoding patch .0 forever.
+# Kubernetes' own release discovery endpoint instead of hardcoding patch .0 forever. Skipped
+# entirely if the user already pinned kubernetes_windows_binary_version (e.g. '1.36.4') via
+# inventory/group_vars/-e, which is null by default.
 - name: Resolve the latest patch version for kubernetes_version
   become: false
   delegate_to: localhost
+  when: kubernetes_windows_binary_version is none
   register: kubernetes_windows_latest_patch
   ansible.builtin.uri:
     return_content: true
     url: "https://dl.k8s.io/release/stable-{{ kubernetes_version }}.txt"
 
 - name: Set fact for the Windows binary version to install
+  when: kubernetes_windows_binary_version is none
   ansible.builtin.set_fact:
     kubernetes_windows_binary_version: "{{ kubernetes_windows_latest_patch.content | trim }}"
 
@@ -128,4 +132,4 @@
   retries: 60
   until: node_ready.rc == 0
   ansible.builtin.command:
-    cmd: kubectl wait --for=condition=Ready node/{{ inventory_hostname_short }} --timeout=30s --kubeconfig /etc/kubernetes/admin.conf
+    cmd: kubectl wait --for=condition=Ready node/{{ inventory_hostname_short }} --timeout=1s --kubeconfig /etc/kubernetes/admin.conf

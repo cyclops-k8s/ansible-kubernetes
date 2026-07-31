@@ -188,7 +188,7 @@ Existing Linux-oriented hook points (`post_install_packages`, `post_security`, e
 intentionally **not** reused for Windows nodes, since hook files written for Linux use
 `ansible.builtin.*` modules that don't work against a Windows host.
 
-**Compliance:** see the new "Windows Worker Nodes" section in [CIS hardening.md](CIS%20hardening.md)
+**Compliance:** see the "Windows Worker Nodes" section in [CIS hardening.md](CIS%20hardening.md)
 for the CIS Kubernetes Benchmark mapping and the DISA Microsoft Windows Server STIG controls applied.
 
 **Manual validation:** a scratch inventory for testing against real VMs (as opposed to the
