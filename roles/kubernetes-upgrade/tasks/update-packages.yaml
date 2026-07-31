@@ -3,7 +3,7 @@
   block:
   - name: Update cri-tools, kubelet and kubectl to specified k8s_version
     with_items:
-    - cri-tools={{ kubernetes_version }}.*
+    - cri-tools{{ kubernetes_cri_tools_version if kubernetes_cri_tools_version is not none else '=' ~ kubernetes_version ~ '.*' }}
     - kubelet={{ k8s_version }}
     - kubectl={{ k8s_version }}
     ansible.builtin.apt:
@@ -20,7 +20,7 @@
     ansible.builtin.apt:
       allow_change_held_packages: true
       allow_downgrade: true
-      name: "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io=' + containerd_version }}"
+      name: "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io=' ~ containerd_version }}"
       only_upgrade: "{{ containerd_version == 'latest' }}"
       state: "{{ 'present' if containerd_version != 'latest' else 'latest' }}"
 
@@ -55,7 +55,7 @@
 
   - name: Update cri-tools, kubelet and kubectl to specified k8s_version
     with_items:
-    - cri-tools-{{ kubernetes_version }}.*
+    - cri-tools{{ kubernetes_cri_tools_version if kubernetes_cri_tools_version is not none else '-' ~ kubernetes_version ~ '.*' }}
     - kubelet-{{ k8s_version }}
     - kubectl-{{ k8s_version }}
     ansible.builtin.dnf:
@@ -70,7 +70,7 @@
   - name: Upgrade containerd
     ansible.builtin.dnf:
       allow_downgrade: true
-      name: "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io-' + containerd_version }}"
+      name: "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io-' ~ containerd_version }}"
       state: "{{ 'latest' if containerd_version == 'latest' else 'present' }}"
 
   # TODO: support crio

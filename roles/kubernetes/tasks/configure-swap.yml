@@ -9,5 +9,5 @@
 
 - name: Disable swap
   changed_when: true
-  when: ansible_facts["swaptotal_mb"] > 0 and allowswap is not defined
+  when: ansible_facts["swaptotal_mb"] > 0 and not kubernetes_allow_swap
   ansible.builtin.command: swapoff -a

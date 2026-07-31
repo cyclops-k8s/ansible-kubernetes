@@ -38,7 +38,7 @@
   ansible.builtin.import_tasks: configure-kernel.yml
 
 - name: Configure Swap
-  when: allowswap is not defined
+  when: not kubernetes_allow_swap
   ansible.builtin.import_tasks: configure-swap.yml
 
 - name: Pull kubernetes images

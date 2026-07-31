@@ -34,7 +34,7 @@
       {{
         (first_kube_control_plane == inventory_hostname) |
         ternary(
-          'kubeadm upgrade apply ' ~ kubeadm_version.stdout ~ ' --config ' ~ kubernetes_config_directory ~ '/kubeadm-upgrade.yaml --yes',
+          'kubeadm upgrade apply ' ~ kubeadm_version ~ ' --config ' ~ kubernetes_config_directory ~ '/kubeadm-upgrade.yaml --yes',
           'kubeadm upgrade node --config ' ~ kubernetes_config_directory ~ '/kubeadm-upgrade.yaml'
         )
       }}

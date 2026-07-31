@@ -1,0 +1,27 @@
+# STIG: V-254800
+apiVersion: apiserver.config.k8s.io/v1
+kind: AdmissionConfiguration
+plugins:
+- name: PodSecurity
+  configuration:
+    apiVersion: pod-security.admission.config.k8s.io/v1
+    kind: PodSecurityConfiguration
+    # Defaults applied when a mode label is not set.
+    defaults:
+      enforce: "{{ kubernetes_admission_configuration.enforce }}"
+      enforce-version: "{{ kubernetes_admission_configuration.enforce_version }}"
+      audit: "{{ kubernetes_admission_configuration.audit }}"
+      audit-version: "{{ kubernetes_admission_configuration.audit_version }}"
+      warn: "{{ kubernetes_admission_configuration.warn }}"
+      warn-version: "{{ kubernetes_admission_configuration.warn_version }}"
+    exemptions:
+      # Don't forget to exempt namespaces or users that are responsible for deploying
+      # cluster components, because they need to run privileged containers
+      usernames:
+{% for username in kubernetes_admission_configuration.exemptions.usernames %}
+      - {{ username }}
+{% endfor %}
+      namespaces:
+{% for namespace in kubernetes_admission_configuration.exemptions.namespaces %}
+      - {{ namespace }}
+{% endfor %}

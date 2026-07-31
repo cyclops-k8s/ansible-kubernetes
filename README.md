@@ -191,6 +191,8 @@ intentionally **not** reused for Windows nodes, since hook files written for Lin
 **Compliance:** see the "Windows Worker Nodes" section in [CIS hardening.md](CIS%20hardening.md)
 for the CIS Kubernetes Benchmark mapping and the DISA Microsoft Windows Server STIG controls applied.
 
-**Manual validation:** a scratch inventory for testing against real VMs (as opposed to the
-Terraform-managed `test/`/`ci-cd/test/` harnesses) is provided in [`manual-test/`](manual-test).
+## Pre-release versions
 
+To install a pre-release version you will need to change at least one value, the `kubernetes_mirror_channel` fact needs to be set to `prerelease`.
+
+Another thing you may need to set is the `kubernetes_cri_tools_version` fact. The cri-tools does not always match the Kubernetes version in prerelease package repository. You will want to set that to an empty string or the exact version number in the package repository.

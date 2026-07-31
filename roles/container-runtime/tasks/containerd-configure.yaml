@@ -160,7 +160,7 @@
         _spec: "{{ oci_spec_raw.stdout | from_json }}"
         _nofile_patched: "{{ _spec.process.rlimits | selectattr('type', 'equalto', 'RLIMIT_NOFILE') | list | first | combine({'soft': kubernetes_containerd_rlimit_nofile_soft, 'hard': kubernetes_containerd_rlimit_nofile_hard}) }}"
         _other_rlimits: "{{ _spec.process.rlimits | rejectattr('type', 'equalto', 'RLIMIT_NOFILE') | list }}"
-        _patched_spec: "{{ _spec | combine({'process': _spec.process | combine({'rlimits': _other_rlimits + [_nofile_patched]})}, recursive=True) }}"
+        _patched_spec: "{{ _spec | combine({'process': _spec.process | combine({'rlimits': (_other_rlimits | default([], true) | list) + [_nofile_patched]})}, recursive=True) }}"
       ansible.builtin.copy:
         content: "{{ _patched_spec | to_nice_json }}\n"
         dest: /etc/containerd/cri-base.json

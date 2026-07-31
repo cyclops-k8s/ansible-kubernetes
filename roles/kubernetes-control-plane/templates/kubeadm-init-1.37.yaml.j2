@@ -27,6 +27,7 @@ memorySwap:
 ---
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
+kubernetesVersion: "{{ kubernetes_full_version_override if kubernetes_full_version_override is defined else kubeadm_version }}"
 controlPlaneEndpoint: "{{ kubernetes_api_endpoint }}:{{ kubernetes_api_port }}"
 controllerManager:
   extraArgs:
@@ -121,9 +122,6 @@ apiServer:
 {% endif %}
   certSANs:
   - "{{ kubernetes_api_endpoint }}"
-{% if kubernetes_control_plane_ip is defined and kubernetes_control_plane_ip != None %}
-  - "{{ kubernetes_control_plane_ip }}"
-{% endif %}
   extraVolumes:
 {% for volume in kubernetes_api_server_additional_mounts %}
     - name: {{ volume.name }}

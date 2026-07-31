@@ -1,0 +1,15 @@
+# encrypt everything in etcd
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- resources:
+  - '*.*'
+  providers:
+  - secretbox:
+      keys:
+      - name: {{ kubernetes_encryption_key_name }}
+        secret: {{ kubernetes_encryption_key }}
+{% for key in kubernetes_encryption_additional_keys %}
+      - name: {{ key.name }}
+        secret: {{ key.key }}
+{% endfor %}

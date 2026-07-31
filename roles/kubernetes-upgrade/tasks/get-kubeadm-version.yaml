@@ -60,5 +60,9 @@
 
 - name: Get kubeadm version
   changed_when: false
-  register: kubeadm_version
+  register: kubeadm_version_output
   ansible.builtin.command: kubeadm version -o short
+
+- name: Set kubeadm_version fact
+  ansible.builtin.set_fact:
+    kubeadm_version: "{{ kubeadm_version_output.stdout }}"
