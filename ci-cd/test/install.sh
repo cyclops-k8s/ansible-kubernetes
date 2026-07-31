@@ -73,4 +73,4 @@ echo "Running the ansible playbook to install kubernetes"
 ansible-playbook -i "inventory.yaml" -i tofu/vars.yaml ../../install.yaml
 
 echo "Waiting for calico-node pods to be ready"
-kubectl --namespace kube-system wait --for=condition=Ready pod -l k8s-app=calico-node --timeout=10m0s
+kubectl --namespace calico-system wait --for=condition=Ready pod -l k8s-app=calico-node --timeout=10m0s

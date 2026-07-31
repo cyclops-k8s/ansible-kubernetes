@@ -70,6 +70,44 @@
   - role: kubernetes-defaults
   - role: post-kubernetes-worker
 
+# The following plays are opt-in and only run against hosts placed in the `windows_worker_nodes`
+# inventory group. If that group is empty or undefined, Ansible matches zero hosts and these
+# plays are skipped entirely - existing Linux-only clusters are unaffected.
+# Windows Server 2025 has no sudo, so `become` is not set (defaults to false) on these plays.
+- name: Install Windows container runtime prerequisites
+  any_errors_fatal: true
+  gather_facts: true
+  hosts: windows_worker_nodes
+  roles:
+  - role: kubernetes-defaults
+  - role: container-runtime-windows
+
+- name: Install Windows kubernetes pre-requisites
+  any_errors_fatal: true
+  hosts: windows_worker_nodes
+  roles:
+  - role: kubernetes-defaults
+  - role: kubernetes-windows
+
+- name: Install Windows worker nodes
+  any_errors_fatal: true
+  hosts: windows_worker_nodes
+  roles:
+  - role: kubernetes-defaults
+  - role: kubernetes-worker-windows
+
+- name: Post Windows worker node hooks
+  any_errors_fatal: true
+  hosts: windows_worker_nodes
+  roles:
+  - role: kubernetes-defaults
+  tasks:
+  - name: Post Windows workers hooks
+    when:
+    - kubernetes_hookfiles.post_windows_workers is defined
+    with_items: "{{ kubernetes_hookfiles.post_windows_workers }}"
+    ansible.builtin.include_tasks: "{{ item }}"
+
 - name: Post Cluster Finalization
   any_errors_fatal: true
   become: true

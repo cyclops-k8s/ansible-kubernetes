@@ -3,3 +3,6 @@ collections:
 - name: community.general
 - name: ansible.posix
 - name: community.dns
+# Required for Windows worker node support (windows_worker_nodes group)
+- name: ansible.windows
+- name: community.windows

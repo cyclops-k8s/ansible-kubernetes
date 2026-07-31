@@ -1,0 +1,38 @@
+- name: "Get certificate signing requests as JSON - pass {{ csr_pass }}"
+  become: true
+  changed_when: false
+  delegate_to: "{{ first_kube_control_plane }}"
+  register: csr_json
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf get csr -o json
+
+- name: "Filter to pending CSRs for this node - pass {{ csr_pass }}"
+  vars:
+    all_csrs: "{{ (csr_json.stdout | from_json)['items'] }}"
+    node_csrs: "{{ all_csrs | selectattr('spec.username', 'equalto', 'system:node:' ~ kubernetes_node_name) | list }}"
+  ansible.builtin.set_fact:
+    pending_csrs: >-
+      {%- set ns = namespace(result=[]) -%}
+      {%- for csr in node_csrs -%}
+        {%- if 'Approved' not in (csr.status.conditions | default([]) | map(attribute='type') | list) -%}
+          {%- set ns.result = ns.result + [csr.metadata.name] -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ ns.result }}
+
+- name: "Approve certificate signing requests - pass {{ csr_pass }}"
+  become: true
+  changed_when: true
+  delegate_to: "{{ first_kube_control_plane }}"
+  loop: "{{ pending_csrs }}"
+  loop_control:
+    loop_var: csr_name
+  when:
+  - pending_csrs | length > 0
+  ansible.builtin.command:
+    cmd: kubectl --kubeconfig /etc/kubernetes/admin.conf certificate approve "{{ csr_name }}"
+
+- name: "Wait before next CSR approval - pass {{ csr_pass }}"
+  when: csr_pass | int < 6
+  ansible.builtin.pause:
+    seconds: 5

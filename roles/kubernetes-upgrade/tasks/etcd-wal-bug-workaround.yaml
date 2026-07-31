@@ -37,8 +37,27 @@
       --cert=/etc/kubernetes/pki/etcd/server.crt
       --key=/etc/kubernetes/pki/etcd/server.key
 
+# CONFIRMED BUG (2026-07-19, live cluster): this task holds a single continuous SSH exec
+# channel open for the entire duration of the write loop (45-90+ minutes observed, since
+# snapshot-count=10000 means 10,001 separate `crictl exec` round trips even backgrounded 20 at a
+# time - the etcd container has no shell/`sh` binary at all, so batching the loop into one exec
+# via a wrapper script is not possible; each put must be its own crictl exec). Twice this caused
+# the single held-open SSH connection to go silently dead mid-task with no incremental output to
+# detect it (the remote script had likely already finished, but the control node never received
+# the completion signal and eventually reported "Shared connection to <host> closed" after
+# sitting stuck for well over an hour) - confirmed NOT a disk I/O problem (moving etcd's data
+# directory to tmpfs made no measurable difference).
+#
+# FIX: run the write loop via async/poll instead of a single synchronous, continuously-connected
+# task. `poll: 0` returns almost immediately after launching the script detached on the remote
+# host; a separate async_status polling task then checks completion via short, independent SSH
+# connections every 15s - if any single poll's connection drops, the NEXT poll just opens a new
+# one, rather than the entire task failing because one long-held channel died.
 - name: Write entries to force etcd raft snapshot
+  async: 7200
+  poll: 0
   changed_when: true
+  register: etcd_snapshot_write_job
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
@@ -53,6 +72,14 @@
       done
       wait
     executable: /bin/bash
+
+- name: Wait for the write job to complete
+  async_status:
+    jid: "{{ etcd_snapshot_write_job.ansible_job_id }}"
+  register: etcd_snapshot_write_job_result
+  until: etcd_snapshot_write_job_result.finished
+  retries: 480
+  delay: 15
 
 - name: Wait for raft snapshot to be written to disk
   ansible.builtin.pause:

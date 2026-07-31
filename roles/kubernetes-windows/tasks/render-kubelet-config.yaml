@@ -1,0 +1,9 @@
+# CIS 4.2.x equivalent - kubelet flags. Linux-only flags (protect-kernel-defaults,
+# make-iptables-util-chains) are intentionally not set - Windows has no sysctl/iptables.
+# Extracted as its own include file (rather than inline in tasks/main.yml) so
+# roles/kubernetes-upgrade-windows can reuse it to re-render the config for a new
+# kubernetes_version during an upgrade, without duplicating the 3 version-specific templates.
+- name: Render Windows kubelet configuration
+  ansible.windows.win_template:
+    dest: "{{ kubernetes_windows_bin_directory }}\\config.yaml"
+    src: kubelet-config-{{ kubernetes_version }}.yaml.j2

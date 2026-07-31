@@ -23,6 +23,30 @@
     state: directory
 
 # CIS 1.2.27
+# Renders unconditionally on every run (NOT gated on the file already existing) - this repo
+# supports encryption key rotation via kubernetes_encryption_key_name/kubernetes_encryption_key
+# (the primary/current key) plus kubernetes_encryption_additional_keys (old keys still needed to
+# decrypt existing data - see roles/kubernetes-defaults/defaults/main.yml). Gating this on
+# "file doesn't exist" would silently prevent that rotation workflow from ever taking effect.
+# Instead, the actual failure mode this previously caused (an invalid/placeholder
+# kubernetes_encryption_key value - e.g. left as the group_vars default/unset - being written
+# into a live cluster's encryption config and instantly crashing the apiserver) is prevented by
+# validating the key format below, so a bad value fails loudly here instead of corrupting the
+# live config file.
+- name: Validate the Kubernetes encryption key looks like a real base64-encoded 32-byte key
+  ansible.builtin.assert:
+    that:
+    - kubernetes_encryption_key is defined
+    - kubernetes_encryption_key is not none
+    - kubernetes_encryption_key is match('^[A-Za-z0-9+/]{43}=$')
+    - kubernetes_encryption_key_name is defined
+    - kubernetes_encryption_key_name | length > 0
+    fail_msg: >-
+      kubernetes_encryption_key must be a base64-encoded 32-byte key (44 characters, e.g. generated
+      with `head -c 32 /dev/urandom | base64`) and kubernetes_encryption_key_name must be set.
+      Refusing to render encryption.yaml with an invalid/missing key - this would otherwise crash
+      the apiserver or corrupt the live cluster's encryption config.
+
 - name: Copy Kubernetes encryption configuration file
   ansible.builtin.template:
     backup: true
