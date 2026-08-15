@@ -1,0 +1,10 @@
+spec:
+  containers:
+  - name: etcd
+    volumeMounts:
+    - mountPath: {{ kubernetes_etcd_snapshots_container_directory | default('/var/lib/etcd/snapshots') }}
+      name: etcd-snapshots
+  volumes:
+  - name: etcd-snapshots
+    hostPath:
+      path: {{ kubernetes_etcd_snapshots_host_directory | default('/var/lib/etcd/snapshots') }}

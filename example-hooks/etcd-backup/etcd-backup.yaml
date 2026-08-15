@@ -1,0 +1,107 @@
+- name: Install etcd-backup
+  delegate_to: "{{ first_kube_control_plane }}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  run_once: true
+  block:
+  - name: Set variable defaults
+    ansible.builtin.set_fact:
+      etcd_backup_crictl_path: "{{ etcd_backup_crictl_path | default('/usr/bin/crictl') }}"
+      etcd_backup_crictl_container_path: /opt/crictl
+      etcd_backup_cronjob_schedule: "{{ etcd_backup_cronjob_schedule | default('0 0 * * *') }}"
+      etcd_backup_extra_scripts: "{{ extra_etcd_backup_scripts | default([]) }}"
+      etcd_backup_image: "{{ etcd_backup_image | default('quay.io/cyclops-k8s/swiss-army-knife:lite-latest') }}"
+      etcd_backup_snapshots_amount_to_keep: "{{ etcd_backup_snapshots_amount_to_keep | default('10') }}"
+      etcd_backup_snapshots_container_source_directory: /opt/snapshots/source
+      etcd_backup_snapshots_container_target_directory: /opt/snapshots/targets
+      etcd_backup_snapshots_host_directory: "{{ etcd_backup_snapshots_host_directory | default('/var/lib/etcd/snapshots') }}"
+      etcd_backup_snapshots_retention_days: "{{ etcd_backup_snapshots_retention_days | default('7') }}"
+      etcd_backup_post_backup_script: "{{ etcd_backup_post_backup_script | default('') }}"
+
+  - name: Set etcd_backup_snapshot_target_volume fact
+    when: etcd_backup_snapshot_target_volume is not defined or etcd_backup_snapshot_target_volume is none
+    ansible.builtin.set_fact:
+      etcd_backup_snapshot_target_volume:
+        emptyDir:
+          medium: Memory
+
+  - name: Copy etcd-backup script to host
+    ansible.builtin.copy:
+      dest: "{{ kubernetes_config_directory }}/etcd-backup.sh"
+      src: "backup-script.sh"
+
+  - name: Create kubectl configmap for etcd-backup script command
+    ansible.builtin.set_fact:
+      etcd_backup_script_cmd: kubectl create configmap -n kube-system etcd-backup-scripts --from-file={{ kubernetes_config_directory }}/etcd-backup.sh
+
+  - name: Append additional scripts to etcd-backup script configmap command
+    loop: "{{ etcd_backup_extra_scripts }}"
+    loop_control:
+      loop_var: extra_script
+    ansible.builtin.set_fact:
+      etcd_backup_script_cmd: "{{ etcd_backup_script_cmd }} --from-file={{ extra_script }}"
+
+  - name: Create etcd-backup script configmap
+    changed_when: etcd_backup_script_configmap.rc == 0
+    failed_when: etcd_backup_script_configmap.rc != 0
+    register: etcd_backup_script_configmap
+    ansible.builtin.shell:
+      cmd: |
+        kubectl get configmap -n kube-system etcd-backup-scripts && kubectl delete configmap -n kube-system etcd-backup-scripts || true
+        {{ etcd_backup_script_cmd }}
+
+  - name: Create etcd-backup configmap
+    changed_when: etcd_backup_configmap.rc == 0
+    environment:
+      AMOUNT_TO_KEEP: "{{ etcd_backup_snapshots_amount_to_keep }}"
+      CRICTL_PATH: "{{ etcd_backup_crictl_container_path }}"
+      HOST_BACKUP_PATH: "{{ etcd_backup_snapshots_host_directory }}"
+      RETENTION_DAYS: "{{ etcd_backup_snapshots_retention_days }}"
+      SOURCE_PATH: "{{ etcd_backup_snapshots_container_source_directory }}"
+      TARGET_PATH: "{{ etcd_backup_snapshots_container_target_directory }}"
+      POST_BACKUP_SCRIPT: "{{ etcd_backup_post_backup_script }}"
+    failed_when: etcd_backup_configmap.rc != 0
+    register: etcd_backup_configmap
+    ansible.builtin.shell:
+      cmd: |
+        kubectl get configmap -n kube-system etcd-backup && kubectl delete configmap -n kube-system etcd-backup || true
+
+        kubectl create configmap \
+          -n kube-system etcd-backup \
+          --from-literal=AMOUNT_TO_KEEP="${AMOUNT_TO_KEEP}" \
+          --from-literal=CRICTL_PATH="${CRICTL_PATH}" \
+          --from-literal=SOURCE_PATH="${SOURCE_PATH}" \
+          --from-literal=HOST_BACKUP_PATH="${HOST_BACKUP_PATH}" \
+          --from-literal=RETENTION_DAYS="${RETENTION_DAYS}" \
+          --from-literal=TARGET_PATH="${TARGET_PATH}" \
+          --from-literal=POST_BACKUP_SCRIPT="${POST_BACKUP_SCRIPT}"
+
+  - name: Copy etcd-backup cronjob
+    ansible.builtin.template:
+      dest: "{{ kubernetes_config_directory }}/etcd-backup-cronjob.yaml"
+      group: root
+      mode: "0600"
+      owner: root
+      src: "cronjob.yaml"
+
+  - name: Apply etcd-backup cronjob
+    changed_when: etcd_backup_cronjob.rc == 0
+    failed_when: etcd_backup_cronjob.rc != 0
+    register: etcd_backup_cronjob
+    ansible.builtin.command:
+      cmd: kubectl apply -f "{{ kubernetes_config_directory }}/etcd-backup-cronjob.yaml"
+
+  rescue:
+  - name: Output etcd_backup configmap
+    when: etcd_backup_configmap is defined
+    ansible.builtin.debug:
+      msg: "{{ etcd_backup_configmap }}"
+
+  - name: Output etcd_backup
+    when: etcd_backup_cronjob is defined
+    ansible.builtin.debug:
+      msg: "{{ etcd_backup_cronjob }}"
+
+  - name: Etcd backup failed to install
+    ansible.builtin.fail:
+      msg: Etcd backup failed to install

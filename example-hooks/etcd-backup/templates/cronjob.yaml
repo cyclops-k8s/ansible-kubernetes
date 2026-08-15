@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+spec:
+  schedule: "{{ etcd_backup_cronjob_schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          hostNetwork: true
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: ""
+          tolerations:
+          - key: node-role.kubernetes.io/control-plane
+            effect: NoSchedule
+          restartPolicy: Never
+          containers:
+          - name: etcd-backup
+            envFrom:
+            - configMapRef:
+                name: etcd-backup
+            securityContext:
+              runAsUser: 0
+            image: "{{ etcd_backup_image }}"
+            command:
+            - /scripts/etcd-backup.sh
+            volumeMounts:
+            - mountPath: /opt/crictl
+              name: crictl
+            - mountPath: /scripts
+              name: scripts
+            - mountPath: /run/containerd/containerd.sock
+              name: containerd-socket
+            - mountPath: "{{ etcd_backup_snapshots_container_source_directory }}"
+              name: etcd-snapshots
+            - mountPath: "{{ etcd_backup_snapshots_container_target_directory }}"
+              name: snapshot-target
+          volumes:
+          - name: crictl
+            hostPath:
+              path: "{{ etcd_backup_crictl_path }}"
+              type: File
+          - name: containerd-socket
+            hostPath:
+              path: /run/containerd/containerd.sock
+              type: Socket
+          - name: etcd-snapshots
+            hostPath:
+              path: "{{ etcd_backup_snapshots_host_directory }}"
+              type: DirectoryOrCreate
+          - name: scripts
+            configMap:
+              name: etcd-backup-scripts
+              defaultMode: 0755
+          - name: snapshot-target
+            {{ etcd_backup_snapshot_target_volume | to_nice_yaml(indent=2) | indent(12) }}
