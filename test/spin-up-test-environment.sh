@@ -137,12 +137,12 @@ function create_vm() {
   MAC1=$(printf "52:54:00:00:01:%02x" "${ip}")
   cat cloud-init/network | \
     yq --yaml-output \
-      ".network.ethernets.eth0.match.macaddress = \"${MAC0}\" | \
-       .network.ethernets.eth0.nameservers.search = [ \"${DOMAIN}\" ] | \
-       .network.ethernets.eth0.nameservers.addresses = [\"${LOCAL_IP}\"] | \
-       .network.ethernets.eth0.mtu = ${MTU} | \
-       .network.ethernets.eth1.match.macaddress = \"${MAC1}\" | \
-       .network.ethernets.eth1.addresses += [\"${IP_PREFIX}.${ip}/24\"] | \
+      ".network.ethernets.public.match.macaddress = \"${MAC0}\" | \
+       .network.ethernets.public.nameservers.search = [ \"${DOMAIN}\" ] | \
+       .network.ethernets.public.nameservers.addresses = [\"${LOCAL_IP}\"] | \
+       .network.ethernets.public.mtu = ${MTU} | \
+       .network.ethernets.internal.match.macaddress = \"${MAC1}\" | \
+       .network.ethernets.internal.addresses += [\"${IP_PREFIX}.${ip}/24\"] | \
        ${ADDITIONAL_NETWORK_CONFIG}" \
     >> "${TEMP_DIR}/${name}.network"
 
@@ -184,7 +184,7 @@ function create_vm() {
   fi
   # shellcheck disable=SC2086
   # Create/start the virtual machine
-  sudo -b qemu-system-x86_64 \
+  nohup sudo qemu-system-x86_64 \
       -boot menu=off \
       -cdrom "${TEMP_DIR}/${name}.cloud-init.iso" \
       -cpu "${CPU}" \
@@ -198,7 +198,8 @@ function create_vm() {
       -nographic \
       -netdev user,id=net0,hostfwd="tcp::${ssh_port}-:22${additional_forwarding}" \
       -netdev socket,id=net1,mcast=230.0.0.1:1234 \
-      -smp "${cpu_num}" 1>"${TEMP_DIR}/${name}.stdout.log" 2>"${TEMP_DIR}/${name}.stderr.log"
+      -smp "${cpu_num}" 1>"${TEMP_DIR}/${name}.stdout.log" 2>"${TEMP_DIR}/${name}.stderr.log" \
+      -serial mon:stdio &
 
   # Allow the virtual machine some time to boot
   sleep 3
@@ -355,12 +356,12 @@ pkill ssh -x || true
 sudo pkill -f qemu-system-x86_64 || true
 
 # Create the virtual machines
-create_vm px  2021 11 ${PROXY_VM_CPU:-2} ${PROXY_VM_MEMORY:-2} 10 ",hostfwd=tcp::6443-:6443"
-create_vm cp1 2022 12 ${CONTROL_PLANE_VM_CPU:-2} ${CONTROL_PLANE_VM_MEMORY:-4} 20
-create_vm cp2 2023 13 ${CONTROL_PLANE_VM_CPU:-2} ${CONTROL_PLANE_VM_MEMORY:-4} 20
-create_vm cp3 2024 14 ${CONTROL_PLANE_VM_CPU:-2} ${CONTROL_PLANE_VM_MEMORY:-4} 20
-create_vm w1  2025 15 ${WORKER_VM_CPU:-2} ${WORKER_VM_MEMORY:-2} 20
-create_vm w2  2026 16 ${WORKER_VM_CPU:-2} ${WORKER_VM_MEMORY:-2} 20
+create_vm px  2021 11 "${PROXY_VM_CPU:-2}" "${PROXY_VM_MEMORY:-2}" 10 ",hostfwd=tcp::6443-:6443"
+create_vm cp1 2022 12 "${CONTROL_PLANE_VM_CPU:-2}" "${CONTROL_PLANE_VM_MEMORY:-4}" 20
+create_vm cp2 2023 13 "${CONTROL_PLANE_VM_CPU:-2}" "${CONTROL_PLANE_VM_MEMORY:-4}" 20
+create_vm cp3 2024 14 "${CONTROL_PLANE_VM_CPU:-2}" "${CONTROL_PLANE_VM_MEMORY:-4}" 20
+create_vm w1  2025 15 "${WORKER_VM_CPU:-2}" "${WORKER_VM_MEMORY:-2}" 20
+create_vm w2  2026 16 "${WORKER_VM_CPU:-2}" "${WORKER_VM_MEMORY:-2}" 20
 
 echo "Waiting for VMs to boot...this will take a few minutes."
 echo "If it seems stuck, please check the ${TEMP_DIR}/<host>.stderr.log file for any errors."
