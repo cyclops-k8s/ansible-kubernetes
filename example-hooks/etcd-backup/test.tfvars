@@ -1,7 +1,7 @@
 extra_kubernetes_configuration = {
-  kubernetes_control_plane_additional_templates` = [
+  kubernetes_control_plane_additional_templates = [
     {
-      source      = "{{ inventory_dir }}/../example-hooks/etcd-backup/etcd-patch.yaml",
+      source      = "{{ inventory_dir }}/../example-hooks/etcd-backup/files/etcd-patch.yaml",
       destination = "{{ kubernetes_config_directory }}/patches/etcd-backuppatch.yaml",
       mode        = "0600"
     }

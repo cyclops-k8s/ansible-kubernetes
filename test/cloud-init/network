@@ -4,6 +4,7 @@ network:
     public:
       match:
         macaddress: "00:00:00:00:00:00"
+      set-name: public
       dhcp4: true
       dhcp6: false
       dhcp4-overrides:
@@ -16,6 +17,7 @@ network:
     internal:
       match:
         macaddress: "00:00:00:00:00:00"
+      set-name: internal
       dhcp4: false
       dhcp6: false
       addresses: []

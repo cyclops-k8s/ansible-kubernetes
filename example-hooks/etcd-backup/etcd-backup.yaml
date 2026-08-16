@@ -9,7 +9,7 @@
       etcd_backup_crictl_path: "{{ etcd_backup_crictl_path | default('/usr/bin/crictl') }}"
       etcd_backup_crictl_container_path: /opt/crictl
       etcd_backup_cronjob_schedule: "{{ etcd_backup_cronjob_schedule | default('0 0 * * *') }}"
-      etcd_backup_extra_scripts: "{{ extra_etcd_backup_scripts | default([]) }}"
+      etcd_backup_extra_scripts: "{{ etcd_backup_extra_scripts | default([]) }}"
       etcd_backup_image: "{{ etcd_backup_image | default('quay.io/cyclops-k8s/swiss-army-knife:lite-latest') }}"
       etcd_backup_snapshots_amount_to_keep: "{{ etcd_backup_snapshots_amount_to_keep | default('10') }}"
       etcd_backup_snapshots_container_source_directory: /opt/snapshots/source

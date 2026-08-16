@@ -66,13 +66,13 @@ then
 
   mv "${SNAPSHOT_SOURCE_PATH}" "${TARGET_PATH}"
 
-  if [[ "${RETENTION_DAYS}" -gt 0 ]]
+  if [[ "${RETENTION_DAYS}" =~ ^[0-9]+$ ]] && [[ "${RETENTION_DAYS}" -gt 0 ]]
   then
     echo "Removing files older than ${RETENTION_DAYS} days"
     find "${TARGET_PATH}" -type f -mtime +"${RETENTION_DAYS}" -delete
   fi
 
-  if [[ "${AMOUNT_TO_KEEP}" -gt 0 ]]
+  if [[ "${AMOUNT_TO_KEEP}" =~ ^[0-9]+$ ]] && [[ "${AMOUNT_TO_KEEP}" -gt 0 ]]
   then
     echo "Keeping only the latest ${AMOUNT_TO_KEEP} files"
     for snapshot in $(find "${TARGET_PATH}" -maxdepth 1 -type f -printf '%T@ %p\n' | sort -nr | tail -n +"$((AMOUNT_TO_KEEP + 1))" | cut -d' ' -f2-)
