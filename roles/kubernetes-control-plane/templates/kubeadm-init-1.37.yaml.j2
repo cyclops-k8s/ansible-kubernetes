@@ -197,6 +197,16 @@ etcd:
         value: "{{ arg.value }}"
 {% endfor %}
 {% endif %}
+{%
+  if (kubernetes_etcd_auto_compaction_mode == "periodic" or kubernetes_etcd_auto_compaction_mode == "revision") and
+      kubernetes_etcd_auto_compaction_retention is defined and
+      kubernetes_etcd_auto_compaction_retention != None
+%}
+      - name: auto-compaction-mode
+        value: "{{ kubernetes_etcd_auto_compaction_mode }}"
+      - name: auto-compaction-retention
+        value: "{{ kubernetes_etcd_auto_compaction_retention }}"
+{% endif %}
 ---
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
 kind: KubeProxyConfiguration

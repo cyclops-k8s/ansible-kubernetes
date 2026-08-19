@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcd-defrag
+  namespace: kube-system
+spec:
+  schedule: "{{ etcd_defrag_cronjob_schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          hostNetwork: true
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: ""
+          tolerations:
+          - key: node-role.kubernetes.io/control-plane
+            effect: NoSchedule
+          restartPolicy: Never
+          containers:
+          - name: etcd-defrag
+            envFrom:
+            - configMapRef:
+                name: etcd-defrag
+            securityContext:
+              runAsUser: 0
+            image: "{{ etcd_defrag_image }}"
+            command:
+            - /scripts/etcd-defrag.sh
+            volumeMounts:
+            - mountPath: /opt/crictl
+              name: crictl
+            - mountPath: /scripts
+              name: scripts
+            - mountPath: /run/containerd/containerd.sock
+              name: containerd-socket
+          volumes:
+          - name: crictl
+            hostPath:
+              path: "{{ etcd_defrag_crictl_path }}"
+              type: File
+          - name: containerd-socket
+            hostPath:
+              path: /run/containerd/containerd.sock
+              type: Socket
+          - name: scripts
+            configMap:
+              name: etcd-defrag-scripts
+              defaultMode: 0755

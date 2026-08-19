@@ -403,6 +403,16 @@ kubernetes_encryption_configuration_file: null
 kubernetes_encryption_key: null
 kubernetes_encryption_key_name: key1
 
+# Interval type of auto-compaction for etcd can be either "periodic" or "revision"
+# https://etcd.io/docs/v3.7/op-guide/maintenance/#auto-compaction
+kubernetes_etcd_auto_compaction_mode: ~
+
+# Retention period for the auto-compaction,
+# If mode is "periodic" this should be a duration string like "5m", "1h", "24h" etc.
+# If mode is "revision" this should be a number representing the number of revisions to keep.
+# https://etcd.io/docs/v3.7/op-guide/maintenance/#auto-compaction
+kubernetes_etcd_auto_compaction_retention: ~
+
 # Extra arguments to pass to the ETCD backend
 # Must not contain any of the following names:
 # authentication-tolerate-lookup-failure
