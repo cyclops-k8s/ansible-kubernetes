@@ -20,39 +20,68 @@
 
   - name: Create kubectl configmap for etcd-defrag script command
     ansible.builtin.set_fact:
-      etcd_defrag_script_cmd: kubectl create configmap -n kube-system etcd-defrag-scripts --from-file={{ kubernetes_config_directory }}/etcd-defrag.sh
+      etcd_defrag_script_cmd_args:
+      - kubectl
+      - create
+      - configmap
+      - -n
+      - kube-system
+      - etcd-defrag-scripts
+      - --from-file={{ kubernetes_config_directory }}/etcd-defrag.sh
 
   - name: Append additional scripts to etcd-defrag script configmap command
     loop: "{{ etcd_defrag_extra_scripts }}"
     loop_control:
       loop_var: extra_script
     ansible.builtin.set_fact:
-      etcd_defrag_script_cmd: "{{ etcd_defrag_script_cmd }} --from-file={{ extra_script }}"
+      etcd_defrag_script_cmd_args: "{{ etcd_defrag_script_cmd_args + ['--from-file=' ~ extra_script] }}"
+
+  - name: Check for etcd-defrag scripts configmap
+    changed_when: false
+    failed_when: false
+    register: etcd_defrag_script_configmap_check
+    ansible.builtin.command:
+      cmd: kubectl get configmap -n kube-system etcd-defrag-scripts
+
+  - name: Remove existing etcd-defrag script configmap if it exists
+    changed_when: true
+    when: etcd_defrag_script_configmap_check.rc == 0
+    ansible.builtin.command:
+      cmd: kubectl delete configmap -n kube-system etcd-defrag-scripts
 
   - name: Create etcd-defrag script configmap
     changed_when: etcd_defrag_script_configmap.rc == 0
     failed_when: etcd_defrag_script_configmap.rc != 0
     register: etcd_defrag_script_configmap
-    ansible.builtin.shell:
-      cmd: |
-        kubectl get configmap -n kube-system etcd-defrag-scripts && kubectl delete configmap -n kube-system etcd-defrag-scripts || true
-        {{ etcd_defrag_script_cmd }}
+    ansible.builtin.command:
+      argv: "{{ etcd_defrag_script_cmd_args }}"
+
+  - name: Check for etcd-defrag configmap
+    failed_when: false
+    register: etcd_backup_configmap_check
+    ansible.builtin.command:
+      cmd: kubectl get configmap -n kube-system etcd-backup
+
+  - name: Remove existing etcd-defrag configmap if it exists
+    changed_when: true
+    when: etcd_backup_configmap_check.rc == 0
+    ansible.builtin.command:
+      cmd: kubectl delete configmap -n kube-system etcd-backup
 
   - name: Create etcd-defrag configmap
-    changed_when: etcd_defrag_configmap.rc == 0
-    environment:
-      CRICTL_PATH: "{{ etcd_defrag_crictl_container_path }}"
-      POST_EXECUTE_SCRIPT: "{{ etcd_defrag_post_execute_script }}"
+    changed_when: true
     failed_when: etcd_defrag_configmap.rc != 0
     register: etcd_defrag_configmap
-    ansible.builtin.shell:
-      cmd: |
-        kubectl get configmap -n kube-system etcd-defrag && kubectl delete configmap -n kube-system etcd-defrag || true
-
-        kubectl create configmap \
-          -n kube-system etcd-defrag \
-          --from-literal=CRICTL_PATH="${CRICTL_PATH}" \
-          --from-literal=POST_EXECUTE_SCRIPT="${POST_EXECUTE_SCRIPT}"
+    ansible.builtin.command:
+      argv:
+      - kubectl
+      - create
+      - configmap
+      - -n
+      - kube-system
+      - etcd-defrag
+      - --from-literal=CRICTL_PATH={{ etcd_defrag_crictl_container_path }}
+      - --from-literal=POST_EXECUTE_SCRIPT={{ etcd_defrag_post_execute_script }}
 
   - name: Copy etcd-defrag cronjob
     ansible.builtin.template:
@@ -60,7 +89,7 @@
       group: root
       mode: "0600"
       owner: root
-      src: "cronjob.yaml"
+      src: cronjob.yaml.j2
 
   - name: Apply etcd-defrag cronjob
     changed_when: etcd_defrag_cronjob.rc == 0
