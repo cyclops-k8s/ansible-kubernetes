@@ -1,0 +1,114 @@
+- name: Install etcd-defrag
+  delegate_to: "{{ first_kube_control_plane }}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  run_once: true
+  block:
+  - name: Set variable defaults
+    ansible.builtin.set_fact:
+      etcd_defrag_crictl_path: "{{ etcd_defrag_crictl_path | default('/usr/bin/crictl') }}"
+      etcd_defrag_crictl_container_path: /opt/crictl
+      etcd_defrag_cronjob_schedule: "{{ etcd_defrag_cronjob_schedule | default('0 0 * * *') }}"
+      etcd_defrag_extra_scripts: "{{ etcd_defrag_extra_scripts | default([]) }}"
+      etcd_defrag_image: "{{ etcd_defrag_image | default('quay.io/cyclops-k8s/swiss-army-knife:lite-latest') }}"
+      etcd_defrag_post_execute_script: "{{ etcd_defrag_post_execute_script | default('') }}"
+
+  - name: Copy etcd-defrag script to host
+    ansible.builtin.copy:
+      dest: "{{ kubernetes_config_directory }}/etcd-defrag.sh"
+      src: "etcd-defrag.sh"
+
+  - name: Create kubectl configmap for etcd-defrag script command
+    ansible.builtin.set_fact:
+      etcd_defrag_script_cmd_args:
+      - kubectl
+      - create
+      - configmap
+      - -n
+      - kube-system
+      - etcd-defrag-scripts
+      - --from-file={{ kubernetes_config_directory }}/etcd-defrag.sh
+
+  - name: Append additional scripts to etcd-defrag script configmap command
+    loop: "{{ etcd_defrag_extra_scripts }}"
+    loop_control:
+      loop_var: extra_script
+    ansible.builtin.set_fact:
+      etcd_defrag_script_cmd_args: "{{ etcd_defrag_script_cmd_args + ['--from-file=' ~ extra_script] }}"
+
+  - name: Check for etcd-defrag scripts configmap
+    changed_when: false
+    failed_when: false
+    register: etcd_defrag_script_configmap_check
+    ansible.builtin.command:
+      cmd: kubectl get configmap -n kube-system etcd-defrag-scripts
+
+  - name: Remove existing etcd-defrag script configmap if it exists
+    changed_when: true
+    when: etcd_defrag_script_configmap_check.rc == 0
+    ansible.builtin.command:
+      cmd: kubectl delete configmap -n kube-system etcd-defrag-scripts
+
+  - name: Create etcd-defrag script configmap
+    changed_when: etcd_defrag_script_configmap.rc == 0
+    failed_when: etcd_defrag_script_configmap.rc != 0
+    register: etcd_defrag_script_configmap
+    ansible.builtin.command:
+      argv: "{{ etcd_defrag_script_cmd_args }}"
+
+  - name: Check for etcd-defrag configmap
+    failed_when: false
+    register: etcd_backup_configmap_check
+    ansible.builtin.command:
+      cmd: kubectl get configmap -n kube-system etcd-backup
+
+  - name: Remove existing etcd-defrag configmap if it exists
+    changed_when: true
+    when: etcd_backup_configmap_check.rc == 0
+    ansible.builtin.command:
+      cmd: kubectl delete configmap -n kube-system etcd-backup
+
+  - name: Create etcd-defrag configmap
+    changed_when: true
+    failed_when: etcd_defrag_configmap.rc != 0
+    register: etcd_defrag_configmap
+    ansible.builtin.command:
+      argv:
+      - kubectl
+      - create
+      - configmap
+      - -n
+      - kube-system
+      - etcd-defrag
+      - --from-literal=CRICTL_PATH={{ etcd_defrag_crictl_container_path }}
+      - --from-literal=POST_EXECUTE_SCRIPT={{ etcd_defrag_post_execute_script }}
+
+  - name: Copy etcd-defrag cronjob
+    ansible.builtin.template:
+      dest: "{{ kubernetes_config_directory }}/etcd-defrag-cronjob.yaml"
+      group: root
+      mode: "0600"
+      owner: root
+      src: cronjob.yaml.j2
+
+  - name: Apply etcd-defrag cronjob
+    changed_when: etcd_defrag_cronjob.rc == 0
+    failed_when: etcd_defrag_cronjob.rc != 0
+    register: etcd_defrag_cronjob
+    ansible.builtin.command:
+      cmd: kubectl apply -f "{{ kubernetes_config_directory }}/etcd-defrag-cronjob.yaml"
+
+  rescue:
+  - name: Output etcd_defrag configmap
+    when: etcd_defrag_configmap is defined
+    ansible.builtin.debug:
+      msg: "{{ etcd_defrag_configmap }}"
+
+  - name: Output etcd_defrag
+    when: etcd_defrag_cronjob is defined
+    ansible.builtin.debug:
+      msg: "{{ etcd_defrag_cronjob }}"
+
+  - name: Etcd defrag failed to install
+    ansible.builtin.fail:
+      msg: Etcd defrag failed to install
