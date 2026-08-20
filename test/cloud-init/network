@@ -1,10 +1,10 @@
 network:
   version: 2
   ethernets:
-    eth0:
+    public:
       match:
         macaddress: "00:00:00:00:00:00"
-      set-name: eth0
+      set-name: public
       dhcp4: true
       dhcp6: false
       dhcp4-overrides:
@@ -14,10 +14,10 @@ network:
         - k8s.local
         addresses:
         - 8.8.8.8
-    eth1:
+    internal:
       match:
         macaddress: "00:00:00:00:00:00"
-      set-name: eth1
+      set-name: internal
       dhcp4: false
       dhcp6: false
       addresses: []
