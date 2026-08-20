@@ -48,7 +48,7 @@ resource "ansible_host" "proxy" {
     vrrp_priority          = 1
     vrrp_state             = "BACKUP" #count.index == 0 ? "MASTER" : "BACKUP"
     vrrp_password          = random_password.proxy_vrrp_password.result
-    vrrp_interface         = "eth1"
+    vrrp_interface         = "internal"
     vrrp_virtual_router_id = 1
     control_plane_ip       = "10.255.254.11"
   }
