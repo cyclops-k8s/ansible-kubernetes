@@ -26,7 +26,7 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-** Playbook information **
+**Playbook information**
 Kubernetes version being installed: `1.36`
 If upgrading, Kubernetes version upgrading from: `n/a`
 Copy of /etc/os-release:
