@@ -10,94 +10,96 @@
   ansible.builtin.set_fact:
     kubernetes_needs_to_join_cluster: "{{ kubernetes_needs_to_join_cluster_cmd.rc == 0 }}"
 
-- name: Create kubeadm file
+- name: Join control plane to the cluster
   when: kubernetes_needs_to_join_cluster
-  ansible.builtin.template:
-    backup: true
-    dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
-    group: root
-    mode: '0600'
-    owner: root
-    src: kubeadm-join-{{ kubernetes_version }}.yaml.j2
+  block:
 
-- name: Pull control plane certs down
-  changed_when: kubernetes_pull_certs.rc == 0
-  delay: 5
-  register: kubernetes_pull_certs
-  retries: 5
-  until: kubernetes_pull_certs.rc == 0
-  when: kubernetes_needs_to_join_cluster
-  ansible.builtin.command:
-    cmd: kubeadm join phase control-plane-prepare download-certs --config {{ kubernetes_config_directory }}/kubeadm.yaml -v5
+  - name: Create kubeadm file
+    ansible.builtin.template:
+      backup: true
+      dest: "{{ kubernetes_config_directory }}/kubeadm.yaml"
+      group: root
+      mode: '0600'
+      owner: root
+      src: kubeadm-join-{{ kubernetes_version }}.yaml.j2
 
-- name: Stop kubelet
-  when: kubernetes_needs_to_join_cluster
-  ansible.builtin.systemd:
-    enabled: true
-    name: kubelet
-    state: stopped
+  - name: Pull control plane certs down
+    changed_when: kubernetes_pull_certs.rc == 0
+    delay: 5
+    register: kubernetes_pull_certs
+    retries: 5
+    until: kubernetes_pull_certs.rc == 0
+    ansible.builtin.command:
+      cmd: kubeadm join phase control-plane-prepare download-certs --config {{ kubernetes_config_directory }}/kubeadm.yaml -v5
 
-- name: Add the control plane node
-  changed_when: kubeadm_join_output.rc == 0
-  delay: 5
-  register: kubeadm_join_output
-  retries: 5
-  when: kubernetes_needs_to_join_cluster
-  ansible.builtin.shell:
-    cmd: |
-      set -eo pipefail
-      kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_join_extra_args | default('') }} 2>&1
-    executable: /bin/bash
+  - name: Stop kubelet
+    ansible.builtin.systemd:
+      enabled: true
+      name: kubelet
+      state: stopped
 
-- name: Create the /root/.kube directory
-  when: kubernetes_needs_to_join_cluster
-  ansible.builtin.file:
-    group: root
-    mode: '0600'
-    owner: root
-    path: /root/.kube
-    state: directory
+  - name: Add the control plane node
+    changed_when: kubeadm_join_output.rc == 0
+    delay: 5
+    register: kubeadm_join_output
+    retries: 5
+    ansible.builtin.command:
+      cmd: kubeadm join --config {{ kubernetes_config_directory }}/kubeadm.yaml {{ kubernetes_kubeadm_join_extra_args | default('') }}
 
-- name: Link admin.conf to /root/.kube/config
-  when: kubernetes_needs_to_join_cluster
-  ansible.builtin.file:
-    dest: /root/.kube/config
-    src: /etc/kubernetes/admin.conf
-    state: link
+  - name: Create the /root/.kube directory
+    ansible.builtin.file:
+      group: root
+      mode: '0600'
+      owner: root
+      path: /root/.kube
+      state: directory
 
-- name: Start kubelet
-  when: kubernetes_needs_to_join_cluster
-  ansible.builtin.service:
-    enabled: true
-    name: kubelet
-    state: started
+  - name: Link admin.conf to /root/.kube/config
+    ansible.builtin.file:
+      dest: /root/.kube/config
+      src: /etc/kubernetes/admin.conf
+      state: link
 
-# CIS 1.1.20
-- name: CIS 1.1.20 - Secure certificates
-  when: kubernetes_needs_to_join_cluster
-  ansible.builtin.file:
-    mode: '0600'
-    path: "{{ kubernetes_pki_directory }}"
-    recurse: true
+  - name: Start kubelet
+    ansible.builtin.service:
+      enabled: true
+      name: kubelet
+      state: started
 
-# CIS 4.1.1
-- name: CIS 4.1.1 - Set kubelet.service to 0600
-  when: kubernetes_needs_to_join_cluster
-  ansible.builtin.file:
-    mode: '0600'
-    path: /usr/lib/systemd/system/kubelet.service
+  # CIS 1.1.20
+  - name: CIS 1.1.20 - Secure certificates
+    ansible.builtin.file:
+      mode: '0600'
+      path: "{{ kubernetes_pki_directory }}"
+      recurse: true
 
-# CIS 4.1.9
-# STIG V-242407
-- name: CIS 4.1.9, STIG V-242407 - Set kubelet config.yaml to 0600
-  when: kubernetes_needs_to_join_cluster
-  ansible.builtin.file:
-    mode: '0600'
-    path: /var/lib/kubelet/config.yaml
+  # CIS 4.1.1
+  - name: CIS 4.1.1 - Set kubelet.service to 0600
+    ansible.builtin.file:
+      mode: '0600'
+      path: /usr/lib/systemd/system/kubelet.service
 
-- name: Post control plane join hooks
-  loop: "{{ kubernetes_hookfiles.post_control_plane_join }}"
-  loop_control:
-    loop_var: hook
-  when: kubernetes_hookfiles.post_control_plane_join is defined
-  ansible.builtin.include_tasks: "{{ hook }}"
+  # CIS 4.1.9
+  # STIG V-242407
+  - name: CIS 4.1.9, STIG V-242407 - Set kubelet config.yaml to 0600
+    ansible.builtin.file:
+      mode: '0600'
+      path: /var/lib/kubelet/config.yaml
+
+  - name: Post control plane join hooks
+    loop: "{{ kubernetes_hookfiles.post_control_plane_join }}"
+    loop_control:
+      loop_var: hook
+    when: kubernetes_hookfiles.post_control_plane_join is defined
+    ansible.builtin.include_tasks: "{{ hook }}"
+
+  rescue:
+  - name: Join command result
+    when: kubeadm_join_output is defined
+    ansible.builtin.debug:
+      msg: "{{ kubeadm_join_output }}"
+
+  - name: Fail control plane node join
+    ansible.builtin.fail:
+      msg: >-
+        Joining control plane node {{ inventory_hostname }} to the cluster failed.

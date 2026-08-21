@@ -107,6 +107,11 @@
       cmd: kubeadm token delete "{{ join_token }}"
 
   rescue:
+  - name: Join command result
+    when: kubernetes_join_output is defined
+    ansible.builtin.debug:
+      msg: "{{ kubernetes_join_output }}"
+
   - name: Expire join token
     changed_when: true
     delegate_to: "{{ first_kube_control_plane }}"
