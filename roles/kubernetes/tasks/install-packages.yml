@@ -25,11 +25,41 @@
         path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
         state: file
 
-    - name: Adding apt repository for Kubernetes
-      ansible.builtin.apt_repository:
-        filename: kubernetes-{{ kubernetes_version }}
-        repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
-        state: present
+    - name: Get a list of Kubernetes-*.list apt repository files
+      register: kubernetes_list_files
+      ansible.builtin.find:
+        paths: /etc/apt/sources.list.d/
+        patterns: kubernetes-*.list
+
+    - name: Remove old Kubernetes apt list repository files
+      loop: "{{ kubernetes_list_files.files }}"
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+
+    - name: Get a list of Kubernetes-*.sources apt repository files
+      register: kubernetes_sources_files
+      ansible.builtin.find:
+        paths: /etc/apt/sources.list.d/
+        patterns: Kubernetes-*.sources
+
+    - name: Remove old Kubernetes apt sources repository files
+      loop: "{{ kubernetes_sources_files.files }}"
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+
+    - name: Add apt repository
+      ansible.builtin.deb822_repository:
+        install_python_debian: true
+        name: Kubernetes-{{ kubernetes_version }}
+        signed_by: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+        suites: ["/"]
+        uris: ["{{ kubernetes_mirror }}"]
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
 
     - name: Get latest specified version of kubeadm, kubelet and kubectl
       changed_when: kubernetes_version_temp.rc != 0
@@ -69,7 +99,6 @@
       ansible.builtin.apt:
         name: "{{ packages }}"
         state: present
-        update_cache: true
 
     - name: Hold cri-tools, kubeadm, kubelet and kubectl
       with_items:

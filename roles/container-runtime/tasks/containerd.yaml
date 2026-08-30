@@ -40,12 +40,24 @@
       path: /etc/apt/keyrings/docker.gpg
       state: file
 
-  - name: Add Docker Repository
-    ansible.builtin.apt_repository:
-      filename: docker
-      repo: deb [signed-by=/etc/apt/keyrings/docker.gpg] {{ kubernetes_containerd_mirror }} {{ ansible_facts["distribution_release"] | lower }} stable
-      state: present
-      update_cache: true
+  - name: Remove old Docker apt repository list file
+    ansible.builtin.file:
+      path: /etc/apt/sources.list.d/docker.list
+      state: absent
+
+  - name: Remove old Docker apt repository sources file
+    ansible.builtin.file:
+      path: /etc/apt/sources.list.d/Docker.sources
+      state: absent
+
+  - name: Add apt repository
+    ansible.builtin.deb822_repository:
+      components: ["stable"]
+      install_python_debian: true
+      name: Docker
+      signed_by: /etc/apt/keyrings/docker.gpg
+      suites: ["{{ ansible_facts[\"distribution_release\"] | lower }}"]
+      uris: ["{{ kubernetes_containerd_mirror }}"]
 
   - name: Resolve containerd package version (Debian/Ubuntu)
     ansible.builtin.include_tasks:
@@ -57,6 +69,7 @@
       - "{{ 'containerd.io' if containerd_version == 'latest' else 'containerd.io=' + containerd_version }}"
       state: present
       allow_downgrade: true
+      update_cache: true
 
   - name: Hold containerd.io
     ansible.builtin.dpkg_selections:
