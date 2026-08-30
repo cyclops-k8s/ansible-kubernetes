@@ -33,11 +33,55 @@
       path: /etc/apt/sources.list.d/kubernetes.list
       state: absent
 
-  - name: Adding apt repository for Kubernetes
-    ansible.builtin.apt_repository:
-      filename: kubernetes-{{ kubernetes_version }}
-      repo: deb [signed-by=/etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg] {{ kubernetes_mirror }} /
-      state: present
+  - name: Get a list of Kubernetes-*.list apt repository files
+    register: kubernetes_list_files
+    ansible.builtin.find:
+      paths: /etc/apt/sources.list.d/
+      patterns: kubernetes-*.list
+
+  - name: Remove old Kubernetes apt list repository files
+    loop: "{{ kubernetes_list_files.files }}"
+    ansible.builtin.file:
+      path: "{{ item.path }}"
+      state: absent
+
+  - name: Get a list of Kubernetes-*.sources apt repository files
+    register: kubernetes_sources_files
+    ansible.builtin.find:
+      paths: /etc/apt/sources.list.d/
+      patterns: Kubernetes-*.sources
+
+  - name: Remove old Kubernetes apt sources repository files
+    loop: "{{ kubernetes_sources_files.files }}"
+    ansible.builtin.file:
+      path: "{{ item.path }}"
+      state: absent
+
+  - name: Add apt repository
+    ansible.builtin.deb822_repository:
+      install_python_debian: true
+      name: Kubernetes-{{ kubernetes_version }}
+      signed_by: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
+      suites: ["/"]
+      uris: ["{{ kubernetes_mirror }}"]
+
+  - name: Remove old Docker apt repository file
+    ansible.builtin.file:
+      path: /etc/apt/sources.list.d/docker.list
+      state: absent
+
+  - name: Add Docker apt repository
+    ansible.builtin.deb822_repository:
+      components: ["stable"]
+      install_python_debian: true
+      name: Docker
+      signed_by: /etc/apt/keyrings/docker.gpg
+      suites: ["{{ ansible_facts[\"distribution_release\"] | lower }}"]
+      uris: ["{{ kubernetes_containerd_mirror }}"]
+
+  - name: Update apt cache
+    ansible.builtin.apt:
+      update_cache: true
 
   - name: Find latest kubernetes version in apt
     delay: 5
