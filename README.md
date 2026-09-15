@@ -1,6 +1,6 @@
 # Ansible-Kubernetes - CIS hardened
 
-This project is an infrastructure automation project that builds production-ready, CIS/STIG-hardened Kubernetes clusters with kubeadm, primarily targeting Ubuntu 24.04+ environments. It uses a phased Ansible orchestration model (proxies, runtime, control planes, workers, upgrades) plus an extensible hook framework so teams can plug in cluster-specific components like CNI/CSI/CPI, OIDC, and operational tooling at defined lifecycle points. Overall, it’s designed for repeatable, idempotent cluster provisioning and day-2 operations (node adds/upgrades) with strong security and compliance defaults.
+This project is an infrastructure automation project that builds production-ready, CIS/STIG-hardened Kubernetes clusters with kubeadm, targeting Ubuntu 24.04/26.04 and CentOS Stream 9/10 environments. It uses a phased Ansible orchestration model (proxies, runtime, control planes, workers, upgrades) plus an extensible hook framework so teams can plug in cluster-specific components like CNI/CSI/CPI, OIDC, and operational tooling at defined lifecycle points. Overall, it’s designed for repeatable, idempotent cluster provisioning and day-2 operations (node adds/upgrades) with strong security and compliance defaults.
 
 ## Pre-requisites
 
@@ -26,12 +26,10 @@ It is tested on the following:
 
 **RPM-based:**
 
-* CentOS Stream 9 <- stability issues when installing a new installation of version 1.36.
+* CentOS Stream 9 <- stability issues when installing a new installation of version 1.37.
 * CentOS Stream 10
 
 The playbook automatically detects the OS family and uses the appropriate package manager (apt for Debian-based, dnf/yum for RPM-based distributions).
-
-As of February 2026, CentOS Stream 9 has stability issues with the Kubernetes components, likely ETCD, when starting from 1.36. Upgrading from an earlier version to 1.36 works fine.
 
 ## Purpose
 
