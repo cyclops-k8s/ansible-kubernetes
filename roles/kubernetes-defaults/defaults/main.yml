@@ -90,6 +90,7 @@ kubernetes_etcd_group_id: 500
 # CIS 1.1.12 - Ensure that the etcd data directory ownership is set to etcd:etcd
 kubernetes_etcd_user_id: 500
 
+# Found in https://github.com/kubernetes/kubernetes/blob/release-1.37/pkg/kubeapiserver/options/plugins.go
 kubernetes_admission_control_plugins_versioned:
   "1.37":
   # CIS 1.2.11 - Ensure that the admission control plugin AlwaysPullImages is set)
@@ -97,27 +98,6 @@ kubernetes_admission_control_plugins_versioned:
 
   # CIS 1.2.14 - Ensure that the admission control plugin NodeRestriction is set (included by default)
   - NodeRestriction
-
-  # Defaults as of 1.37
-  - CertificateApproval
-  - CertificateSigning
-  - CertificateSubjectRestriction
-  - DefaultIngressClass
-  - DefaultStorageClass
-  - DefaultTolerationSeconds
-  - LimitRanger
-  - MutatingAdmissionWebhook
-  - NamespaceLifecycle
-  - PersistentVolumeClaimResize
-  - PodSecurity
-  - Priority
-  - ResourceQuota
-  - RuntimeClass
-  - ServiceAccount
-  - StorageObjectInUseProtection
-  - TaintNodesByCondition
-  - ValidatingAdmissionPolicy
-  - ValidatingAdmissionWebhook
 
   "1.36":
   # CIS 1.2.11 - Ensure that the admission control plugin AlwaysPullImages is set)
