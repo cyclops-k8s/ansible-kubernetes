@@ -5,7 +5,7 @@ on:
 
 env:
   IS_CI: "true"
-  KUBERNETES_VERSION: 1.36
+  KUBERNETES_VERSION: 1.37
   WORKING_DIR: ci-cd/test
 
 jobs:

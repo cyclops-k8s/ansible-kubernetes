@@ -1,7 +1,8 @@
 # wait for ssh and cloud-init to finish
 - name: Wait for SSH and cloud-init
-  hosts: all
+  become: true
   gather_facts: false
+  hosts: all
   tasks:
   - name: Wait for ssh access
     register: ssh_access
@@ -20,3 +21,18 @@
     until: "cloud_init.cloud_init_data_facts.status.v1.stage is defined and not cloud_init.cloud_init_data_facts.status.v1.stage"
     community.general.cloud_init_data_facts:
       filter: status
+
+  - name: Reboot the node
+    ansible.builtin.reboot:
+      reboot_timeout: 300
+      test_command: whoami
+
+  - name: Wait for ssh access
+    register: ssh_access_post_reboot
+    retries: 30
+    until: ssh_access_post_reboot is ansible.builtin.success
+    ansible.builtin.wait_for_connection:
+      delay: "{{ delay | default(0) }}"
+      connect_timeout: 10
+      sleep: 10
+      timeout: 10

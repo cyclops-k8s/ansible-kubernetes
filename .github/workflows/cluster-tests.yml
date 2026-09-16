@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         kubernetes_version:
-        - "1.36"
+        - "1.37"
         os_image:
         - ubuntu-24.04
         - ubuntu-26.04
@@ -84,12 +84,12 @@ jobs:
       fail-fast: false
       matrix:
         start_version:
-          - start: "1.34"
-            intermediate: "1.35"
-            end: "1.36"
           - start: "1.35"
+            intermediate: "1.36"
+            end: "1.37"
+          - start: "1.36"
             intermediate: "Skip"
-            end: "1.36"
+            end: "1.37"
         os_image:
           - ubuntu-24.04
           - ubuntu-26.04
@@ -158,7 +158,7 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.WORKING_DIR }}
-    name: Skip Version Upgrade Test (1.34 → 1.36)
+    name: Skip Version Upgrade Test (1.35 → 1.37)
     runs-on:
       group: Default
     timeout-minutes: 120
@@ -175,17 +175,17 @@ jobs:
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
-      - name: Install Kubernetes 1.34
-        run: ./install.sh -v 1.34
+      - name: Install Kubernetes 1.35
+        run: ./install.sh -v 1.35
 
       - name: Verify initial cluster
-        run: ./verify-cluster-health.sh 1.34
+        run: ./verify-cluster-health.sh 1.35
 
-      - name: Attempt direct upgrade to 1.36
+      - name: Attempt direct upgrade to 1.37
         continue-on-error: true
         run: |
-          ./upgrade.sh -v 1.36 || {
-            echo "Direct upgrade from 1.34 to 1.36 failed as expected"
+          ./upgrade.sh -v 1.37 || {
+            echo "Direct upgrade from 1.35 to 1.37 failed as expected"
             echo "Kubernetes upgrade policy typically requires upgrading through intermediate versions"
             exit 0
           }
