@@ -1,7 +1,8 @@
 # wait for ssh and cloud-init to finish
 - name: Wait for SSH and cloud-init
-  hosts: all
+  become: true
   gather_facts: false
+  hosts: all
   tasks:
   - name: Wait for ssh access
     register: ssh_access
