@@ -28,30 +28,17 @@
       path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
       state: file
 
-  - name: Remove old style Kubernetes apt repository
-    ansible.builtin.file:
-      path: /etc/apt/sources.list.d/kubernetes.list
-      state: absent
-
-  - name: Get a list of Kubernetes-*.list apt repository files
-    register: kubernetes_list_files
-    ansible.builtin.find:
-      paths: /etc/apt/sources.list.d/
-      patterns: kubernetes-*.list
-
-  - name: Remove old Kubernetes apt list repository files
-    loop: "{{ kubernetes_list_files.files }}"
-    ansible.builtin.file:
-      path: "{{ item.path }}"
-      state: absent
-
-  - name: Get a list of Kubernetes-*.sources apt repository files
+  - name: Get a list of Kubernetes-* apt repository files
     register: kubernetes_sources_files
     ansible.builtin.find:
       paths: /etc/apt/sources.list.d/
-      patterns: Kubernetes-*.sources
+      patterns:
+      - Kubernetes-*.sources
+      - kubernetes-*.list
+      - docker.list
+      - kubernetes.list
 
-  - name: Remove old Kubernetes apt sources repository files
+  - name: Remove old Kubernetes apt repository files
     loop: "{{ kubernetes_sources_files.files }}"
     ansible.builtin.file:
       path: "{{ item.path }}"
@@ -64,11 +51,6 @@
       signed_by: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
       suites: ["/"]
       uris: ["{{ kubernetes_mirror }}"]
-
-  - name: Remove old Docker apt repository file
-    ansible.builtin.file:
-      path: /etc/apt/sources.list.d/docker.list
-      state: absent
 
   - name: Add Docker apt repository
     ansible.builtin.deb822_repository:

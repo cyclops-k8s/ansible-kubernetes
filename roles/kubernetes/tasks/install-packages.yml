@@ -25,26 +25,17 @@
         path: /etc/apt/keyrings/kubernetes-{{ kubernetes_version }}.gpg
         state: file
 
-    - name: Get a list of Kubernetes-*.list apt repository files
+    - name: Get a list of Kubernetes-* apt repository files
       register: kubernetes_list_files
       ansible.builtin.find:
         paths: /etc/apt/sources.list.d/
-        patterns: kubernetes-*.list
+        patterns:
+        - kubernetes-*.list
+        - Kubernetes-*.sources
+        - kubernetes.list
 
-    - name: Remove old Kubernetes apt list repository files
+    - name: Remove Kubernetes apt repository files
       loop: "{{ kubernetes_list_files.files }}"
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        state: absent
-
-    - name: Get a list of Kubernetes-*.sources apt repository files
-      register: kubernetes_sources_files
-      ansible.builtin.find:
-        paths: /etc/apt/sources.list.d/
-        patterns: Kubernetes-*.sources
-
-    - name: Remove old Kubernetes apt sources repository files
-      loop: "{{ kubernetes_sources_files.files }}"
       ansible.builtin.file:
         path: "{{ item.path }}"
         state: absent
