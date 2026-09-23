@@ -1,0 +1,8 @@
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: UpgradeConfiguration
+apply:
+  patches:
+    directory: '{{ kubernetes_windows_config_directory }}\patches'
+node:
+  patches:
+    directory: '{{ kubernetes_windows_config_directory }}\patches'
