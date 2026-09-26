@@ -16,6 +16,25 @@ env:
   WORKING_DIR: ci-cd/test
 
 jobs:
+  lint:
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+    name: Lint
+    runs-on:
+      group: Default
+    steps:
+    - name: YAML Lint
+      run: yamllint .
+
+    - name: Ansible Lint
+      run: ansible-lint --force-color --sarif-file ansible.sarif | true
+
+    - name: Upload CodeQL File
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ansible.sarif
+
   install-cluster:
     defaults:
       run:
