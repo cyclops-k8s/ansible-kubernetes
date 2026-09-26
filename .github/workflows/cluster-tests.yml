@@ -17,9 +17,6 @@ env:
 
 jobs:
   lint:
-    defaults:
-      run:
-        working-directory: ${{ env.WORKING_DIR }}
     name: Lint
     permissions:
       actions: read
