@@ -27,54 +27,53 @@ jobs:
         - centos10
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up PATH
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+    - name: Set up PATH
+      run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Spin up test environment
-        run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
-        env:
-          GITHUB_RUN_NUMBER: conf-${{ github.run_number }}
-          TF_VAR_control_plane_memory_size: 8
-          TF_VAR_worker_memory_size: 8
+    - name: Spin up test environment
+      run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
+      env:
+        GITHUB_RUN_NUMBER: conf-${{ github.run_number }}
+        TF_VAR_control_plane_memory_size: 8
+        TF_VAR_worker_memory_size: 8
 
+    - name: Install Kubernetes cluster
+      run: ./install.sh -v ${{ env.KUBERNETES_VERSION }}
 
-      - name: Install Kubernetes cluster
-        run: ./install.sh -v ${{ env.KUBERNETES_VERSION }}
+    - name: Verify cluster health
+      run: ./verify-cluster-health.sh ${{ env.KUBERNETES_VERSION }}
 
-      - name: Verify cluster health
-        run: ./verify-cluster-health.sh ${{ env.KUBERNETES_VERSION }}
+    - name: Install Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: stable
 
-      - name: Install Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: stable
+    - name: Run conformance tests
+      run: ./run-conformance-tests.sh
 
-      - name: Run conformance tests
-        run: ./run-conformance-tests.sh
+    - name: Collect logs on failure
+      if: failure()
+      run: ./collect-logs.sh
 
-      - name: Collect logs on failure
-        if: failure()
-        run: ./collect-logs.sh
+    - name: Upload logs artifact
+      if: failure()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: logs-install-${{ matrix.os_image }}-${{ github.run_number }}
+        path: /tmp/logs/${{ github.run_number }}/
+        retention-days: 7
 
-      - name: Upload logs artifact
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: logs-install-${{ matrix.os_image }}-${{ github.run_number }}
-          path: /tmp/logs/${{ github.run_number }}/
-          retention-days: 7
+    - name: Upload conformance results
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: conformance-${{ matrix.os_image }}-${{ github.run_number }}
+        path: /tmp/results/
+        retention-days: 7
 
-      - name: Upload conformance results
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: conformance-${{ matrix.os_image }}-${{ github.run_number }}
-          path: /tmp/results/
-          retention-days: 7
-
-      - name: Cleanup test environment
-        if: always()
-        run: ./shutdown-test-environment.sh || true
+    - name: Cleanup test environment
+      if: always()
+      run: ./shutdown-test-environment.sh || true

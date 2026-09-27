@@ -1,0 +1,5 @@
+# Documentation for available options:
+#   https://docs.ansible.com/projects/lint/configuring/
+
+exclude_paths:
+- .github/workflows

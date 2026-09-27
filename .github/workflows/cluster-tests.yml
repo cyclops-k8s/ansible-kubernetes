@@ -3,12 +3,12 @@ name: Cluster Tests
 on:
   push:
     branches:
-      - main
-      - develop
+    - main
+    - develop
   pull_request:
     branches:
-      - main
-      - develop
+    - main
+    - develop
   workflow_dispatch:
 
 env:
@@ -16,6 +16,26 @@ env:
   WORKING_DIR: ci-cd/test
 
 jobs:
+  lint:
+    name: Lint
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on:
+      group: Default
+    steps:
+    - name: YAML Lint
+      run: yamllint .
+
+    - name: Ansible Lint
+      run: ansible-lint --force-color --sarif-file ansible.sarif | true
+
+    - name: Upload CodeQL File
+      uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+      with:
+        sarif_file: ansible.sarif
+
   install-cluster:
     defaults:
       run:
@@ -36,41 +56,41 @@ jobs:
         - centos10
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up PATH
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+    - name: Set up PATH
+      run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Spin up test environment
-        run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
-        env:
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+    - name: Spin up test environment
+      run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
+      env:
+        GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
-      - name: Install Kubernetes cluster
-        run: ./install.sh -v ${{ matrix.kubernetes_version }}
+    - name: Install Kubernetes cluster
+      run: ./install.sh -v ${{ matrix.kubernetes_version }}
 
-      - name: Verify cluster health
-        run: ./verify-cluster-health.sh ${{ matrix.kubernetes_version }}
+    - name: Verify cluster health
+      run: ./verify-cluster-health.sh ${{ matrix.kubernetes_version }}
 
-      - name: Run smoke tests
-        run: ./run-smoke-tests.sh
+    - name: Run smoke tests
+      run: ./run-smoke-tests.sh
 
-      - name: Collect logs on failure
-        if: failure()
-        run: ./collect-logs.sh
+    - name: Collect logs on failure
+      if: failure()
+      run: ./collect-logs.sh
 
-      - name: Upload logs artifact
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: logs-install-${{ matrix.kubernetes_version }}-${{ matrix.os_image }}-${{ github.run_number }}
-          path: /tmp/logs/${{ github.run_number }}/
-          retention-days: 7
+    - name: Upload logs artifact
+      if: failure()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: logs-install-${{ matrix.kubernetes_version }}-${{ matrix.os_image }}-${{ github.run_number }}
+        path: /tmp/logs/${{ github.run_number }}/
+        retention-days: 7
 
-      - name: Cleanup test environment
-        if: always()
-        run: ./shutdown-test-environment.sh || true
+    - name: Cleanup test environment
+      if: always()
+      run: ./shutdown-test-environment.sh || true
 
   test-upgrade:
     defaults:
@@ -84,75 +104,75 @@ jobs:
       fail-fast: false
       matrix:
         start_version:
-          - start: "1.35"
-            intermediate: "1.36"
-            end: "1.37"
-          - start: "1.36"
-            intermediate: "Skip"
-            end: "1.37"
+        - start: "1.35"
+          intermediate: "1.36"
+          end: "1.37"
+        - start: "1.36"
+          intermediate: "Skip"
+          end: "1.37"
         os_image:
-          - ubuntu-24.04
-          - ubuntu-26.04
-          - centos9
-          - centos10
+        - ubuntu-24.04
+        - ubuntu-26.04
+        - centos9
+        - centos10
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up PATH
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+    - name: Set up PATH
+      run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Spin up test environment
-        run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
-        env:
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+    - name: Spin up test environment
+      run: ./spin-up-test-environment.sh --os-image ${{ matrix.os_image }}
+      env:
+        GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
-      - name: Install initial Kubernetes version
-        run: ./install.sh -v ${{ matrix.start_version.start }}
+    - name: Install initial Kubernetes version
+      run: ./install.sh -v ${{ matrix.start_version.start }}
 
-      - name: Verify initial cluster
-        run: ./verify-cluster-health.sh ${{ matrix.start_version.start }}
+    - name: Verify initial cluster
+      run: ./verify-cluster-health.sh ${{ matrix.start_version.start }}
 
-      - name: Run smoke tests
-        run: ./run-smoke-tests.sh
+    - name: Run smoke tests
+      run: ./run-smoke-tests.sh
 
-      - name: Upgrade to ${{ matrix.start_version.intermediate }} (if starting from ${{ matrix.start_version.start }})
-        if: matrix.start_version.intermediate != 'Skip'
-        run: ./upgrade.sh -v ${{ matrix.start_version.intermediate }}
+    - name: Upgrade to ${{ matrix.start_version.intermediate }} (if starting from ${{ matrix.start_version.start }})
+      if: matrix.start_version.intermediate != 'Skip'
+      run: ./upgrade.sh -v ${{ matrix.start_version.intermediate }}
 
-      - name: Verify cluster after ${{ matrix.start_version.intermediate }} upgrade
-        if: matrix.start_version.intermediate != 'Skip'
-        run: ./verify-cluster-health.sh ${{ matrix.start_version.intermediate }}
+    - name: Verify cluster after ${{ matrix.start_version.intermediate }} upgrade
+      if: matrix.start_version.intermediate != 'Skip'
+      run: ./verify-cluster-health.sh ${{ matrix.start_version.intermediate }}
 
-      - name: Run smoke tests post upgrade
-        if: matrix.start_version.intermediate != 'Skip'
-        run: ./run-smoke-tests.sh
+    - name: Run smoke tests post upgrade
+      if: matrix.start_version.intermediate != 'Skip'
+      run: ./run-smoke-tests.sh
 
-      - name: Upgrade to ${{ matrix.start_version.end }}
-        run: ./upgrade.sh -v ${{ matrix.start_version.end }}
+    - name: Upgrade to ${{ matrix.start_version.end }}
+      run: ./upgrade.sh -v ${{ matrix.start_version.end }}
 
-      - name: Verify final cluster state
-        run: ./verify-cluster-health.sh ${{ matrix.start_version.end }}
+    - name: Verify final cluster state
+      run: ./verify-cluster-health.sh ${{ matrix.start_version.end }}
 
-      - name: Run post-upgrade smoke tests
-        run: ./run-smoke-tests.sh
+    - name: Run post-upgrade smoke tests
+      run: ./run-smoke-tests.sh
 
-      - name: Collect logs on failure
-        if: failure()
-        run: ./collect-logs.sh
+    - name: Collect logs on failure
+      if: failure()
+      run: ./collect-logs.sh
 
-      - name: Upload logs artifact
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: logs-upgrade-${{ matrix.start_version.start }}-to-${{ matrix.start_version.end }}-${{ matrix.os_image }}-${{ github.run_number }}
-          path: /tmp/logs/${{ github.run_number }}/
-          retention-days: 7
+    - name: Upload logs artifact
+      if: failure()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: logs-upgrade-${{ matrix.start_version.start }}-to-${{ matrix.start_version.end }}-${{ matrix.os_image }}-${{ github.run_number }}
+        path: /tmp/logs/${{ github.run_number }}/
+        retention-days: 7
 
-      - name: Cleanup test environment
-        if: always()
-        run: ./shutdown-test-environment.sh || true
+    - name: Cleanup test environment
+      if: always()
+      run: ./shutdown-test-environment.sh || true
 
   test-skip-version-upgrade:
     defaults:
@@ -164,44 +184,44 @@ jobs:
     timeout-minutes: 120
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up PATH
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+    - name: Set up PATH
+      run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Spin up test environment
-        run: ./spin-up-test-environment.sh --os-image ubuntu-26.04
-        env:
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+    - name: Spin up test environment
+      run: ./spin-up-test-environment.sh --os-image ubuntu-26.04
+      env:
+        GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
-      - name: Install Kubernetes 1.35
-        run: ./install.sh -v 1.35
+    - name: Install Kubernetes 1.35
+      run: ./install.sh -v 1.35
 
-      - name: Verify initial cluster
-        run: ./verify-cluster-health.sh 1.35
+    - name: Verify initial cluster
+      run: ./verify-cluster-health.sh 1.35
 
-      - name: Attempt direct upgrade to 1.37
-        continue-on-error: true
-        run: |
-          ./upgrade.sh -v 1.37 || {
-            echo "Direct upgrade from 1.35 to 1.37 failed as expected"
-            echo "Kubernetes upgrade policy typically requires upgrading through intermediate versions"
-            exit 0
-          }
+    - name: Attempt direct upgrade to 1.37
+      continue-on-error: true
+      run: |
+        ./upgrade.sh -v 1.37 || {
+          echo "Direct upgrade from 1.35 to 1.37 failed as expected"
+          echo "Kubernetes upgrade policy typically requires upgrading through intermediate versions"
+          exit 0
+        }
 
-      - name: Collect logs on failure
-        if: failure()
-        run: ./collect-logs.sh
+    - name: Collect logs on failure
+      if: failure()
+      run: ./collect-logs.sh
 
-      - name: Upload logs artifact
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: logs-skip-version-upgrade--${{ github.run_number }}
-          path: /tmp/logs/${{ github.run_number }}/
-          retention-days: 7
+    - name: Upload logs artifact
+      if: failure()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: logs-skip-version-upgrade--${{ github.run_number }}
+        path: /tmp/logs/${{ github.run_number }}/
+        retention-days: 7
 
-      - name: Cleanup test environment
-        if: always()
-        run: ./shutdown-test-environment.sh || true
+    - name: Cleanup test environment
+      if: always()
+      run: ./shutdown-test-environment.sh || true
